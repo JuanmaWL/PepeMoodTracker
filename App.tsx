@@ -71,65 +71,61 @@ const App: React.FC = () => {
     <div className="flex flex-col items-center min-h-screen bg-slate-950 pb-20 overflow-x-hidden text-slate-100">
       
       {/* Header Section */}
-      <header className="mt-12 mb-8 text-center animate-in slide-in-from-top duration-700 flex flex-col items-center relative w-full">
+      <header className="mt-8 mb-6 text-center animate-in slide-in-from-top duration-700 flex flex-col items-center relative w-full">
         
-        {/* Pepe Banner Image Container */}
-        <div className="w-full max-w-4xl px-4 mb-8 drop-shadow-[0_20px_60px_rgba(34,197,94,0.45)] pepe-float">
-          <div className="relative bg-slate-900 rounded-[2.5rem] overflow-hidden border-4 border-slate-800/50 shadow-2xl aspect-[21/9] flex items-center justify-center group">
+        {/* Pepe Banner Image Container - Ajustado a formato cuadrado para imagen 1:1 */}
+        <div className="w-full max-w-[12rem] md:max-w-[16rem] px-4 mb-6 drop-shadow-[0_15px_40px_rgba(34,197,94,0.35)] pepe-float">
+          <div className="relative bg-slate-900 rounded-[2rem] md:rounded-[3rem] overflow-hidden border-2 border-slate-800/50 shadow-2xl aspect-square flex items-center justify-center group">
             
             {!bannerError ? (
               <img 
                 src={PEPE_BANNER} 
                 alt="Pepe Banner" 
-                className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
+                className="block w-full h-full object-contain p-2 transition-transform duration-1000 group-hover:scale-110"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
-                  // Si falla la URL principal, intentamos la local
                   const localPath = "assets/images/pepe_banner.webp";
                   if (target.src !== window.location.origin + "/" + localPath && !target.src.includes(localPath)) {
-                    console.log("Cambiando a fallback local...");
                     target.src = localPath;
                   } else {
-                    // Si falla la local también, activamos el estado de error para mostrar el fallback visual
                     setBannerError(true);
                   }
                 }}
               />
             ) : (
-              /* Fallback Visual: Gradiente Pepe si todo falla */
+              /* Fallback Visual */
               <div className="w-full h-full bg-gradient-to-br from-green-900 via-slate-900 to-emerald-900 flex flex-col items-center justify-center animate-pulse">
-                <span className="text-8xl mb-2 drop-shadow-2xl">🐸</span>
-                <span className="text-green-500 font-black tracking-widest text-xl opacity-50 uppercase">Pepe is watching you</span>
+                <span className="text-4xl md:text-6xl mb-1 drop-shadow-2xl">🐸</span>
               </div>
             )}
             
-            {/* Overlay de brillo */}
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 to-transparent pointer-events-none"></div>
+            {/* Overlay de brillo sutil */}
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/20 to-transparent pointer-events-none"></div>
           </div>
         </div>
 
         {/* Title: PEPE MOOD YEAR */}
         <div className="relative overflow-visible">
-          <h1 className="text-6xl md:text-8xl font-black bg-gradient-to-r from-green-400 via-emerald-300 to-green-600 bg-clip-text text-transparent py-4 px-6 leading-tight animate-shimmer tracking-tighter">
+          <h1 className="text-5xl md:text-7xl font-black bg-gradient-to-r from-green-400 via-emerald-300 to-green-600 bg-clip-text text-transparent py-2 px-6 leading-tight animate-shimmer tracking-tighter">
             PEPE MOOD YEAR
           </h1>
         </div>
         
-        <p className="text-slate-400 font-bold tracking-[0.2em] text-sm md:text-lg mt-2 max-w-2xl mx-auto px-6 italic opacity-90 uppercase">
+        <p className="text-slate-400 font-bold tracking-[0.2em] text-xs md:text-base mt-1 max-w-2xl mx-auto px-6 italic opacity-90 uppercase">
           Tu mood diario durante {currentYear}
         </p>
       </header>
 
       {/* Today Button */}
-      <div className="relative mb-16">
+      <div className="relative mb-12">
         <button
           onClick={handleToday}
-          className="group relative inline-flex items-center gap-4 px-12 py-6 bg-gradient-to-br from-green-600 to-emerald-700 rounded-2xl text-white font-black text-2xl tracking-tight shadow-[0_15px_40px_-10px_rgba(34,197,94,0.6)] hover:shadow-[0_20px_50px_-5px_rgba(34,197,94,0.8)] hover:-translate-y-1 active:scale-95 transition-all duration-300"
+          className="group relative inline-flex items-center gap-3 px-10 py-5 bg-gradient-to-br from-green-600 to-emerald-700 rounded-xl text-white font-black text-xl tracking-tight shadow-[0_10px_30px_-5px_rgba(34,197,94,0.5)] hover:shadow-[0_15px_40px_-5px_rgba(34,197,94,0.7)] hover:-translate-y-0.5 active:scale-95 transition-all duration-300"
         >
-          <Plus strokeWidth={4} size={28} className="group-hover:rotate-90 transition-transform duration-300" /> 
+          <Plus strokeWidth={4} size={24} className="group-hover:rotate-90 transition-transform duration-300" /> 
           REGISTRAR HOY
         </button>
-        <div className="absolute -top-2 -right-2 w-6 h-6 bg-yellow-400 rounded-full animate-bounce shadow-lg shadow-yellow-400/50 border-2 border-slate-950"></div>
+        <div className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-400 rounded-full animate-bounce shadow-lg shadow-yellow-400/50 border-2 border-slate-950"></div>
       </div>
 
       <Calendar 

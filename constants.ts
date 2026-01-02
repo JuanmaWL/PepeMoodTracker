@@ -6,9 +6,9 @@ export const PEPE_BANNER = "https://i.imgur.com/KJSjEue.png";
 // Selección de emotes icónicos de Pepe (CDNs de confianza)
 export const PEPE_MOOD_IMAGES = {
   LEVEL_5: "https://media.tenor.com/tthMwilLM8UAAAAj/pepe-meme.gif", // PepeHype
-  LEVEL_4: "https://i.imgur.com/DwB961M.png", // PepeCool
-  LEVEL_3: "https://i.pinimg.com/originals/26/36/7b/26367b882196bab0348c173ec61d9268.gif", // PepeOkay
-  LEVEL_2: "https://i.pinimg.com/originals/ff/5f/83/ff5f832e40cf3ec7787d1c539bf02ce7.gif", // PepeSad
+  LEVEL_4: "https://media.tenor.com/AmwATYlrR-UAAAAj/thinkge-pepega.gif", // PepeCool
+  LEVEL_3: "https://media1.tenor.com/m/s382PAkSepsAAAAC/pepe-the-frog-pepe.gif", // PepeOkay
+  LEVEL_2: "https://media1.tenor.com/m/vbFbEEXZZvkAAAAd/pepocry-pepe.gif", // PepeSad
   LEVEL_1: "https://i.pinimg.com/originals/17/89/2a/17892a4da93c7a712a008b1c31ca1b27.gif", // PepeHands
 };
 
@@ -31,7 +31,7 @@ export const MOODS: Record<MoodLevel, MoodConfig> = {
   },
   [MoodLevel.Normal]: {
     level: MoodLevel.Normal,
-    label: "Buenoooo",
+    label: "Buenoooo...",
     subLabel: "Notbad",
     color: "#facc15",
     twColor: "bg-yellow-400",

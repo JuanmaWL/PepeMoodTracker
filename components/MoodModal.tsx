@@ -41,18 +41,18 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, initialD
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/90 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-slate-800 border border-slate-700 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="bg-slate-800 border border-slate-700 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         
         {/* Header */}
-        <div className="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-800/50">
-          <h2 className="text-xl font-black text-slate-100">
+        <div className="p-5 border-b border-slate-700 flex justify-between items-center bg-slate-800/80">
+          <h2 className="text-xl font-black text-slate-100 tracking-tight">
             {formatDateDisplay(dateStr)}
           </h2>
           <button 
             onClick={onClose} 
             className="p-2 hover:bg-slate-700 rounded-full transition-colors text-slate-400 hover:text-white"
           >
-            <X size={20} />
+            <X size={24} />
           </button>
         </div>
 
@@ -61,7 +61,7 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, initialD
           
           {/* Mood Selection */}
           <div>
-            <p className="text-slate-400 text-sm font-bold uppercase tracking-wider mb-4">Selecciona tu mood</p>
+            <p className="text-slate-400 text-xs font-black uppercase tracking-widest mb-4 opacity-70">¿Cómo ha sido el día?</p>
             <div className="space-y-3">
               {[MoodLevel.Legendary, MoodLevel.Fresco, MoodLevel.Normal, MoodLevel.Regular, MoodLevel.Fatal].map((moodLvl) => {
                 const config = MOODS[moodLvl as MoodLevel];
@@ -71,31 +71,39 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, initialD
                   <button
                     key={moodLvl}
                     onClick={() => setLevel(moodLvl as MoodLevel)}
-                    className={`w-full group relative overflow-hidden p-3 rounded-xl border-2 transition-all duration-200 flex items-center gap-4 text-left
+                    className={`w-full group relative overflow-hidden p-3 rounded-2xl border-2 transition-all duration-300 flex items-center gap-5 text-left
                       ${isSelected 
-                        ? `border-[${config.color}] bg-[${config.color}]/10` 
-                        : 'border-slate-700 hover:border-slate-500 bg-slate-800'
+                        ? 'ring-4 ring-white/10 scale-[1.02] shadow-xl z-10' 
+                        : 'hover:scale-[1.01] hover:brightness-110'
                       }
                     `}
-                    style={{ borderColor: isSelected ? config.color : undefined }}
+                    style={{ 
+                      borderColor: isSelected ? config.color : `${config.color}44`, 
+                      backgroundColor: isSelected ? `${config.color}33` : `${config.color}22`, 
+                    }}
                   >
-                    <div className="w-12 h-12 rounded-lg bg-slate-900 overflow-hidden shrink-0 border border-slate-600">
+                    {/* Larger Image Container with White Background */}
+                    <div className="w-24 h-24 rounded-xl bg-white overflow-hidden shrink-0 border-2 border-white/20 shadow-lg flex items-center justify-center">
                          <img 
                            src={config.image} 
                            alt={config.label} 
-                           className="w-full h-full object-contain p-1 opacity-80 group-hover:opacity-100 transition-opacity" 
+                           className={`w-full h-full object-contain p-1 transition-all duration-500
+                             ${isSelected ? 'scale-110' : 'opacity-90 group-hover:scale-105'}
+                           `} 
                          />
                     </div>
+
                     <div className="flex-1">
-                      <div className="font-bold text-lg leading-tight" style={{ color: isSelected ? config.color : 'white' }}>
+                      <div className="font-black text-lg leading-tight tracking-tight mb-1" style={{ color: isSelected ? '#fff' : config.color }}>
                         {config.label}
                       </div>
-                      <div className="text-xs text-slate-400 font-medium">
+                      <div className={`text-xs font-bold uppercase tracking-wider transition-colors ${isSelected ? 'text-slate-200' : 'text-slate-500'}`}>
                         {config.subLabel}
                       </div>
                     </div>
+
                     {isSelected && (
-                      <div className="absolute right-4 w-3 h-3 rounded-full shadow-[0_0_10px_currentColor]" style={{ backgroundColor: config.color }} />
+                      <div className="absolute right-4 w-4 h-4 rounded-full shadow-[0_0_15px_currentColor]" style={{ backgroundColor: config.color }} />
                     )}
                   </button>
                 );
@@ -105,12 +113,12 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, initialD
 
           {/* Note Input */}
           <div>
-            <div className="flex justify-between items-center mb-2">
-              <p className="text-slate-400 text-sm font-bold uppercase tracking-wider">Lore del día</p>
-              <span className="text-[10px] text-slate-500 font-bold uppercase italic">Opcional</span>
+            <div className="flex justify-between items-center mb-2 px-1">
+              <p className="text-slate-400 text-xs font-black uppercase tracking-widest opacity-70">Lore del día</p>
+              <span className="text-[10px] text-slate-500 font-bold uppercase italic tracking-tighter">Opcional</span>
             </div>
             <textarea
-              className="w-full h-32 bg-slate-900/50 border border-slate-700 rounded-xl p-4 text-slate-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent placeholder-slate-600 resize-none font-medium"
+              className="w-full h-32 bg-slate-900/40 border border-slate-700 rounded-2xl p-4 text-slate-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent placeholder-slate-600 resize-none font-medium transition-all"
               placeholder="¿Qué ha pasado hoy?"
               value={note}
               onChange={(e) => setNote(e.target.value)}
@@ -120,19 +128,19 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, initialD
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-slate-700 bg-slate-800">
+        <div className="p-5 border-t border-slate-700 bg-slate-800/80">
           <button
             onClick={handleSave}
             disabled={level === MoodLevel.None}
-            className={`w-full py-4 rounded-xl font-black text-lg flex items-center justify-center gap-2 transition-all shadow-lg
+            className={`w-full py-4 rounded-2xl font-black text-xl flex items-center justify-center gap-3 transition-all shadow-xl
               ${level !== MoodLevel.None 
-                ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:scale-[1.02] active:scale-[0.98] shadow-green-500/20' 
-                : 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                ? 'bg-gradient-to-br from-green-500 to-emerald-700 text-white hover:brightness-110 active:scale-[0.98] shadow-green-500/20' 
+                : 'bg-slate-700 text-slate-500 cursor-not-allowed'
               }
             `}
           >
-            <Save size={20} />
-            GUARDAR PROGRESO
+            <Save size={24} />
+            SELLAR DESTINO
           </button>
         </div>
 
