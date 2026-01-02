@@ -152,23 +152,24 @@ const handleAskPepe = async () => {
             1. Usa las etiquetas [DIAGNÓSTICO], [SOUNDTRACK] y [LOGRO].
             
             En [DIAGNÓSTICO]:
-            - Analiza el mes y defínelo con una frase lapidaria en ESPAÑOL DE ESPAÑA.
-            - Usa jerga relacionada con: "NPC", "Evento Canónico", "Prime", "Lore", "Plot Twist", "Arco de villano", "Skill issue", "Tankear", "De locos", "tocar cesped", etc.
-            - Referencias culturales: 
-              - Compáralo con una película de Harry Potter (menciona Dementores, Hogwarts Slytherin o algún personaje) o con elementos de la serie Stranger Things (como Vecna, el Upside Down, etc) o de la saga Pokémon (con cualquier mención a cualquier Pokémon o a algún personaje).
-              - Compáralo con un capítulo de relleno de un anime como Naruto o Boruto o con alguno de sus personajes.
+            - Analiza el mes y defínelo con una frase lapidaria en ESPAÑOL DE ESPAÑA, sé sarcástico y directo.
+            - Usa jerga sarcástica, inteligente e irónica relacionada con cultura POP, con jerga de Internet y Twitter y con referencias culturales (no tienes que usarlas todas para no saturar) tales como: 
+              - Universo de Harry Potter.
+              - Elementos de la serie Stranger Things (como Vecna, el Upside Down, etc)
+              - Saga Pokémon (con cualquier mención a cualquier Pokémon o a algún personaje).
+              - Anime como Naruto o Boruto o con alguno de sus personajes.
             
             En [SOUNDTRACK]:
-            - Usa frases, canciones o vibras de canciones de Linkin Park, Avril Lavigne o Taylor Swift para definir el periodo analizado.
+            - Usa frases, canciones o vibras de canciones de Linkin Park, Avril Lavigne o Taylor Swift para definir el periodo analizado de forma interesante y perspicaz. Puedes usar otros grupos como Skillet, Nickelback, Green Day, Fall Out Boy, Simple Play, Sum41, etc. Ese tipo de grupos.
             
             En [LOGRO]:
-            - Crea un "Logro Desbloqueado" sarcástico de máximo 6 palabras.
+            - Crea un "Logro Desbloqueado" sarcástico de máximo 8 palabras. No tienes que usar todas, es como máximo.
 
             REGLAS DE ORO:
-            - NO USES la palabra "Basado".
-            - PROHIBIDO: Jerga de Twitch (Pog, MonkaS, OmegaLul) y nada de Tyler Durden.
+            - No satures el mensaje con muchísimas referencias, sé elegante.
+            - PROHIBIDO: Jerga de Twitch (Pog, MonkaS, OmegaLul).
             - Tono: Como un adolescente "emo" de los 2000 que ahora es sabio, sarcástico e irónico.
-            - Longitud: Máximo 75 palabras en total. Sé denso y directo.
+            - Longitud: Máximo 80 palabras en total.
         `;
         const response = await ai.models.generateContent({
             model: 'gemini-3-flash-preview',

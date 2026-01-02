@@ -71,15 +71,14 @@ const PepeOracle: React.FC<PepeOracleProps> = ({ data }) => {
       const ai = new GoogleGenAI({ apiKey: apiKey });
       
       const prompt = `
-        ACTÚA COMO: Pepe el Sabio (Pepe the Frog). Eres un filósofo de internet, cínico pero curiosamente motivador.
-        CONTEXTO: Vas a dar un "Veredicto de Vida" basado en los últimos días del usuario.
+        ACTÚA COMO: Pepe el Oráculo (Pepe the Frog). Eres un filósofo de internet, cínico pero curiosamente motivador, sarcástico y gracioso.
+        CONTEXTO: Vas a dar un "Veredicto de Vida", un oráculo futuro basado en los últimos días del usuario.
         LORE RECIENTE: ${JSON.stringify(recent)}
         
         REGLAS:
-        1. Sé breve (máximo 50 palabras).
-        2. Usa español de internet pero muy sabio (jerga: lince, crack, épico, compañero... etc).
-        3. NO USES LA PALABRA "BASADO" bajo ninguna circunstancia.
-        4. Si el mood es malo, sé sarcásticamente comprensivo. Si es bueno, di que está en su "Prime".
+        1. Sé breve (máximo 60 palabras).
+        2. Usa jerga mágica y de oráculo, sabia e inteligente, como si fueses Albus Dumbledore o el Oráculo de Delfos prediciendo el futuro.
+        4. Si el mood es malo, sé sarcásticamente comprensivo. Si es bueno, sé bromista.
       `;
 
       const response = await ai.models.generateContent({
@@ -156,7 +155,7 @@ const PepeOracle: React.FC<PepeOracleProps> = ({ data }) => {
                 </div>
               ) : (
                 <p className="text-slate-400 text-lg md:text-xl font-medium opacity-70 max-w-lg leading-relaxed">
-                  ¿Ansías conocer tu destino, compañero? El Oráculo Supremo de Pepe escudriña tu lore para dictar sentencia divina.
+                  ¿Ansías conocer tu destino? El Oráculo Supremo de Pepe escudriña tu lore para dictar sentencia divina.
                 </p>
               )}
             </div>

@@ -17,7 +17,7 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({ onExport, onStats, onReset,
         title="Copia de seguridad"
       >
         <Download size={20} className="group-hover:-translate-y-1 transition-transform" />
-        <span className="hidden md:block text-[10px] font-bold uppercase tracking-wider">Copia</span>
+        <span className="hidden md:block text-[10px] font-bold uppercase tracking-wider">Guardar</span>
       </button>
 
       <button 
@@ -35,7 +35,7 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({ onExport, onStats, onReset,
         title="Estadísticas"
       >
         <BarChart2 size={24} className="group-hover:-translate-y-1 transition-transform" />
-        <span className="hidden md:block text-[10px] font-bold uppercase tracking-wider">Stats</span>
+        <span className="hidden md:block text-[10px] font-bold uppercase tracking-wider">Estadísticas</span>
       </button>
 
       <button 
