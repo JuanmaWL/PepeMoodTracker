@@ -140,7 +140,7 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, initialD
             `}
           >
             <Save size={24} />
-            SELLAR DESTINO
+            GUARDAR DÍA
           </button>
         </div>
 

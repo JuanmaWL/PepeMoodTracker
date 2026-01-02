@@ -8,25 +8,41 @@ interface CalendarProps {
   currentYear: number;
 }
 
+const WEEK_DAYS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+
 const Calendar: React.FC<CalendarProps> = ({ yearData, onDayClick, currentYear }) => {
   
   return (
     <div className="w-full max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 p-4 pb-32">
       {MONTHS.map((monthName, mIndex) => {
         const daysInMonth = new Date(currentYear, mIndex + 1, 0).getDate();
-        // Calculate offset for the first day of the month to align correctly in grid (optional, but looks nice)
-        // For simplicity in this specific "Habit Tracker" style, usually just a flex grid of squares is preferred over a real calendar alignment.
-        // We will stick to the 'GitHub contributions' style block grid as per original reference.
+        const firstDayOfMonth = new Date(currentYear, mIndex, 1).getDay();
+        // Convert JS day (0=Sun, 1=Mon...) to Spanish week (0=Mon, 6=Sun)
+        const adjustedFirstDay = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
 
         const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
         return (
-          <div key={monthName} className="bg-slate-800/50 rounded-2xl p-5 border border-slate-700/50 shadow-sm hover:border-slate-600 transition-colors">
-            <h3 className="text-slate-400 font-black text-xs uppercase tracking-[0.2em] mb-4 text-center">
+          <div key={monthName} className="bg-slate-800/40 backdrop-blur-sm rounded-2xl p-5 border border-slate-700/50 shadow-lg hover:border-slate-500/50 transition-all duration-300">
+            <h3 className="text-slate-300 font-black text-sm uppercase tracking-[0.2em] mb-4 text-center">
               {monthName}
             </h3>
             
+            {/* Week day headers */}
+            <div className="grid grid-cols-7 gap-2 mb-2">
+              {WEEK_DAYS.map(wd => (
+                <div key={wd} className="text-[10px] font-black text-slate-500 text-center uppercase opacity-80">
+                  {wd}
+                </div>
+              ))}
+            </div>
+
             <div className="grid grid-cols-7 gap-2">
+              {/* Empty slots for month start alignment */}
+              {Array.from({ length: adjustedFirstDay }).map((_, i) => (
+                <div key={`empty-${i}`} className="aspect-square" />
+              ))}
+
               {days.map(d => {
                 const dateStr = `${currentYear}-${String(mIndex + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
                 const entry = yearData[dateStr];
@@ -40,16 +56,16 @@ const Calendar: React.FC<CalendarProps> = ({ yearData, onDayClick, currentYear }
                     onClick={() => onDayClick(dateStr)}
                     className={`
                       aspect-square rounded-md relative group transition-all duration-300
-                      ${moodLevel === MoodLevel.None ? 'bg-slate-700/50 hover:bg-slate-600' : ''}
-                      ${moodLevel === MoodLevel.Legendary ? 'animate-pulse hover:animate-none shadow-[0_0_10px_rgba(34,197,94,0.4)]' : ''}
+                      ${moodLevel === MoodLevel.None ? 'bg-slate-700/30 hover:bg-slate-600/50' : ''}
+                      ${moodLevel === MoodLevel.Legendary ? 'animate-pulse hover:animate-none shadow-[0_0_12px_rgba(34,197,94,0.4)]' : ''}
                     `}
                     style={{ 
                         backgroundColor: moodLevel !== MoodLevel.None ? config.color : undefined,
                     }}
                     title={`${dateStr}${entry?.note ? ': ' + entry.note : ''}`}
                   >
-                    {/* Hover tooltip effect - Translated to Spanish */}
-                    <div className="opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-slate-900 text-white text-[10px] py-1 px-2 rounded pointer-events-none whitespace-nowrap z-10 border border-slate-700 shadow-xl">
+                    {/* Hover tooltip effect */}
+                    <div className="opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-slate-900 text-white text-[10px] py-1 px-2 rounded pointer-events-none whitespace-nowrap z-10 border border-slate-700 shadow-2xl transition-opacity">
                       Día {d}
                     </div>
 

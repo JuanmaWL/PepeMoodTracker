@@ -25,7 +25,7 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({ onExport, onStats, onReset 
         title="Ver Estadísticas"
       >
         <BarChart2 size={24} className="group-hover:-translate-y-1 transition-transform duration-300" />
-        <span className="text-[10px] font-bold uppercase tracking-wider">Stats</span>
+        <span className="text-[10px] font-bold uppercase tracking-wider">Estadísticas</span>
       </button>
 
       <button 

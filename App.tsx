@@ -68,14 +68,14 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col items-center min-h-screen bg-slate-950 pb-20 overflow-x-hidden text-slate-100">
+    <div className="flex flex-col items-center min-h-screen pb-20 overflow-x-hidden text-slate-100 relative">
       
       {/* Header Section */}
       <header className="mt-8 mb-6 text-center animate-in slide-in-from-top duration-700 flex flex-col items-center relative w-full">
         
         {/* Pepe Banner Image Container - Ajustado a formato cuadrado para imagen 1:1 */}
         <div className="w-full max-w-[12rem] md:max-w-[16rem] px-4 mb-6 drop-shadow-[0_15px_40px_rgba(34,197,94,0.35)] pepe-float">
-          <div className="relative bg-slate-900 rounded-[2rem] md:rounded-[3rem] overflow-hidden border-2 border-slate-800/50 shadow-2xl aspect-square flex items-center justify-center group">
+          <div className="relative bg-slate-900/60 backdrop-blur-sm rounded-[2rem] md:rounded-[3rem] overflow-hidden border-2 border-slate-800/50 shadow-2xl aspect-square flex items-center justify-center group">
             
             {!bannerError ? (
               <img 
@@ -133,6 +133,13 @@ const App: React.FC = () => {
         onDayClick={handleDayClick} 
         currentYear={currentYear} 
       />
+
+      {/* developed by Juasmio */}
+      <footer className="mt-auto py-10 opacity-30 hover:opacity-100 transition-opacity duration-500">
+        <p className="text-xs font-black tracking-[0.3em] uppercase text-slate-400 flex items-center gap-2">
+          developed by <span className="text-green-500">Juasmio</span>
+        </p>
+      </footer>
 
       <FloatingMenu 
         onExport={handleExport}
