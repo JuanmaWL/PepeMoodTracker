@@ -8,7 +8,7 @@ import PepeOracle from './components/PepeOracle';
 import Particles from './components/Particles';
 import { YearData, DayData, MoodLevel } from './types';
 import { STORAGE_KEY, PEPE_BANNER } from './constants';
-import { Plus, Flame } from 'lucide-react';
+import { Plus, Flame, Trash2, X, AlertTriangle } from 'lucide-react';
 
 const APP_TITLES = [
   "Pepe Tracker 2026",
@@ -31,6 +31,7 @@ const App: React.FC = () => {
   const [isMoodModalOpen, setIsMoodModalOpen] = useState(false);
   const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   // Lógica de Racha (Streak)
   const streak = useMemo(() => {
@@ -44,7 +45,6 @@ const App: React.FC = () => {
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = yesterday.toISOString().split('T')[0];
 
-    // Si no ha registrado hoy ni ayer, la racha es 0
     if (!yearData[todayStr] && !yearData[yesterdayStr]) return 0;
 
     let checkDate = yearData[todayStr] ? today : yesterday;
@@ -101,6 +101,16 @@ const App: React.FC = () => {
     setYearData(prev => ({ ...prev, [selectedDate]: data }));
   };
 
+  const handleDeleteDay = (dateToDelete: string) => {
+    if (!dateToDelete) return;
+    setYearData(prev => {
+      const { [dateToDelete]: _, ...rest } = prev;
+      return rest;
+    });
+    setIsMoodModalOpen(false);
+    setSelectedDate(null);
+  };
+
   const handleToday = () => {
     const today = new Date();
     const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
@@ -118,9 +128,8 @@ const App: React.FC = () => {
   };
 
   const handleReset = () => {
-    if (window.confirm("Pepe pregunta: ¿Seguro que quieres borrar tus recuerdos?")) {
-      setYearData({});
-    }
+    setYearData({});
+    setShowResetConfirm(false);
   };
 
   return (
@@ -128,7 +137,6 @@ const App: React.FC = () => {
       <Particles />
       
       <header className="mt-8 mb-6 text-center flex flex-col items-center relative w-full px-4">
-        {/* Streak Display - Reposicionado para evitar solapamiento en móvil */}
         {streak > 0 && (
           <div className="mb-4 lg:absolute lg:top-0 lg:right-12 flex items-center gap-2 bg-slate-900/60 backdrop-blur-md border border-orange-500/40 px-5 py-2.5 rounded-full shadow-[0_0_20px_rgba(249,115,22,0.2)] animate-in fade-in slide-in-from-top duration-700 z-30">
             <Flame size={20} className="text-orange-500 fill-orange-500 animate-pulse" />
@@ -177,7 +185,7 @@ const App: React.FC = () => {
       <FloatingMenu 
         onExport={handleExport}
         onStats={() => setIsStatsModalOpen(true)}
-        onReset={handleReset}
+        onReset={() => setShowResetConfirm(true)}
         onSearch={() => setIsSearchModalOpen(true)}
       />
 
@@ -185,6 +193,7 @@ const App: React.FC = () => {
         isOpen={isMoodModalOpen}
         onClose={() => setIsMoodModalOpen(false)}
         onSave={handleSaveDay}
+        onDelete={handleDeleteDay}
         dateStr={selectedDate || ''}
         initialData={selectedDate ? yearData[selectedDate] || { level: MoodLevel.None, note: '' } : { level: MoodLevel.None, note: '' }}
       />
@@ -204,6 +213,37 @@ const App: React.FC = () => {
           setIsMoodModalOpen(true);
         }}
       />
+
+      {/* Custom Reset Confirmation Modal */}
+      {showResetConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-xl animate-in fade-in duration-300">
+          <div className="bg-slate-900 border-2 border-red-500/50 w-full max-w-md rounded-[2.5rem] shadow-[0_0_50px_rgba(239,68,68,0.2)] overflow-hidden p-8 flex flex-col items-center text-center space-y-6">
+            <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center text-red-500 animate-pulse">
+              <AlertTriangle size={48} />
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-black text-white uppercase tracking-tighter">¿Borrar todo el lore?</h2>
+              <p className="text-slate-400 text-sm font-medium leading-relaxed">
+                Pepe pregunta: ¿Seguro que quieres borrar todos tus recuerdos? Esta acción no se puede deshacer.
+              </p>
+            </div>
+            <div className="flex flex-col w-full gap-3 pt-4">
+              <button
+                onClick={handleReset}
+                className="w-full py-4 bg-red-600 hover:bg-red-500 text-white font-black uppercase tracking-[0.2em] rounded-2xl transition-all shadow-lg shadow-red-900/40 flex items-center justify-center gap-2"
+              >
+                <Trash2 size={18} /> SÍ, BORRAR TODO
+              </button>
+              <button
+                onClick={() => setShowResetConfirm(false)}
+                className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-slate-300 font-black uppercase tracking-[0.2em] rounded-2xl transition-all border border-slate-700"
+              >
+                CANCELAR
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

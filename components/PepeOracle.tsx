@@ -11,11 +11,11 @@ interface PepeOracleProps {
 const ORACLE_FALLBACKS = [
   "Necesito más lore para juzgarte, lince. Registra un par de días más.",
   "Poco lore veo aquí, compañero. Vuelve cuando hayas vivido algo épico.",
-  "¿Solo esto, titán? Mi sabiduría requiere al menos dos fragmentos de tu historia.",
+  "¿Solo esto? Mi sabiduría requiere al menos dos fragmentos de tu historia.",
   "El archivo está vacío, compañero. Dale chicha al diario para que Pepe hable.",
-  "Falta contexto, titán. Registra más días o el Oráculo seguirá AFK.",
+  "Falta contexto. Registra más días o el Oráculo seguirá AFK.",
   "No puedo leer tu destino con tan poco material, compañero. Escribe más.",
-  "Tu vida es un servidor vacío ahora mismo, titán. Necesito datos.",
+  "Tu vida es un servidor vacío ahora mismo. Necesito datos.",
   "Compañero, el Oráculo no hace milagros sin días de registro."
 ];
 
@@ -52,16 +52,12 @@ const PepeOracle: React.FC<PepeOracleProps> = ({ data }) => {
     if (loading) return;
     
     const recent = getRecentLore();
+    const getRandomFallback = () => ORACLE_FALLBACKS[Math.floor(Math.random() * ORACLE_FALLBACKS.length)];
+
     if (recent.length < 2) {
-      const randomFallback = ORACLE_FALLBACKS[Math.floor(Math.random() * ORACLE_FALLBACKS.length)];
-      setAdvice(randomFallback);
+      setAdvice(getRandomFallback());
       setIsMagicActive(true);
       setTimeout(() => setIsMagicActive(false), 500);
-      return;
-    }
-
-    if (!process.env.API_KEY) {
-      setAdvice("Compañero, falta la energía mística (API Key) para conectar con el servidor central.");
       return;
     }
 
@@ -77,7 +73,7 @@ const PepeOracle: React.FC<PepeOracleProps> = ({ data }) => {
         
         REGLAS:
         1. Sé breve (máximo 50 palabras).
-        2. Usa español de internet (jerga: lince, crack, Canon, Épico, plot twist, compañero, figura, titán).
+        2. Usa español de internet pero muy sabio (jerga: lince, crack, épico, compañero... etc).
         3. NO USES LA PALABRA "BASADO" bajo ninguna circunstancia.
         4. Si el mood es malo, sé sarcásticamente comprensivo. Si es bueno, di que está en su "Prime".
       `;
@@ -101,15 +97,11 @@ const PepeOracle: React.FC<PepeOracleProps> = ({ data }) => {
       <div className={`bg-slate-950/80 backdrop-blur-3xl border border-indigo-500/30 rounded-[4rem] p-10 md:p-16 shadow-[0_0_80px_rgba(99,102,241,0.1)] relative overflow-hidden group transition-all duration-1000
         ${isMagicActive ? 'magic-channeling shadow-[0_0_120px_rgba(167,139,250,0.5)] ring-4 ring-purple-400/50' : 'hover:shadow-[0_0_100px_rgba(99,102,241,0.2)]'}
       `}>
-        {/* Luces místicas ambientales */}
         <div className="absolute -top-24 -left-24 w-96 h-96 bg-purple-600/10 blur-[120px] rounded-full animate-pulse"></div>
         <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-indigo-600/10 blur-[120px] rounded-full animate-pulse" style={{ animationDelay: '3s' }}></div>
 
         <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20 relative z-10">
-          
-          {/* Imagen del Oráculo con marco místico y PARTÍCULAS VIOLETAS */}
           <div className="shrink-0 relative">
-            {/* Partículas violetas estáticas (animadas) */}
             <div className="absolute inset-0 z-0">
                <div className="absolute -top-4 left-1/4 w-3 h-3 bg-purple-500 rounded-full blur-[2px] animate-bounce opacity-60"></div>
                <div className="absolute top-1/2 -right-6 w-2 h-2 bg-violet-400 rounded-full blur-[1px] animate-pulse opacity-80" style={{ animationDelay: '1s' }}></div>
@@ -135,7 +127,6 @@ const PepeOracle: React.FC<PepeOracleProps> = ({ data }) => {
               )}
             </div>
             
-            {/* Medallón flotante */}
             <div className="absolute -bottom-4 -right-2 bg-gradient-to-br from-violet-600 to-indigo-700 p-4 rounded-3xl shadow-2xl border-2 border-purple-400/50 z-20 animate-bounce">
               <Sparkles size={24} className="text-white" />
             </div>
@@ -143,7 +134,7 @@ const PepeOracle: React.FC<PepeOracleProps> = ({ data }) => {
           
           <div className="flex-1 text-center lg:text-left space-y-8">
             <div className="space-y-4">
-              <h3 className="text-5xl md:text-7xl font-black uppercase tracking-tighter leading-[0.9] bg-gradient-to-r from-violet-300 via-indigo-200 to-purple-100 bg-clip-text text-transparent drop-shadow-2xl transition-all duration-1000 group-hover:tracking-normal">
+              <h3 className="text-5xl md:text-7xl font-black uppercase tracking-tighter leading-[1.2] pt-6 bg-gradient-to-r from-violet-300 via-indigo-200 to-purple-100 bg-clip-text text-transparent drop-shadow-2xl transition-all duration-1000 group-hover:tracking-normal">
                 Oráculo Supremo
               </h3>
               <div className="flex items-center justify-center lg:justify-start gap-4 text-purple-400/70 font-black text-sm uppercase tracking-[0.5em]">
@@ -189,8 +180,6 @@ const PepeOracle: React.FC<PepeOracleProps> = ({ data }) => {
                     <span>Dictar Veredicto</span>
                   </>
                 )}
-                
-                {/* Shimmer effect */}
                 {!loading && (
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_2s_infinite] pointer-events-none"></div>
                 )}

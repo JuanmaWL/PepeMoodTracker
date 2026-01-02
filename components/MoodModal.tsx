@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { X, Save, MessageSquareText } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Save, MessageSquareText, Trash2, Check, RotateCcw } from 'lucide-react';
 import { MOODS } from '../constants';
 import { MoodLevel, DayData } from '../types';
 
@@ -7,6 +7,7 @@ interface MoodModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (data: DayData) => void;
+  onDelete: (dateStr: string) => void;
   initialData: DayData;
   dateStr: string;
 }
@@ -24,18 +25,17 @@ const SAVE_PHRASES = [
   "ESTABLECER CANON"
 ];
 
-const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, initialData, dateStr }) => {
+const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete, initialData, dateStr }) => {
   const [level, setLevel] = useState<MoodLevel>(MoodLevel.None);
   const [note, setNote] = useState('');
-  
-  // Seleccionar una frase aleatoria cada vez que el modal se abre
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [buttonText, setButtonText] = useState(SAVE_PHRASES[0]);
 
   useEffect(() => {
     if (isOpen) {
       setLevel(initialData.level || MoodLevel.None);
       setNote(initialData.note || '');
-      // Cambiar el texto del botón al abrir
+      setIsConfirmingDelete(false);
       const randomPhrase = SAVE_PHRASES[Math.floor(Math.random() * SAVE_PHRASES.length)];
       setButtonText(randomPhrase);
     }
@@ -46,6 +46,11 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, initialD
   const handleSave = () => {
     onSave({ level, note });
     onClose();
+  };
+
+  const handleConfirmDelete = () => {
+    onDelete(dateStr);
+    setIsConfirmingDelete(false);
   };
 
   const formatDateDisplay = (isoDate: string) => {
@@ -63,6 +68,8 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, initialD
     MoodLevel.Regular,
     MoodLevel.Fatal
   ];
+
+  const hasExistingData = initialData.level !== MoodLevel.None || (initialData.note && initialData.note.trim() !== "");
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md animate-in fade-in duration-300">
@@ -103,13 +110,15 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, initialD
                 return (
                   <button
                     key={moodLvl}
+                    disabled={isConfirmingDelete}
                     onClick={() => setLevel(moodLvl as MoodLevel)}
                     className={`group relative overflow-hidden p-4 rounded-[1.5rem] border-2 transition-all duration-300 flex items-center gap-4 text-left
                       ${isLastFull ? 'md:col-span-2' : ''}
                       ${isSelected 
                         ? 'ring-4 ring-white/5 scale-[1.02] shadow-xl z-10' 
-                        : 'hover:scale-[1.01] hover:brightness-110'
+                        : 'hover:scale-[1.01] hover:brightness-110 opacity-70 hover:opacity-100'
                       }
+                      ${isConfirmingDelete ? 'blur-[1px] grayscale opacity-50 pointer-events-none' : ''}
                     `}
                     style={{ 
                       borderColor: isSelected ? config.color : `${config.color}33`, 
@@ -145,7 +154,7 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, initialD
           </div>
 
           {/* Note Input */}
-          <div className="animate-in slide-in-from-bottom duration-500 delay-150">
+          <div className={`animate-in slide-in-from-bottom duration-500 delay-150 ${isConfirmingDelete ? 'opacity-30 pointer-events-none' : ''}`}>
             <div className="flex justify-between items-center mb-4 px-1">
               <div className="flex items-center gap-2">
                 <MessageSquareText size={18} className="text-slate-500" />
@@ -164,22 +173,58 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, initialD
         </div>
 
         {/* Footer */}
-        <div className="p-7 border-t border-slate-800 bg-slate-900/80 backdrop-blur-md">
-          <button
-            onClick={handleSave}
-            disabled={level === MoodLevel.None}
-            className={`w-full py-5 rounded-[1.5rem] font-black text-lg md:text-xl flex justify-center items-center transition-all shadow-2xl
-              ${level !== MoodLevel.None 
-                ? 'bg-gradient-to-br from-green-500 to-emerald-700 text-white hover:brightness-110 active:scale-[0.98] shadow-green-500/30' 
-                : 'bg-slate-800 text-slate-600 cursor-not-allowed opacity-50'
-              }
-            `}
-          >
-            <div className="flex items-center gap-3 px-4 text-center">
-              <Save size={24} className="shrink-0" />
-              <span className="leading-tight">{buttonText}</span>
+        <div className="p-7 border-t border-slate-800 bg-slate-900/80 backdrop-blur-md flex flex-col sm:flex-row gap-4 relative">
+          
+          {isConfirmingDelete ? (
+            <div className="w-full flex items-center justify-between gap-4 animate-in fade-in zoom-in duration-300">
+              <div className="flex-1 text-red-400 font-black text-xs uppercase tracking-wider">
+                ¿Borrar este lore para siempre?
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setIsConfirmingDelete(false)}
+                  className="px-6 py-4 rounded-2xl bg-slate-800 text-slate-300 font-black text-sm uppercase tracking-widest hover:bg-slate-700 transition-all border border-slate-700"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleConfirmDelete}
+                  className="px-8 py-4 rounded-2xl bg-red-600 text-white font-black text-sm uppercase tracking-widest hover:bg-red-500 transition-all shadow-lg shadow-red-900/40 flex items-center gap-2"
+                >
+                  <Trash2 size={16} /> Sí, borrar
+                </button>
+              </div>
             </div>
-          </button>
+          ) : (
+            <>
+              {hasExistingData && (
+                <button
+                  onClick={() => setIsConfirmingDelete(true)}
+                  className="flex-none px-6 py-5 rounded-[1.5rem] bg-slate-800 hover:bg-red-900/40 text-slate-400 hover:text-red-400 font-black transition-all flex items-center justify-center gap-2 border border-slate-700"
+                  title="Borrar registro"
+                >
+                  <Trash2 size={24} />
+                  <span className="sm:hidden lg:inline text-sm uppercase tracking-wider">Borrar día</span>
+                </button>
+              )}
+              
+              <button
+                onClick={handleSave}
+                disabled={level === MoodLevel.None}
+                className={`flex-1 py-5 rounded-[1.5rem] font-black text-lg md:text-xl flex justify-center items-center transition-all shadow-2xl
+                  ${level !== MoodLevel.None 
+                    ? 'bg-gradient-to-br from-green-500 to-emerald-700 text-white hover:brightness-110 active:scale-[0.98] shadow-green-500/30' 
+                    : 'bg-slate-800 text-slate-600 cursor-not-allowed opacity-50'
+                  }
+                `}
+              >
+                <div className="flex items-center gap-3 px-4 text-center">
+                  <Save size={24} className="shrink-0" />
+                  <span className="leading-tight">{buttonText}</span>
+                </div>
+              </button>
+            </>
+          )}
         </div>
 
       </div>
