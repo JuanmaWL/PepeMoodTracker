@@ -14,19 +14,19 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({ onExport, onStats, onReset,
       <button 
         onClick={onExport}
         className="group flex flex-col items-center gap-1 text-slate-400 hover:text-green-400 transition-colors"
-        title="Backup"
+        title="Copia de seguridad"
       >
         <Download size={20} className="group-hover:-translate-y-1 transition-transform" />
-        <span className="hidden md:block text-[10px] font-bold uppercase tracking-wider">Backup</span>
+        <span className="hidden md:block text-[10px] font-bold uppercase tracking-wider">Copia</span>
       </button>
 
       <button 
         onClick={onSearch}
         className="group flex flex-col items-center gap-1 text-slate-400 hover:text-yellow-400 transition-colors"
-        title="Buscar Lore"
+        title="Buscar en el Lore"
       >
         <Search size={20} className="group-hover:-translate-y-1 transition-transform" />
-        <span className="hidden md:block text-[10px] font-bold uppercase tracking-wider">Lore</span>
+        <span className="hidden md:block text-[10px] font-bold uppercase tracking-wider">Buscar</span>
       </button>
 
       <button 
@@ -41,10 +41,10 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({ onExport, onStats, onReset,
       <button 
         onClick={onReset}
         className="group flex flex-col items-center gap-1 text-slate-400 hover:text-red-500 transition-colors"
-        title="Reset"
+        title="Borrar todo"
       >
         <RotateCcw size={20} className="group-hover:rotate-180 transition-transform duration-500" />
-        <span className="hidden md:block text-[10px] font-bold uppercase tracking-wider">Reset</span>
+        <span className="hidden md:block text-[10px] font-bold uppercase tracking-wider">Borrar</span>
       </button>
     </div>
   );

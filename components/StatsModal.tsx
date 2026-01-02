@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { X, Sparkles } from 'lucide-react';
+import { X, Sparkles, Music, Trophy, Brain, Quote, Loader2 } from 'lucide-react';
 import { YearData, MoodLevel, DayData } from '../types';
 import { MOODS, MONTHS } from '../constants';
 import Heatmap from './Heatmap';
@@ -59,19 +59,54 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
     return { totalDays, average, pieData, lineData: filteredLineData, validEntries };
   }, [data, selectedMonth]);
 
-  const renderFormattedText = (text: string) => {
+  const parseAiResponse = (text: string) => {
     if (!text) return null;
-    const parts = text.split(/(\*\*[^*]+\*\*)/g);
-    return parts.map((part, index) => {
-      if (part.startsWith('**') && part.endsWith('**')) {
-        return (
-          <strong key={index} className="font-black text-white bg-indigo-500/30 px-1 rounded shadow-sm">
-            {part.slice(2, -2)}
-          </strong>
-        );
-      }
-      return part;
-    });
+    
+    // Buscar secciones usando etiquetas robustas
+    const diagMatch = text.match(/\[DIAGNÓSTICO\](.*?)(\[|$)/s);
+    const soundMatch = text.match(/\[SOUNDTRACK\](.*?)(\[|$)/s);
+    const achievementMatch = text.match(/\[LOGRO\](.*?)(\[|$)/s);
+
+    const diagnosis = diagMatch ? diagMatch[1].trim() : text;
+    const soundtrack = soundMatch ? soundMatch[1].trim() : "";
+    const achievement = achievementMatch ? achievementMatch[1].trim() : "";
+
+    const formatBold = (str: string) => {
+      const parts = str.split(/(\*\*[^*]+\*\*)/g);
+      return parts.map((part, index) => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+          return <strong key={index} className="text-white font-black">{part.slice(2, -2)}</strong>;
+        }
+        return part;
+      });
+    };
+
+    return (
+      <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-700">
+        <div className="bg-slate-900/40 p-4 rounded-2xl border border-indigo-500/20 relative">
+          <Quote size={16} className="text-indigo-500/50 absolute top-3 left-3" />
+          <p className="text-indigo-100 text-sm leading-relaxed pl-6 italic font-medium">
+            {formatBold(diagnosis)}
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          {soundtrack && (
+            <div className="flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 px-3 py-2 rounded-xl">
+              <Music size={14} className="text-indigo-400" />
+              <span className="text-[10px] font-black text-indigo-300 uppercase tracking-wider">{soundtrack}</span>
+            </div>
+          )}
+          
+          {achievement && (
+            <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/20 px-3 py-2 rounded-xl group transition-all hover:bg-green-500/20">
+              <Trophy size={14} className="text-green-400 group-hover:scale-125 transition-transform" />
+              <span className="text-[10px] font-black text-green-300 uppercase tracking-wider">{achievement}</span>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   };
 
 const handleAskPepe = async () => {
@@ -105,25 +140,38 @@ const handleAskPepe = async () => {
         ).join("\n");
 
         const prompt = `
-        ACTÚA COMO: Pepe the Frog. Sabio, cínico, irónico. Un observador que dice la verdad sin filtros.
-        CONTEXTO: Analizas el diario ${filterText}.
-        DATOS: ${summaryText}
+            ACTÚA COMO: Pepe the Frog. Sabio, cínico, un poco melancólico pero divertido. Un observador que dice la verdad sin filtros.
+            CONTEXTO: Estás analizando el diario personal de un humano: ${filterText}.
+            DATOS ESTADÍSTICOS: ${summaryText}
 
-        Misión:
-        1. Haz un resumen del mes/periodo con humor ácido en ESPAÑOL.
-        2. Usa jerga obligatoria: "NPC", "Canon", "Prime", "Lore", "Plot Twist", "Arco de redención".
-        3. NO USES LA PALABRA "BASADO" bajo ninguna circunstancia.
-        4. PROHIBIDO: Jerga de Twitch (nada de PogChamp o MonkaS).
-        5. Integra referencias sarcásticas de cultura pop: Naruto, Boruto, Stranger Things, Taylor Swift.
-        6. Sé breve (máx 60 palabras).
+            Misión (RESPUESTA ESTRUCTURADA OBLIGATORIA):
+            1. Usa las etiquetas [DIAGNÓSTICO], [SOUNDTRACK] y [LOGRO].
+            
+            En [DIAGNÓSTICO]:
+            - Analiza el mes y defínelo con una frase lapidaria en ESPAÑOL DE ESPAÑA.
+            - Usa jerga relacionada con: "NPC", "Evento Canónico", "Prime", "Lore", "Plot Twist", "Arco de villano", "Skill issue", "Tankear", "De locos", "tocar cesped", etc.
+            - Referencias culturales: 
+              - Compáralo con una película de Harry Potter (menciona Dementores, Hogwarts Slytherin o algún personaje) o con elementos de la serie Stranger Things (como Vecna, el Upside Down, etc) o de la saga Pokémon (con cualquier mención a cualquier Pokémon o a algún personaje).
+              - Compáralo con un capítulo de relleno de un anime como Naruto o Boruto o con alguno de sus personajes.
+            
+            En [SOUNDTRACK]:
+            - Usa frases, canciones o vibras de canciones de Linkin Park, Avril Lavigne o Taylor Swift para definir el periodo analizado.
+            
+            En [LOGRO]:
+            - Crea un "Logro Desbloqueado" sarcástico de máximo 6 palabras (no hay que usarlas todas).
+
+            REGLAS DE ORO:
+            - NO USES la palabra "Basado".
+            - PROHIBIDO: Jerga de Twitch (Pog, MonkaS, OmegaLul) y nada de Tyler Durden.
+            - Tono: Como un adolescente "emo" de los 2000 que ahora es sabio, sarcástico e irónico.
+            - Longitud: Máximo 75 palabras en total. Sé denso y directo.
         `;
-
         const response = await ai.models.generateContent({
             model: 'gemini-3-flash-preview',
             contents: prompt,
         });
 
-        setAiAnalysis(response.text || "Pepe no tiene palabras para esto.");
+        setAiAnalysis(response.text || "[DIAGNÓSTICO] Pepe se ha quedado sin palabras ante semejante lore.");
     } catch (e) {
         setErrorAi("Pepe está AFK (Error API).");
     } finally {
@@ -152,7 +200,9 @@ const handleAskPepe = async () => {
           ) : (
             <>
               <div className="bg-slate-900/40 p-5 rounded-3xl border border-slate-700">
-                <h3 className="text-slate-400 font-black text-xs uppercase tracking-widest mb-4">Mapa de Calor Anual</h3>
+                <h3 className="text-slate-400 font-black text-xs uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <Brain size={14} className="text-slate-500" /> Mapa de Calor Anual
+                </h3>
                 <Heatmap data={data} year={new Date().getFullYear()} />
               </div>
 
@@ -168,39 +218,47 @@ const handleAskPepe = async () => {
                   </span>
                 </div>
                 <div className="md:col-span-2 bg-indigo-900/20 p-5 rounded-2xl border border-indigo-500/30">
-                  <div className="flex justify-between items-start mb-2">
+                  <div className="flex justify-between items-start mb-4">
                     <span className="text-indigo-300 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
-                      <Sparkles size={12} /> Juicio Mensual
+                      <Sparkles size={12} className="text-indigo-400 animate-pulse" /> Juicio de Pepe
                     </span>
                     <select 
                       value={selectedMonth} 
                       onChange={(e) => setSelectedMonth(e.target.value === 'all' ? 'all' : parseInt(e.target.value))}
-                      className="bg-slate-900 text-slate-300 text-[10px] font-bold py-1 px-2 rounded-lg border border-slate-700 outline-none"
+                      className="bg-slate-900 text-slate-300 text-[10px] font-bold py-1 px-2 rounded-lg border border-slate-700 outline-none hover:border-indigo-500/50 transition-colors"
                     >
                       <option value="all">Todo el año</option>
                       {MONTHS.map((m, i) => <option key={m} value={i}>{m}</option>)}
                     </select>
                   </div>
-                  {aiAnalysis ? (
-                    <p className="text-indigo-100 text-sm italic leading-relaxed">
-                      "{renderFormattedText(aiAnalysis)}"
-                    </p>
+                  
+                  {loadingAi ? (
+                    <div className="h-24 flex flex-col items-center justify-center gap-2 text-indigo-400">
+                      <Loader2 size={24} className="animate-spin" />
+                      <span className="text-[10px] font-black uppercase tracking-widest animate-pulse">Consultando el Lore...</span>
+                    </div>
+                  ) : aiAnalysis ? (
+                    parseAiResponse(aiAnalysis)
                   ) : (
-                    <button 
-                      onClick={handleAskPepe} 
-                      disabled={loadingAi}
-                      className="w-full mt-2 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all disabled:opacity-50"
-                    >
-                      {loadingAi ? "Invocando a Pepe..." : "Pedir análisis"}
-                    </button>
+                    <div className="py-2">
+                       <button 
+                        onClick={handleAskPepe} 
+                        className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20"
+                      >
+                        <Brain size={16} /> Obtener Veredicto de Pepe
+                      </button>
+                      <p className="text-[9px] text-slate-500 text-center mt-3 uppercase font-bold tracking-tighter opacity-60">
+                        Pepe analizará tus notas para darte un juicio basado en el lore
+                      </p>
+                    </div>
                   )}
-                  {errorAi && <p className="text-red-400 text-[10px] mt-2">{errorAi}</p>}
+                  {errorAi && <p className="text-red-400 text-[10px] mt-2 font-bold">{errorAi}</p>}
                 </div>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 bg-slate-900/50 p-6 rounded-3xl border border-slate-700">
-                  <h3 className="text-slate-400 font-black text-xs uppercase mb-6 tracking-widest">Evolución</h3>
+                  <h3 className="text-slate-400 font-black text-xs uppercase mb-6 tracking-widest">Evolución de Vibra</h3>
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                       <LineChart data={stats.lineData}>
