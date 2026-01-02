@@ -1,15 +1,15 @@
 import { MoodConfig, MoodLevel } from './types';
 
 // Banner principal del App - URL pública de alta fiabilidad como fuente primaria
-export const PEPE_BANNER = "https://images3.alphacoders.com/110/1107773.jpg"; 
+export const PEPE_BANNER = "https://i.imgur.com/KJSjEue.png"; 
 
 // Selección de emotes icónicos de Pepe (CDNs de confianza)
 export const PEPE_MOOD_IMAGES = {
-  LEVEL_5: "https://cdn.frankerfacez.com/emoticon/128054/4", // PepeHype
-  LEVEL_4: "https://cdn.frankerfacez.com/emoticon/451433/4", // PepeCool
-  LEVEL_3: "https://cdn.frankerfacez.com/emoticon/458025/4", // PepeOkay
-  LEVEL_2: "https://cdn.frankerfacez.com/emoticon/446187/4", // PepeSad
-  LEVEL_1: "https://cdn.frankerfacez.com/emoticon/436302/4", // PepeHands
+  LEVEL_5: "https://media.tenor.com/tthMwilLM8UAAAAj/pepe-meme.gif", // PepeHype
+  LEVEL_4: "https://i.imgur.com/DwB961M.png", // PepeCool
+  LEVEL_3: "https://i.pinimg.com/originals/26/36/7b/26367b882196bab0348c173ec61d9268.gif", // PepeOkay
+  LEVEL_2: "https://i.pinimg.com/originals/ff/5f/83/ff5f832e40cf3ec7787d1c539bf02ce7.gif", // PepeSad
+  LEVEL_1: "https://i.pinimg.com/originals/17/89/2a/17892a4da93c7a712a008b1c31ca1b27.gif", // PepeHands
 };
 
 export const MOODS: Record<MoodLevel, MoodConfig> = {
