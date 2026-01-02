@@ -62,7 +62,6 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
   const parseAiResponse = (text: string) => {
     if (!text) return null;
     
-    // Buscar secciones usando etiquetas robustas
     const diagMatch = text.match(/\[DIAGNÓSTICO\](.*?)(\[|$)/s);
     const soundMatch = text.match(/\[SOUNDTRACK\](.*?)(\[|$)/s);
     const achievementMatch = text.match(/\[LOGRO\](.*?)(\[|$)/s);
@@ -110,7 +109,10 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
   };
 
 const handleAskPepe = async () => {
-    if (!process.env.API_KEY) {
+    // Uso de las variables de entorno configuradas
+    const apiKey = process.env.API_KEY || (import.meta as any).env?.VITE_PEPE_MOOD_KEY || (process as any).env?.NEXT_PUBLIC_PEPE_MOOD_KEY;
+    
+    if (!apiKey) {
         setErrorAi("No hay API Key configurada.");
         return;
     }
@@ -122,7 +124,7 @@ const handleAskPepe = async () => {
     setAiAnalysis("");
 
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const ai = new GoogleGenAI({ apiKey: apiKey });
         
         const filterText = selectedMonth === 'all' ? "reciente" : `de ${MONTHS[selectedMonth as number]}`;
         const relevantEntries = selectedMonth === 'all' 
@@ -158,7 +160,7 @@ const handleAskPepe = async () => {
             - Usa frases, canciones o vibras de canciones de Linkin Park, Avril Lavigne o Taylor Swift para definir el periodo analizado.
             
             En [LOGRO]:
-            - Crea un "Logro Desbloqueado" sarcástico de máximo 6 palabras (no hay que usarlas todas).
+            - Crea un "Logro Desbloqueado" sarcástico de máximo 6 palabras.
 
             REGLAS DE ORO:
             - NO USES la palabra "Basado".
@@ -247,9 +249,6 @@ const handleAskPepe = async () => {
                       >
                         <Brain size={16} /> Obtener Veredicto de Pepe
                       </button>
-                      <p className="text-[9px] text-slate-500 text-center mt-3 uppercase font-bold tracking-tighter opacity-60">
-                        Pepe analizará tus notas para darte un juicio basado en el lore
-                      </p>
                     </div>
                   )}
                   {errorAi && <p className="text-red-400 text-[10px] mt-2 font-bold">{errorAi}</p>}
@@ -257,10 +256,10 @@ const handleAskPepe = async () => {
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 bg-slate-900/50 p-6 rounded-3xl border border-slate-700">
+                <div className="lg:col-span-2 bg-slate-900/50 p-6 rounded-3xl border border-slate-700 overflow-hidden">
                   <h3 className="text-slate-400 font-black text-xs uppercase mb-6 tracking-widest">Evolución de Vibra</h3>
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                  <div className="h-64 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={stats.lineData}>
                         <XAxis dataKey="date" stroke="#475569" tick={{fontSize: 10}} />
                         <YAxis domain={[1, 5]} hide />
@@ -281,7 +280,7 @@ const handleAskPepe = async () => {
                       <img src="https://i.imgur.com/3OaT1ef.png" className="w-full h-full object-contain" alt="Pepe Center" />
                     </div>
                     
-                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                    <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie 
                           data={stats.pieData} 
