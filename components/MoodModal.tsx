@@ -168,15 +168,17 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, initialD
           <button
             onClick={handleSave}
             disabled={level === MoodLevel.None}
-            className={`w-full py-5 rounded-[1.5rem] font-black text-xl flex items-center justify-center gap-3 transition-all shadow-2xl
+            className={`w-full py-5 rounded-[1.5rem] font-black text-lg md:text-xl flex justify-center items-center transition-all shadow-2xl
               ${level !== MoodLevel.None 
                 ? 'bg-gradient-to-br from-green-500 to-emerald-700 text-white hover:brightness-110 active:scale-[0.98] shadow-green-500/30' 
                 : 'bg-slate-800 text-slate-600 cursor-not-allowed opacity-50'
               }
             `}
           >
-            <Save size={24} />
-            {buttonText}
+            <div className="flex items-center gap-3 px-4 text-center">
+              <Save size={24} className="shrink-0" />
+              <span className="leading-tight">{buttonText}</span>
+            </div>
           </button>
         </div>
 

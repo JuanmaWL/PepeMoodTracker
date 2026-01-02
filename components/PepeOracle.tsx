@@ -49,12 +49,19 @@ const PepeOracle: React.FC<PepeOracleProps> = ({ data }) => {
   };
 
   const askOracle = async () => {
-    if (!process.env.API_KEY || loading) return;
+    if (loading) return;
     
     const recent = getRecentLore();
     if (recent.length < 2) {
       const randomFallback = ORACLE_FALLBACKS[Math.floor(Math.random() * ORACLE_FALLBACKS.length)];
       setAdvice(randomFallback);
+      setIsMagicActive(true);
+      setTimeout(() => setIsMagicActive(false), 500);
+      return;
+    }
+
+    if (!process.env.API_KEY) {
+      setAdvice("Compañero, falta la energía mística (API Key) para conectar con el servidor central.");
       return;
     }
 
@@ -81,7 +88,8 @@ const PepeOracle: React.FC<PepeOracleProps> = ({ data }) => {
       });
       setAdvice(response.text || "Pepe se ha quedado sin palabras.");
     } catch (e) {
-      setAdvice("El Oráculo está saturado de normies. Inténtalo luego.");
+      console.error("Oracle Error:", e);
+      setAdvice("El Oráculo está saturado de normies o la conexión ha petado. Inténtalo luego.");
     } finally {
       setLoading(false);
       setTimeout(() => setIsMagicActive(false), 1000);
@@ -121,7 +129,7 @@ const PepeOracle: React.FC<PepeOracleProps> = ({ data }) => {
                 className="w-full h-full object-cover grayscale-[10%] hover:grayscale-0 transition-all duration-1000"
               />
               {loading && (
-                <div className="absolute inset-0 bg-purple-900/70 backdrop-blur-md flex items-center justify-center">
+                <div className="absolute inset-0 bg-purple-900/60 backdrop-blur-sm flex items-center justify-center rounded-full overflow-hidden">
                   <Loader2 className="text-white animate-spin" size={64} />
                 </div>
               )}
@@ -136,7 +144,7 @@ const PepeOracle: React.FC<PepeOracleProps> = ({ data }) => {
           <div className="flex-1 text-center lg:text-left space-y-8">
             <div className="space-y-4">
               <h3 className="text-5xl md:text-7xl font-black uppercase tracking-tighter leading-[0.9] bg-gradient-to-r from-violet-300 via-indigo-200 to-purple-100 bg-clip-text text-transparent drop-shadow-2xl transition-all duration-1000 group-hover:tracking-normal">
-                El Oráculo Supremo
+                Oráculo Supremo
               </h3>
               <div className="flex items-center justify-center lg:justify-start gap-4 text-purple-400/70 font-black text-sm uppercase tracking-[0.5em]">
                 <BrainCircuit size={18} /> Lore Analysis Engine v3.0

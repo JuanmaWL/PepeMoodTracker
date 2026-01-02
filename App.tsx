@@ -53,7 +53,9 @@ const App: React.FC = () => {
       const dateStr = checkDate.toISOString().split('T')[0];
       if (yearData[dateStr] && yearData[dateStr].level > 0) {
         count++;
-        checkDate.setDate(checkDate.getDate() - 1);
+        const nextCheck = new Date(checkDate);
+        nextCheck.setDate(nextCheck.getDate() - 1);
+        checkDate = nextCheck;
       } else {
         break;
       }
@@ -126,11 +128,11 @@ const App: React.FC = () => {
       <Particles />
       
       <header className="mt-8 mb-6 text-center flex flex-col items-center relative w-full px-4">
-        {/* Streak Display */}
+        {/* Streak Display - Reposicionado para evitar solapamiento en móvil */}
         {streak > 0 && (
-          <div className="absolute top-0 right-4 md:right-12 flex items-center gap-2 bg-slate-900/50 backdrop-blur-sm border border-orange-500/30 px-4 py-2 rounded-full shadow-lg animate-in fade-in slide-in-from-top duration-700">
-            <Flame size={18} className="text-orange-500 fill-orange-500 animate-pulse" />
-            <span className="text-sm font-black text-white">{streak} DÍAS DE LORE</span>
+          <div className="mb-4 lg:absolute lg:top-0 lg:right-12 flex items-center gap-2 bg-slate-900/60 backdrop-blur-md border border-orange-500/40 px-5 py-2.5 rounded-full shadow-[0_0_20px_rgba(249,115,22,0.2)] animate-in fade-in slide-in-from-top duration-700 z-30">
+            <Flame size={20} className="text-orange-500 fill-orange-500 animate-pulse" />
+            <span className="text-xs md:text-sm font-black text-white tracking-widest">{streak} DÍAS DE LORE</span>
           </div>
         )}
 
