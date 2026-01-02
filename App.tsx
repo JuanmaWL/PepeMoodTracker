@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Calendar from './components/Calendar';
 import MoodModal from './components/MoodModal';
 import StatsModal from './components/StatsModal';
@@ -16,6 +16,43 @@ const App: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [isMoodModalOpen, setIsMoodModalOpen] = useState(false);
   const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
+
+  // Dynamic phrases for Pepe
+  const dynamicSubtitle = useMemo(() => {
+  const phrases = [
+    // Estilo Observador
+    `Pepe está tomando notas de tu ${currentYear}`,
+    `Juzgando tus decisiones de vida en ${currentYear}`,
+    `El testigo ocular de tus dramas en ${currentYear}`,
+    `Aquí guardamos tus secretos de ${currentYear}`,
+    `Pepe lo ha visto todo en ${currentYear}`,
+    `Tu conciencia (en forma de rana) para ${currentYear}`,
+
+    // Estilo Caos Diario
+    `Intentando ser adultos funcionales en ${currentYear}`,
+    `Gestionando el caos emocional de ${currentYear}`,
+    `Tu bitácora de supervivencia para ${currentYear}`,
+    `¿Todo bien en casa? Edición ${currentYear}`,
+    `Esquivando problemas en ${currentYear}`,
+    `La película de tu vida: Temporada ${currentYear}`,
+    `La montaña rusa emocional de ${currentYear}`,
+
+    // Estilo Good Vibes / Ironía
+    `Buscando los momentos 'Feels Good' de ${currentYear}`,
+    `Tu colección de buenos ratos en ${currentYear}`,
+    `Manteniendo la calma (o intentándolo) en ${currentYear}`,
+    `Crónicas de la charca en ${currentYear}`,
+    `Menos drama y más memes en ${currentYear}`,
+    `El archivo oficial de tus aventuras en ${currentYear}`,
+
+    // Estilo Resumen
+    `Tu historial de dramas y victorias en ${currentYear}`,
+    `Documentando el lore de tu vida en ${currentYear}`,
+    `Crónicas de una rana moderna en ${currentYear}`,
+    `Tu diario antistress para ${currentYear}`
+  ];
+    return phrases[Math.floor(Math.random() * phrases.length)];
+  }, [currentYear]);
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -73,7 +110,7 @@ const App: React.FC = () => {
       {/* Header Section */}
       <header className="mt-8 mb-6 text-center animate-in slide-in-from-top duration-700 flex flex-col items-center relative w-full">
         
-        {/* Pepe Banner Image Container - Ajustado a formato cuadrado para imagen 1:1 */}
+        {/* Pepe Banner Image Container */}
         <div className="w-full max-w-[12rem] md:max-w-[16rem] px-4 mb-6 drop-shadow-[0_15px_40px_rgba(34,197,94,0.35)] pepe-float">
           <div className="relative bg-slate-900/60 backdrop-blur-sm rounded-[2rem] md:rounded-[3rem] overflow-hidden border-2 border-slate-800/50 shadow-2xl aspect-square flex items-center justify-center group">
             
@@ -93,13 +130,11 @@ const App: React.FC = () => {
                 }}
               />
             ) : (
-              /* Fallback Visual */
               <div className="w-full h-full bg-gradient-to-br from-green-900 via-slate-900 to-emerald-900 flex flex-col items-center justify-center animate-pulse">
                 <span className="text-4xl md:text-6xl mb-1 drop-shadow-2xl">🐸</span>
               </div>
             )}
             
-            {/* Overlay de brillo sutil */}
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950/20 to-transparent pointer-events-none"></div>
           </div>
         </div>
@@ -112,7 +147,7 @@ const App: React.FC = () => {
         </div>
         
         <p className="text-slate-400 font-bold tracking-[0.2em] text-xs md:text-base mt-1 max-w-2xl mx-auto px-6 italic opacity-90 uppercase">
-          Tu mood diario durante {currentYear}
+          {dynamicSubtitle}
         </p>
       </header>
 

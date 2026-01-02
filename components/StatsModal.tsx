@@ -1,11 +1,10 @@
-
 import React, { useState, useMemo } from 'react';
 import { X, Sparkles, AlertCircle } from 'lucide-react';
 import { YearData, MoodLevel, DayData } from '../types';
 import { MOODS } from '../constants';
 import { 
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, 
-  PieChart, Pie, Cell, Legend 
+  PieChart, Pie, Cell 
 } from 'recharts';
 import { GoogleGenAI } from "@google/genai";
 
@@ -21,19 +20,16 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
   const [errorAi, setErrorAi] = useState("");
 
   const stats = useMemo(() => {
-    // Fix: Cast entries to [string, DayData][] to ensure TypeScript correctly identifies the type of 'd' as 'DayData'.
     const entries = Object.entries(data) as [string, DayData][];
     const validEntries = entries.filter(([_, d]) => d.level > 0).sort((a, b) => a[0].localeCompare(b[0]));
     
     if (validEntries.length === 0) return null;
 
     const totalDays = validEntries.length;
-    // Fix: Accessing d.level now works because d is typed as DayData
     const totalScore = validEntries.reduce((acc, [_, d]) => acc + d.level, 0);
     const average = totalScore / totalDays;
 
-    const distribution = [0, 0, 0, 0, 0, 0]; // Index maps to MoodLevel
-    // Fix: Accessing d.level now works because d is typed as DayData
+    const distribution = [0, 0, 0, 0, 0, 0]; 
     validEntries.forEach(([_, d]) => distribution[d.level]++);
 
     const pieData = [
@@ -46,7 +42,6 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
 
     const lineData = validEntries.map(([date, d]) => {
         const [y,m,day] = date.split('-');
-        // Fix: Accessing d.level and d.note now works because d is typed as DayData
         return {
             date: `${m}/${day}`,
             fullDate: date,
@@ -74,44 +69,49 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
     setAiAnalysis("");
 
     try {
-        // Fix: Initializing GoogleGenAI client according to best practices
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         
-        // Prepare summary for AI
-        const recentEntries = stats.validEntries.slice(-15); // Last 15 entries for context
+        const recentEntries = stats.validEntries.slice(-20); 
         const summaryText = recentEntries.map(([date, d]) => 
-            `Fecha: ${date}, Mood: ${MOODS[d.level].label}, Nota: ${d.note || "Sin nota"}`
+            `Día: ${date}, Mood: ${MOODS[d.level].label}, Lore: ${d.note || "N/A"}`
         ).join("\n");
 
         const prompt = `
-        Eres Pepe the Frog (la rana Pepe). Estás viendo el diario de ánimo de un usuario.
-        Aquí están los datos recientes (Últimos 15 registros):
+        ACTÚA COMO: Pepe the Frog. Eres un observador cínico, irónico y "basado", pero no un streamer de Twitch. Eres ese amigo que dice las verdades a la cara.
+        CONTEXTO: Estás analizando el diario de tu "bro" (el usuario).
+        
+        DATOS RECIENTES:
         ${summaryText}
 
-        Puntuación media de ánimo: ${stats.average.toFixed(2)} / 5.
+        ESTADÍSTICAS GENERALES:
+        Días registrados: ${stats.totalDays}
+        Promedio de felicidad: ${stats.average.toFixed(2)} / 5
 
-        Dame un análisis corto, divertido y lleno de cultura de memes de internet (Twitch, Reddit) sobre su vida reciente.
-        Usa jerga de Twitch (Pog, MonkaS, Sadge, FeelsGoodMan) de forma apropiada pero el texto principal debe estar en ESPAÑOL.
-        Si el ánimo es bajo, sé comprensivo pero en plan "bro". Si es alto, emociónate (HYPE).
-        Máximo 100 palabras.
+        TU MISIÓN:
+        1. Analiza su estado mental con sarcasmo y humor negro suave. Mete bromas sobre Naruto, Boruto, Stranger Things, Taylor Swift, Pokémon y los gatos.
+        2. VOCABULARIO: Usa términos generales de internet como "Basado", "Cringe", "NPC", "Main Character", "Lore", "Arco de personaje", "Tocar pasto" o "Plot twist". 
+        3. PROHIBIDO: No uses emotes de Twitch (Nada de PogChamp, MonkaS, Sadge, etc.).
+        4. Si la media es baja: Dile que su lore es demasiado dramático y que salga a tocar pasto.
+        5. Si la media es alta: Dile que está basadísimo y en su "Prime".
+        6. Si es neutral: Dile que parece un NPC de relleno.
+        7. Idioma: ESPAÑOL CASTELLANO.
+        8. Sé breve y directo, máximo 70 palabras.
         `;
 
-        // Fix: Using correct model name and generateContent syntax
         const response = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
+            model: 'gemini-3-flash-preview', 
             contents: prompt,
         });
 
-        // Fix: Accessing generated text using the .text property
-        setAiAnalysis(response.text || "Pepe se ha quedado sin palabras.");
+        setAiAnalysis(response.text || "Pepe está juzgándote en silencio (Error de respuesta).");
 
     } catch (e) {
         console.error(e);
-        setErrorAi("Pepe está durmiendo (Error API).");
+        setErrorAi("Pepe ha salido del chat (Error API).");
     } finally {
         setLoadingAi(false);
     }
-  };
+  }
 
   if (!isOpen) return null;
 
@@ -155,25 +155,25 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                      <div className="bg-slate-700/50 p-4 rounded-2xl border border-slate-600 col-span-2 md:col-span-2 flex flex-col justify-center items-start">
                          <div className="flex items-center justify-between w-full mb-2">
                              <span className="text-slate-400 text-sm font-bold uppercase flex items-center gap-2">
-                                 <Sparkles size={14} className="text-yellow-400"/> Análisis IA
+                                 <Sparkles size={14} className="text-yellow-400"/> Juicio de Pepe (IA)
                              </span>
                              {process.env.API_KEY && !aiAnalysis && !loadingAi && (
                                  <button 
                                     onClick={handleAskPepe}
-                                    className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1 rounded-full font-bold transition-colors"
+                                    className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1 rounded-full font-bold transition-colors shadow-lg shadow-indigo-900/40"
                                  >
-                                     Preguntar a Pepe
+                                     ¿Cómo me ves, Pepe?
                                  </button>
                              )}
                          </div>
                          {loadingAi ? (
-                             <span className="text-indigo-300 animate-pulse text-sm">Pepe está pensando...</span>
+                             <span className="text-indigo-300 animate-pulse text-sm font-medium">Pepe está analizando tu lore...</span>
                          ) : errorAi ? (
                              <span className="text-red-400 text-xs flex items-center gap-1"><AlertCircle size={12}/> {errorAi}</span>
                          ) : aiAnalysis ? (
-                             <p className="text-indigo-100 text-sm italic border-l-2 border-indigo-500 pl-3">"{aiAnalysis}"</p>
+                             <p className="text-indigo-100 text-sm italic border-l-2 border-indigo-500 pl-3 leading-relaxed">"{aiAnalysis}"</p>
                          ) : (
-                             <span className="text-slate-500 text-sm">Recibe feedback de la IA sobre tu año.</span>
+                             <span className="text-slate-500 text-sm">Pregúntale a Pepe qué opina de tu vida reciente.</span>
                          )}
                      </div>
                 </div>
@@ -181,7 +181,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                 {/* Charts */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Line Chart */}
-                    <div className="lg:col-span-2 bg-slate-900/50 p-4 rounded-2xl border border-slate-700">
+                    <div className="lg:col-span-2 bg-slate-900/50 p-4 rounded-2xl border border-slate-700 shadow-inner">
                         <h3 className="text-slate-400 font-bold mb-4 text-sm uppercase">Evolución del Mood</h3>
                         <div className="h-64 w-full">
                             <ResponsiveContainer width="100%" height="100%">
@@ -190,17 +190,17 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                                     <YAxis domain={[1, 5]} hide />
                                     <Tooltip 
                                         contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '12px', color: '#f1f5f9' }}
-                                        itemStyle={{ color: '#22c55e' }}
-                                        formatter={(value: number) => [MOODS[value as MoodLevel].label, "Ánimo"]}
+                                        itemStyle={{ color: '#fff' }}
                                         labelStyle={{ color: '#94a3b8' }}
+                                        formatter={(value: number) => [MOODS[value as MoodLevel].label, "Mood"]}
                                     />
                                     <Line 
                                         type="monotone" 
                                         dataKey="level" 
                                         stroke="#22c55e" 
-                                        strokeWidth={3}
+                                        strokeWidth={4}
                                         dot={{ fill: '#0f172a', stroke: '#22c55e', strokeWidth: 2, r: 4 }}
-                                        activeDot={{ r: 6, fill: '#fff' }}
+                                        activeDot={{ r: 8, fill: '#fff', stroke: '#10b981', strokeWidth: 3 }}
                                     />
                                 </LineChart>
                             </ResponsiveContainer>
@@ -208,7 +208,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                     </div>
 
                     {/* Pie Chart */}
-                    <div className="bg-slate-900/50 p-4 rounded-2xl border border-slate-700 flex flex-col items-center">
+                    <div className="bg-slate-900/50 p-4 rounded-2xl border border-slate-700 flex flex-col items-center shadow-inner">
                         <h3 className="text-slate-400 font-bold mb-2 text-sm uppercase">Distribución</h3>
                         <div className="h-48 w-full relative">
                             <ResponsiveContainer width="100%" height="100%">
@@ -217,29 +217,33 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                                         data={stats.pieData}
                                         cx="50%"
                                         cy="50%"
-                                        innerRadius={40}
-                                        outerRadius={70}
-                                        paddingAngle={5}
+                                        innerRadius={45}
+                                        outerRadius={75}
+                                        paddingAngle={4}
                                         dataKey="value"
+                                        animationDuration={1500}
                                     >
                                         {stats.pieData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                                            <Cell key={`cell-${index}`} fill={entry.color} stroke="#0f172a" strokeWidth={2} />
                                         ))}
                                     </Pie>
-                                    <Tooltip contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '8px' }}/>
+                                    <Tooltip 
+                                        contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '8px' }}
+                                        itemStyle={{ color: '#fff' }}
+                                    />
                                 </PieChart>
                             </ResponsiveContainer>
                             {/* Center Pepe */}
-                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
-                                <span className="text-4xl">🐸</span>
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-40">
+                                <span className="text-4xl filter drop-shadow-md">🐸</span>
                             </div>
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-2 w-full mt-4">
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-2 w-full mt-4">
                             {stats.pieData.map((d) => (
                                 <div key={d.name} className="flex items-center gap-2 text-xs text-slate-300">
-                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: d.color }}></div>
-                                    <span>{d.name}: {d.value}</span>
+                                    <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: d.color }}></div>
+                                    <span className="font-bold">{d.name}: {d.value}</span>
                                 </div>
                             ))}
                         </div>
