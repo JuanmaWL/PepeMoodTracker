@@ -65,7 +65,8 @@ const PepeOracle: React.FC<PepeOracleProps> = ({ data }) => {
     setIsMagicActive(true);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const apiKey = import.meta.env.VITE_GOOGLE_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_API_KEY || process.env.GOOGLE_API_KEY;
+      const ai = new GoogleGenAI({ apiKey: apiKey });
       const prompt = `
         ACTÚA COMO: Pepe el Sabio (Pepe the Frog). Eres un filósofo de internet, cínico pero curiosamente motivador.
         CONTEXTO: Vas a dar un "Veredicto de Vida" basado en los últimos días del usuario.
