@@ -1,9 +1,9 @@
 import { MoodConfig, MoodLevel } from './types';
 
-// Banner principal del App - Usamos una URL de alta calidad para asegurar visualización inmediata
-export const PEPE_BANNER = "/assets/images/pepe_banner_1.png"; 
+// Banner principal del App - URL pública de alta fiabilidad como fuente primaria
+export const PEPE_BANNER = "https://images3.alphacoders.com/110/1107773.jpg"; 
 
-// Selección de emotes icónicos de Pepe
+// Selección de emotes icónicos de Pepe (CDNs de confianza)
 export const PEPE_MOOD_IMAGES = {
   LEVEL_5: "https://cdn.frankerfacez.com/emoticon/128054/4", // PepeHype
   LEVEL_4: "https://cdn.frankerfacez.com/emoticon/451433/4", // PepeCool
