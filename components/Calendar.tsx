@@ -55,7 +55,7 @@ const Calendar: React.FC<CalendarProps> = ({ yearData, onDayClick, currentYear }
                     key={d}
                     onClick={() => onDayClick(dateStr)}
                     className={`
-                      aspect-square rounded-md relative group transition-all duration-300
+                      aspect-square rounded-md relative group transition-all duration-300 flex items-center justify-center
                       ${moodLevel === MoodLevel.None ? 'bg-slate-700/30 hover:bg-slate-600/50' : ''}
                       ${moodLevel === MoodLevel.Legendary ? 'animate-pulse hover:animate-none shadow-[0_0_12px_rgba(34,197,94,0.4)]' : ''}
                     `}
@@ -64,6 +64,14 @@ const Calendar: React.FC<CalendarProps> = ({ yearData, onDayClick, currentYear }
                     }}
                     title={`${dateStr}${entry?.note ? ': ' + entry.note : ''}`}
                   >
+                    {/* Day Number */}
+                    <span className={`
+                      text-[10px] md:text-xs font-black transition-colors duration-300 pointer-events-none select-none
+                      ${moodLevel === MoodLevel.None ? 'text-slate-500' : 'text-slate-950/80'}
+                    `}>
+                      {d}
+                    </span>
+
                     {/* Hover tooltip effect */}
                     <div className="opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-slate-900 text-white text-[10px] py-1 px-2 rounded pointer-events-none whitespace-nowrap z-10 border border-slate-700 shadow-2xl transition-opacity">
                       Día {d}
@@ -71,7 +79,7 @@ const Calendar: React.FC<CalendarProps> = ({ yearData, onDayClick, currentYear }
 
                     {/* Note Indicator */}
                     {hasNote && (
-                      <div className="absolute top-1 right-1 w-1.5 h-1.5 bg-white rounded-full shadow-sm" />
+                      <div className={`absolute top-1 right-1 w-1.5 h-1.5 rounded-full shadow-sm ${moodLevel === MoodLevel.None ? 'bg-green-500' : 'bg-white'}`} />
                     )}
                   </button>
                 );

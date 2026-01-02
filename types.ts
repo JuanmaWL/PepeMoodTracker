@@ -3,7 +3,7 @@ export enum MoodLevel {
   Fatal = 1,
   Regular = 2,
   Normal = 3,
-  Fresco = 4,
+  MoiBiens = 4,
   Legendary = 5,
 }
 

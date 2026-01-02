@@ -1,29 +1,27 @@
 import { MoodConfig, MoodLevel } from './types';
 
-// Banner principal del App - URL pública de alta fiabilidad como fuente primaria
 export const PEPE_BANNER = "https://i.imgur.com/KJSjEue.png"; 
 
-// Selección de emotes icónicos de Pepe (CDNs de confianza)
 export const PEPE_MOOD_IMAGES = {
-  LEVEL_5: "https://media.tenor.com/tthMwilLM8UAAAAj/pepe-meme.gif", // PepeHype
-  LEVEL_4: "https://media.tenor.com/AmwATYlrR-UAAAAj/thinkge-pepega.gif", // PepeCool
-  LEVEL_3: "https://media1.tenor.com/m/s382PAkSepsAAAAC/pepe-the-frog-pepe.gif", // PepeOkay
-  LEVEL_2: "https://media1.tenor.com/m/vbFbEEXZZvkAAAAd/pepocry-pepe.gif", // PepeSad
-  LEVEL_1: "https://i.pinimg.com/originals/17/89/2a/17892a4da93c7a712a008b1c31ca1b27.gif", // PepeHands
+  LEVEL_5: "https://media.tenor.com/tthMwilLM8UAAAAj/pepe-meme.gif",
+  LEVEL_4: "https://media.tenor.com/AmwATYlrR-UAAAAj/thinkge-pepega.gif",
+  LEVEL_3: "https://media1.tenor.com/m/s382PAkSepsAAAAC/pepe-the-frog-pepe.gif",
+  LEVEL_2: "https://media1.tenor.com/m/vbFbEEXZZvkAAAAd/pepocry-pepe.gif",
+  LEVEL_1: "https://i.pinimg.com/originals/17/89/2a/17892a4da93c7a712a008b1c31ca1b27.gif",
 };
 
 export const MOODS: Record<MoodLevel, MoodConfig> = {
   [MoodLevel.Legendary]: {
     level: MoodLevel.Legendary,
-    label: "Una maravilla para la vista",
+    label: "Legendario",
     subLabel: "HYPE ABSOLUTO",
     color: "#22c55e",
     twColor: "bg-green-500",
     image: PEPE_MOOD_IMAGES.LEVEL_5,
   },
-  [MoodLevel.Fresco]: {
-    level: MoodLevel.Fresco,
-    label: "Moooi biens",
+  [MoodLevel.MoiBiens]: {
+    level: MoodLevel.MoiBiens,
+    label: "Moi biens",
     subLabel: "FeelsGoodMan",
     color: "#84cc16",
     twColor: "bg-lime-500",
@@ -31,7 +29,7 @@ export const MOODS: Record<MoodLevel, MoodConfig> = {
   },
   [MoodLevel.Normal]: {
     level: MoodLevel.Normal,
-    label: "Buenooo...",
+    label: "Normal",
     subLabel: "NotBad",
     color: "#facc15",
     twColor: "bg-yellow-400",
@@ -39,7 +37,7 @@ export const MOODS: Record<MoodLevel, MoodConfig> = {
   },
   [MoodLevel.Regular]: {
     level: MoodLevel.Regular,
-    label: "Un poco punto es",
+    label: "Regular",
     subLabel: "FeelsOkayMan",
     color: "#f97316",
     twColor: "bg-orange-500",
@@ -47,7 +45,7 @@ export const MOODS: Record<MoodLevel, MoodConfig> = {
   },
   [MoodLevel.Fatal]: {
     level: MoodLevel.Fatal,
-    label: "Una gran mierda",
+    label: "Fatal",
     subLabel: "Sadge",
     color: "#ef4444",
     twColor: "bg-red-500",
