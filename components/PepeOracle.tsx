@@ -65,8 +65,9 @@ const PepeOracle: React.FC<PepeOracleProps> = ({ data }) => {
     setIsMagicActive(true);
 
     try {
-      // Prioridad a la clave del sistema o las especificadas por el usuario para Vercel/Netlify
-      const apiKey = process.env.API_KEY || (import.meta as any).env?.VITE_PEPE_MOOD_KEY || (process as any).env?.NEXT_PUBLIC_PEPE_MOOD_KEY;
+      // Prioridad a variables de entorno externas para Vercel/Netlify
+      const apiKey = (import.meta as any).env?.VITE_PEPE_MOOD_KEY || (process as any).env?.NEXT_PUBLIC_PEPE_MOOD_KEY || process.env.API_KEY;
+      
       const ai = new GoogleGenAI({ apiKey: apiKey });
       
       const prompt = `
@@ -88,7 +89,7 @@ const PepeOracle: React.FC<PepeOracleProps> = ({ data }) => {
       setAdvice(response.text || "Pepe se ha quedado sin palabras.");
     } catch (e) {
       console.error("Oracle Error:", e);
-      setAdvice("El Oráculo está saturado de normies o la conexión ha petado. Inténtalo luego.");
+      setAdvice("El Oráculo está saturado o la conexión ha petado. Inténtalo luego.");
     } finally {
       setLoading(false);
       setTimeout(() => setIsMagicActive(false), 1000);

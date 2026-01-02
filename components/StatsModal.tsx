@@ -66,9 +66,12 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
     const soundMatch = text.match(/\[SOUNDTRACK\](.*?)(\[|$)/s);
     const achievementMatch = text.match(/\[LOGRO\](.*?)(\[|$)/s);
 
-    const diagnosis = diagMatch ? diagMatch[1].trim() : text;
-    const soundtrack = soundMatch ? soundMatch[1].trim() : "";
-    const achievement = achievementMatch ? achievementMatch[1].trim() : "";
+    // Limpiamos los dos puntos iniciales y espacios que a veces añade la IA
+    const cleanStr = (s: string) => s.trim().replace(/^[:\s-]+/, '');
+
+    const diagnosis = diagMatch ? cleanStr(diagMatch[1]) : cleanStr(text);
+    const soundtrack = soundMatch ? cleanStr(soundMatch[1]) : "";
+    const achievement = achievementMatch ? cleanStr(achievementMatch[1]) : "";
 
     const formatBold = (str: string) => {
       const parts = str.split(/(\*\*[^*]+\*\*)/g);
@@ -91,8 +94,8 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
 
         <div className="flex flex-wrap gap-3">
           {soundtrack && (
-            <div className="flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 px-3 py-2 rounded-xl">
-              <Music size={14} className="text-indigo-400" />
+            <div className="flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 px-3 py-2 rounded-xl group transition-all hover:bg-indigo-500/20">
+              <Music size={14} className="text-indigo-400 group-hover:scale-125 transition-transform" />
               <span className="text-[10px] font-black text-indigo-300 uppercase tracking-wider">{soundtrack}</span>
             </div>
           )}
@@ -109,8 +112,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
   };
 
 const handleAskPepe = async () => {
-    // Uso de las variables de entorno configuradas
-    const apiKey = process.env.API_KEY || (import.meta as any).env?.VITE_PEPE_MOOD_KEY || (process as any).env?.NEXT_PUBLIC_PEPE_MOOD_KEY;
+    const apiKey = (import.meta as any).env?.VITE_PEPE_MOOD_KEY || (process as any).env?.NEXT_PUBLIC_PEPE_MOOD_KEY || process.env.API_KEY;
     
     if (!apiKey) {
         setErrorAi("No hay API Key configurada.");
@@ -294,7 +296,8 @@ const handleAskPepe = async () => {
                           {stats.pieData.map((e, i) => <Cell key={i} fill={e.color} stroke="none" />)}
                         </Pie>
                         <Tooltip 
-                          contentStyle={{ backgroundColor: '#0f172a', border: 'none', borderRadius: '12px', color: '#fff' }}
+                          contentStyle={{ backgroundColor: '#0f172a', border: 'none', borderRadius: '12px' }}
+                          itemStyle={{ color: '#fff' }}
                         />
                       </PieChart>
                     </ResponsiveContainer>

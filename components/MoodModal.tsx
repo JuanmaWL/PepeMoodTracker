@@ -177,21 +177,21 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
           
           {isConfirmingDelete ? (
             <div className="flex flex-col gap-3 animate-in fade-in zoom-in duration-300">
-              <div className="text-red-400 font-black text-[10px] uppercase tracking-widest text-center px-2">
-                ¿Borrar este lore para siempre?
+              <div className="text-red-400 font-black text-[10px] uppercase tracking-[0.15em] text-center px-4">
+                ¿Borrar este lore para siempre, compañero?
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <button
                   onClick={() => setIsConfirmingDelete(false)}
-                  className="flex-1 px-4 py-4 rounded-2xl bg-slate-800 text-slate-300 font-black text-[10px] md:text-xs uppercase tracking-widest hover:bg-slate-700 transition-all border border-slate-700"
+                  className="flex-1 px-4 py-4 rounded-2xl bg-slate-800 text-slate-300 font-black text-xs uppercase tracking-widest hover:bg-slate-700 transition-all border border-slate-700 shadow-lg"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={handleConfirmDelete}
-                  className="flex-1 px-4 py-4 rounded-2xl bg-red-600 text-white font-black text-[10px] md:text-xs uppercase tracking-widest hover:bg-red-500 transition-all shadow-lg shadow-red-900/40 flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-4 rounded-2xl bg-red-600 text-white font-black text-xs uppercase tracking-widest hover:bg-red-500 transition-all shadow-xl shadow-red-900/40 flex items-center justify-center gap-2"
                 >
-                  <Trash2 size={14} /> Sí, borrar
+                  <Trash2 size={16} /> Sí, borrar todo
                 </button>
               </div>
             </div>
@@ -200,17 +200,17 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
               {hasExistingData && (
                 <button
                   onClick={() => setIsConfirmingDelete(true)}
-                  className="w-full sm:w-auto px-5 py-4 rounded-[1.25rem] bg-slate-800 hover:bg-red-900/40 text-slate-400 hover:text-red-400 font-black transition-all flex items-center justify-center gap-2 border border-slate-700"
+                  className="w-full sm:w-auto px-5 py-4 rounded-[1.25rem] bg-slate-800 hover:bg-red-900/40 text-slate-400 hover:text-red-400 font-black transition-all flex items-center justify-center gap-3 border border-slate-700"
                 >
-                  <Trash2 size={20} />
-                  <span className="sm:hidden lg:inline text-xs uppercase tracking-wider">Borrar día</span>
+                  <Trash2 size={24} />
+                  <span className="sm:hidden lg:inline text-xs uppercase tracking-widest">Borrar registro</span>
                 </button>
               )}
               
               <button
                 onClick={handleSave}
                 disabled={level === MoodLevel.None}
-                className={`flex-1 py-4 rounded-[1.25rem] font-black flex justify-center items-center transition-all shadow-xl
+                className={`flex-1 py-4 rounded-[1.25rem] font-black flex justify-center items-center transition-all shadow-2xl
                   ${level !== MoodLevel.None 
                     ? 'bg-gradient-to-br from-green-500 to-emerald-700 text-white hover:brightness-110 active:scale-[0.98] shadow-green-500/30' 
                     : 'bg-slate-800 text-slate-600 cursor-not-allowed opacity-50'
@@ -218,8 +218,8 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
                 `}
               >
                 <div className="flex items-center gap-2 px-2 text-center">
-                  <Save size={20} className="shrink-0" />
-                  <span className="leading-tight text-xs md:text-sm tracking-widest uppercase">{buttonText}</span>
+                  <Save size={24} className="shrink-0" />
+                  <span className="leading-tight text-xs md:text-sm tracking-[0.1em] uppercase">{buttonText}</span>
                 </div>
               </button>
             </div>
