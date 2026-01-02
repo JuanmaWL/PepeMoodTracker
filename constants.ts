@@ -1,54 +1,57 @@
 import { MoodConfig, MoodLevel } from './types';
 
-// Using popular emote CDNs for consistent "Pepe" aesthetics
-export const PEPE_IMAGES = {
-  LEGENDARY: "https://cdn.frankerfacez.com/emoticon/243789/4", // Hypers / Excited
-  FRESCO: "https://cdn.frankerfacez.com/emoticon/231552/4",    // EZ / Cool
-  NORMAL: "https://cdn.frankerfacez.com/emoticon/263996/4",    // Poker / Neutral
-  REGULAR: "https://cdn.frankerfacez.com/emoticon/436302/4",   // Hmm / Skeptical
-  FATAL: "https://cdn.frankerfacez.com/emoticon/238634/4",     // PepeHands / Crying
+// Banner principal del App - Usamos una URL de alta calidad para asegurar visualización inmediata
+export const PEPE_BANNER = "/assets/images/pepe_banner_1.png"; 
+
+// Selección de emotes icónicos de Pepe
+export const PEPE_MOOD_IMAGES = {
+  LEVEL_5: "https://cdn.frankerfacez.com/emoticon/128054/4", // PepeHype
+  LEVEL_4: "https://cdn.frankerfacez.com/emoticon/451433/4", // PepeCool
+  LEVEL_3: "https://cdn.frankerfacez.com/emoticon/458025/4", // PepeOkay
+  LEVEL_2: "https://cdn.frankerfacez.com/emoticon/446187/4", // PepeSad
+  LEVEL_1: "https://cdn.frankerfacez.com/emoticon/436302/4", // PepeHands
 };
 
 export const MOODS: Record<MoodLevel, MoodConfig> = {
   [MoodLevel.Legendary]: {
     level: MoodLevel.Legendary,
-    label: "Legendario",
-    subLabel: "Absolute Cinema",
+    label: "Una maravilla para la vista",
+    subLabel: "Espectacular",
     color: "#22c55e",
     twColor: "bg-green-500",
-    image: PEPE_IMAGES.LEGENDARY,
+    image: PEPE_MOOD_IMAGES.LEVEL_5,
   },
   [MoodLevel.Fresco]: {
     level: MoodLevel.Fresco,
-    label: "Fresco",
-    subLabel: "Feels Good Man",
+    label: "Moi biens",
+    subLabel: "Guay",
     color: "#84cc16",
     twColor: "bg-lime-500",
-    image: PEPE_IMAGES.FRESCO,
+    image: PEPE_MOOD_IMAGES.LEVEL_4,
   },
   [MoodLevel.Normal]: {
     level: MoodLevel.Normal,
-    label: "NPC",
-    subLabel: "Es lo que hay",
+    label: "Buenoooo",
+    subLabel: "Notbad",
     color: "#facc15",
     twColor: "bg-yellow-400",
-    image: PEPE_IMAGES.NORMAL,
+    image: PEPE_MOOD_IMAGES.LEVEL_3,
   },
   [MoodLevel.Regular]: {
     level: MoodLevel.Regular,
-    label: "Regular",
-    subLabel: "Feels Bad Man",
+    label: "Un poco chof",
+    subLabel: "Regular",
     color: "#f97316",
     twColor: "bg-orange-500",
-    image: PEPE_IMAGES.REGULAR,
+    image: PEPE_MOOD_IMAGES.LEVEL_2,
   },
   [MoodLevel.Fatal]: {
     level: MoodLevel.Fatal,
-    label: "Fatal",
-    subLabel: "It's over",
+    label: "Una gran mierda grande",
+    subLabel: "Basura",
     color: "#ef4444",
     twColor: "bg-red-500",
-    image: PEPE_IMAGES.FATAL,
+    image: PEPE_MOOD_IMAGES.LEVEL_1,
   },
   [MoodLevel.None]: {
     level: MoodLevel.None,

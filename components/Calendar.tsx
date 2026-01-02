@@ -48,9 +48,9 @@ const Calendar: React.FC<CalendarProps> = ({ yearData, onDayClick, currentYear }
                     }}
                     title={`${dateStr}${entry?.note ? ': ' + entry.note : ''}`}
                   >
-                    {/* Hover tooltip effect */}
-                    <div className="opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-slate-900 text-white text-[10px] py-1 px-2 rounded pointer-events-none whitespace-nowrap z-10 border border-slate-700">
-                      Day {d}
+                    {/* Hover tooltip effect - Translated to Spanish */}
+                    <div className="opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-slate-900 text-white text-[10px] py-1 px-2 rounded pointer-events-none whitespace-nowrap z-10 border border-slate-700 shadow-xl">
+                      Día {d}
                     </div>
 
                     {/* Note Indicator */}

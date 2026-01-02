@@ -29,11 +29,14 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, initialD
     onClose();
   };
 
-  // Helper to get day and month name for display
+  // Helper to get day and month name for display with specific capitalization
   const formatDateDisplay = (isoDate: string) => {
     const [y, m, d] = isoDate.split('-').map(Number);
     const date = new Date(y, m - 1, d);
-    return date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+    const formatted = date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+    // Convert to lowercase first, then capitalize only the very first letter
+    const lower = formatted.toLowerCase();
+    return lower.charAt(0).toUpperCase() + lower.slice(1);
   };
 
   return (
@@ -42,7 +45,7 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, initialD
         
         {/* Header */}
         <div className="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-800/50">
-          <h2 className="text-xl font-black text-slate-100 capitalize">
+          <h2 className="text-xl font-black text-slate-100">
             {formatDateDisplay(dateStr)}
           </h2>
           <button 
@@ -54,7 +57,7 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, initialD
         </div>
 
         {/* Scrollable Content */}
-        <div className="p-6 overflow-y-auto space-y-6">
+        <div className="p-6 overflow-y-auto space-y-6 custom-scrollbar">
           
           {/* Mood Selection */}
           <div>
@@ -84,7 +87,7 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, initialD
                          />
                     </div>
                     <div className="flex-1">
-                      <div className="font-bold text-lg" style={{ color: isSelected ? config.color : 'white' }}>
+                      <div className="font-bold text-lg leading-tight" style={{ color: isSelected ? config.color : 'white' }}>
                         {config.label}
                       </div>
                       <div className="text-xs text-slate-400 font-medium">
@@ -102,10 +105,13 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, initialD
 
           {/* Note Input */}
           <div>
-            <p className="text-slate-400 text-sm font-bold uppercase tracking-wider mb-2">Lore del día</p>
+            <div className="flex justify-between items-center mb-2">
+              <p className="text-slate-400 text-sm font-bold uppercase tracking-wider">Lore del día</p>
+              <span className="text-[10px] text-slate-500 font-bold uppercase italic">Opcional</span>
+            </div>
             <textarea
               className="w-full h-32 bg-slate-900/50 border border-slate-700 rounded-xl p-4 text-slate-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent placeholder-slate-600 resize-none font-medium"
-              placeholder="¿Qué pasó hoy, anon?"
+              placeholder="¿Qué ha pasado hoy?"
               value={note}
               onChange={(e) => setNote(e.target.value)}
             />

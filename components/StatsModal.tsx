@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { X, Sparkles, AlertCircle } from 'lucide-react';
 import { YearData, MoodLevel, DayData } from '../types';
@@ -20,28 +21,32 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
   const [errorAi, setErrorAi] = useState("");
 
   const stats = useMemo(() => {
-    const entries = Object.entries(data);
+    // Fix: Cast entries to [string, DayData][] to ensure TypeScript correctly identifies the type of 'd' as 'DayData'.
+    const entries = Object.entries(data) as [string, DayData][];
     const validEntries = entries.filter(([_, d]) => d.level > 0).sort((a, b) => a[0].localeCompare(b[0]));
     
     if (validEntries.length === 0) return null;
 
     const totalDays = validEntries.length;
+    // Fix: Accessing d.level now works because d is typed as DayData
     const totalScore = validEntries.reduce((acc, [_, d]) => acc + d.level, 0);
     const average = totalScore / totalDays;
 
     const distribution = [0, 0, 0, 0, 0, 0]; // Index maps to MoodLevel
+    // Fix: Accessing d.level now works because d is typed as DayData
     validEntries.forEach(([_, d]) => distribution[d.level]++);
 
     const pieData = [
-        { name: 'Fatal', value: distribution[1], color: MOODS[1].color },
-        { name: 'Regular', value: distribution[2], color: MOODS[2].color },
-        { name: 'Normal', value: distribution[3], color: MOODS[3].color },
-        { name: 'Fresco', value: distribution[4], color: MOODS[4].color },
-        { name: 'Legendario', value: distribution[5], color: MOODS[5].color },
+        { name: 'Fatal', value: distribution[1], color: MOODS[1 as MoodLevel].color },
+        { name: 'Regular', value: distribution[2], color: MOODS[2 as MoodLevel].color },
+        { name: 'Normal', value: distribution[3], color: MOODS[3 as MoodLevel].color },
+        { name: 'Fresco', value: distribution[4], color: MOODS[4 as MoodLevel].color },
+        { name: 'Legendario', value: distribution[5], color: MOODS[5 as MoodLevel].color },
     ].filter(d => d.value > 0);
 
     const lineData = validEntries.map(([date, d]) => {
         const [y,m,day] = date.split('-');
+        // Fix: Accessing d.level and d.note now works because d is typed as DayData
         return {
             date: `${m}/${day}`,
             fullDate: date,
@@ -69,6 +74,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
     setAiAnalysis("");
 
     try {
+        // Fix: Initializing GoogleGenAI client according to best practices
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         
         // Prepare summary for AI
@@ -90,11 +96,13 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
         Máximo 100 palabras.
         `;
 
+        // Fix: Using correct model name and generateContent syntax
         const response = await ai.models.generateContent({
             model: 'gemini-3-flash-preview',
             contents: prompt,
         });
 
+        // Fix: Accessing generated text using the .text property
         setAiAnalysis(response.text || "Pepe se ha quedado sin palabras.");
 
     } catch (e) {
