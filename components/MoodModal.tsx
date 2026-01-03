@@ -23,6 +23,7 @@ const SAVE_PHRASES = [
 // URL directa a un Pepe "Base" (Sad/Neutral) que permita CORS para poder editarlo
 // Usamos una versión fiable alojada para evitar errores de lienzo sucio (tainted canvas)
 const PEPE_BASE_SOURCE = "https://i.imgur.com/KJSjEue.png"; // Pepe clásico neutro para mejor edición
+const PEPE_FAIL_SOURCE = "https://media.tenor.com/Jjnsb7lqiIEAAAAM/pepe-the-frog-clown.gif"; // Pepe Clown para cuando falla la IA
 
 const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete, initialData, dateStr }) => {
   const [level, setLevel] = useState<MoodLevel>(MoodLevel.None);
@@ -30,10 +31,11 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [buttonText, setButtonText] = useState(SAVE_PHRASES[0]);
   
-  // Estados para Nano Banana Image Editor
+  // Estados para Pepe Magic Image Editor
   const [isMemeMode, setIsMemeMode] = useState(false);
   const [generatingMeme, setGeneratingMeme] = useState(false);
   const [memeUrl, setMemeUrl] = useState<string | null>(null);
+  const [magicExcuse, setMagicExcuse] = useState<string | null>(null);
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -44,6 +46,7 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
       setIsConfirmingDelete(false);
       setIsMemeMode(false);
       setMemeUrl(null);
+      setMagicExcuse(null);
       setGeneratingMeme(false);
       const randomPhrase = SAVE_PHRASES[Math.floor(Math.random() * SAVE_PHRASES.length)];
       setButtonText(randomPhrase);
@@ -85,6 +88,7 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
     setIsMemeMode(false);
     setGeneratingMeme(false);
     setMemeUrl(null);
+    setMagicExcuse(null);
   };
 
   const formatDateDisplay = (isoDate: string) => {
@@ -95,7 +99,7 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
     return lower.charAt(0).toUpperCase() + lower.slice(1);
   };
 
-  // --- NANO BANANA IMAGE EDITING LOGIC ---
+  // --- NANO BANANA / PEPE MAGIC IMAGE EDITING LOGIC ---
 
   const getBase64FromUrl = async (url: string): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -123,6 +127,7 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
   const generateAutoEdit = async () => {
     setGeneratingMeme(true);
     setMemeUrl(null);
+    setMagicExcuse(null);
     SoundManager.play('magic');
 
     const apiKey = (import.meta as any).env?.VITE_PEPE_MOOD_KEY || (process as any).env?.NEXT_PUBLIC_PEPE_MOOD_KEY || process.env.API_KEY;
@@ -139,7 +144,6 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
              base64Image = await getBase64FromUrl(PEPE_BASE_SOURCE);
         } catch (e) {
              console.error("Error cargando imagen base, usando fallback local de emergencia");
-             // Fallback minimalista de un pixel verde si falla la red, para que la AI "imagine" el resto
              base64Image = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mM8c+ZMPQAJ0AOuZ402wAAAAABJRU5ErkJggg==";
         }
 
@@ -188,8 +192,9 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
 
     } catch (e) {
         console.error("Error editando imagen", e);
-        // Mostrar un estado de error sutil en la UI
-        setMemeUrl(PEPE_BASE_SOURCE); // Fallback a la original si falla
+        // Fallback gracioso cuando falla la API
+        setMemeUrl(PEPE_FAIL_SOURCE); 
+        setMagicExcuse("La IA está durmiendo la siesta o te falta API Key. Toma este payaso de consolación.");
     } finally {
         setGeneratingMeme(false);
     }
@@ -304,7 +309,7 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
           {/* Note Input */}
           <div className={`animate-in slide-in-from-bottom duration-500 delay-150 ${isConfirmingDelete ? 'opacity-30 pointer-events-none' : ''}`}>
              
-             {/* Header de la sección de texto + Botón Nano */}
+             {/* Header de la sección de texto + Botón Magic */}
              <div className="flex justify-between items-center mb-4 px-1">
               <div className="flex items-center gap-2">
                 <MessageSquareText size={18} className="text-slate-500" />
@@ -314,9 +319,9 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
               {!isMemeMode && level !== MoodLevel.None && (
                 <button 
                   onClick={() => setIsMemeMode(true)}
-                  className="flex items-center gap-1.5 bg-gradient-to-r from-yellow-500 to-amber-600 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase text-white hover:brightness-110 transition-all shadow-lg shadow-yellow-500/30 animate-in fade-in zoom-in"
+                  className="flex items-center gap-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase text-white hover:brightness-110 transition-all shadow-lg shadow-purple-500/30 animate-in fade-in zoom-in"
                 >
-                    <Sparkles size={12} /> Nano Magic
+                    <Sparkles size={12} className="text-yellow-200" /> Pepe Magic
                 </button>
               )}
             </div>
@@ -329,10 +334,10 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
                 onChange={(e) => setNote(e.target.value)}
                 />
             ) : (
-                <div className="bg-slate-950 rounded-3xl p-4 md:p-6 border border-yellow-500/30 text-center animate-in zoom-in duration-300">
+                <div className="bg-slate-950 rounded-3xl p-4 md:p-6 border border-purple-500/30 text-center animate-in zoom-in duration-300">
                     <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-yellow-400 font-black text-xs uppercase tracking-widest flex items-center gap-2">
-                            <Sparkles size={14} /> Nano Banana Editor
+                        <h3 className="text-purple-400 font-black text-xs uppercase tracking-widest flex items-center gap-2">
+                            <Sparkles size={14} /> Pepe Magic Studio
                         </h3>
                         <button onClick={handleCloseMemeMode} className="text-slate-500 hover:text-white text-[10px] font-bold uppercase">Cerrar</button>
                     </div>
@@ -343,8 +348,8 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
                         
                         {generatingMeme ? (
                             <div className="flex flex-col items-center gap-3 relative z-10">
-                                <Loader2 size={40} className="text-yellow-500 animate-spin" />
-                                <span className="text-xs font-bold text-yellow-400 animate-pulse">Pepe está mutando...</span>
+                                <Loader2 size={40} className="text-purple-500 animate-spin" />
+                                <span className="text-xs font-bold text-purple-400 animate-pulse">Invocando magia oscura...</span>
                                 <span className="text-[10px] text-slate-500">Interpretando tu lore</span>
                             </div>
                         ) : memeUrl ? (
@@ -365,6 +370,15 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
                              />
                         )}
                     </div>
+                    
+                    {/* Mensaje de Excusa si falló */}
+                    {magicExcuse && (
+                        <div className="mb-4 px-4 py-2 bg-red-500/10 border border-red-500/20 rounded-xl">
+                            <p className="text-[10px] text-red-300 font-bold italic">
+                                "{magicExcuse}"
+                            </p>
+                        </div>
+                    )}
 
                     {/* Área de Control */}
                     <div className="space-y-3">
@@ -374,7 +388,7 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
                                     onClick={generateAutoEdit}
                                     className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-2"
                                 >
-                                    <RefreshCw size={12} /> Regenerar
+                                    <RefreshCw size={12} /> Reintentar
                                 </button>
                                 <button 
                                     onClick={handleDownloadMeme}
@@ -385,7 +399,7 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
                             </div>
                         )}
                         {generatingMeme && (
-                            <p className="text-[10px] text-slate-500 italic animate-pulse">Aplicando magia de nano banana...</p>
+                            <p className="text-[10px] text-slate-500 italic animate-pulse">Pepe está pensando...</p>
                         )}
                     </div>
                 </div>

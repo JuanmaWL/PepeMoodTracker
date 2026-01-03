@@ -9,19 +9,16 @@ interface CloudModalProps {
   data: YearData;
 }
 
-// Lista extendida de palabras vacías para limpiar "ruido"
+// Lista de stopwords
 const STOPWORDS = new Set([
-  // Artículos y Preposiciones
   'el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas', 'lo', 'al', 'del',
   'a', 'ante', 'bajo', 'cabe', 'con', 'contra', 'de', 'desde', 'durante',
   'en', 'entre', 'hacia', 'hasta', 'mediante', 'para', 'por', 'segun', 'sin',
   'so', 'sobre', 'tras', 'versus', 'via',
-  // Pronombres y Posesivos
   'yo', 'tu', 'el', 'ella', 'ello', 'nosotros', 'nosotras', 'vosotros', 'vosotras',
   'ellos', 'ellas', 'mi', 'mis', 'tu', 'tus', 'su', 'sus', 'nuestro', 'nuestra',
   'vuestro', 'vuestra', 'me', 'te', 'se', 'nos', 'os', 'le', 'les', 'migo', 'tigo',
   'conmigo', 'contigo', 'consigo',
-  // Verbos Auxiliares y Comunes
   'soy', 'eres', 'es', 'somos', 'sois', 'son', 'fui', 'fuiste', 'fue', 'fuimos', 'fueron',
   'era', 'eras', 'eramos', 'eran', 'sido', 'siendo',
   'estoy', 'estas', 'esta', 'estamos', 'estais', 'estan', 'estuve', 'estuviste', 'estuvo',
@@ -35,7 +32,6 @@ const STOPWORDS = new Set([
   'hicimos', 'hicieron', 'hacia', 'hacias', 'haciamos', 'hacian', 'hecho', 'haciendo',
   'puedo', 'puedes', 'puede', 'podemos', 'podeis', 'pueden', 'podia', 'podias', 'podiamos',
   'queria', 'querias', 'queriamos', 'dije', 'dijo', 'dice', 'dicen', 'saber', 'sabia',
-  // Conjunciones y Adverbios de Relleno
   'y', 'e', 'ni', 'o', 'u', 'pero', 'mas', 'sino', 'aunque', 'porque', 'pues',
   'como', 'cuando', 'donde', 'quien', 'que', 'cual', 'cuanto', 'si', 'no',
   'muy', 'mucho', 'poco', 'bastante', 'tan', 'tanto', 'asi', 'entonces', 'luego',
@@ -48,21 +44,54 @@ const STOPWORDS = new Set([
   'este', 'esta', 'esto', 'estos', 'estas', 'aquel', 'aquella', 'aquello',
   'dia', 'dias', 'hoy', 'ayer', 'mañana', 'año', 'mes', 'semana', 'vez', 'veces',
   'creo', 'parece', 'siento', 'veo', 'digo', 'bueno', 'malo', 'claro', 'vale',
-  'fin', 'principio', 'mitad', 'lado', 'parte', 'gran', 'solo', 'solamente',
-  // DÍAS DE LA SEMANA (Ruido temporal)
+  'fin', 'principio', 'mitad', 'lado', 'parte', 'gran', 'solo', 'solamente', 'super',
   'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo',
   'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
   'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
 ]);
 
 // Palabras cortas permitidas (excepciones)
-const WHITELIST_SHORT = new Set(['sol', 'mar', 'luz', 'paz', 'fe', 'ron', 'bar', 'gym', 'gas', 'red', 'gol']);
+const WHITELIST_SHORT = new Set(['sol', 'mar', 'luz', 'paz', 'fe', 'ron', 'bar', 'gym', 'gas', 'red', 'gol', 'ojo', 'sed', 'fan']);
 
+// Función de Normalización Avanzada (Protege la Ñ)
 const normalizeText = (text: string) => {
-  return text
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
+  // 1. Minúsculas
+  let str = text.toLowerCase();
+  // 2. Proteger la ñ reemplazándola temporalmente
+  str = str.replace(/ñ/g, '###nz###');
+  // 3. Eliminar acentos
+  str = str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  // 4. Restaurar la ñ
+  str = str.replace(/###nz###/g, 'ñ');
+  return str;
+};
+
+// Algoritmo simple de Stemming para español (Singularización)
+const getStem = (word: string) => {
+  if (WHITELIST_SHORT.has(word)) return word;
+  if (word.length <= 3) return word;
+
+  // Plurales en -ces (feliz -> felices, luz -> luces)
+  if (word.endsWith('ces')) {
+    return word.slice(0, -3) + 'z';
+  }
+  
+  // Plurales en -es (árbol -> árboles)
+  if (word.endsWith('es')) {
+    const stem = word.slice(0, -2);
+    // Evitar romper palabras cortas
+    if (stem.length > 2) return stem;
+  }
+
+  // Plurales en -s (gato -> gatos)
+  if (word.endsWith('s') && !word.endsWith('ss')) {
+    const stem = word.slice(0, -1);
+    // Evitar romper palabras que terminan en s pero no son plurales obvios
+    // o dejar raíces demasiado cortas
+    if (stem.length > 2) return stem;
+  }
+
+  return word;
 };
 
 const CloudModal: React.FC<CloudModalProps> = ({ isOpen, onClose, data }) => {
@@ -71,54 +100,53 @@ const CloudModal: React.FC<CloudModalProps> = ({ isOpen, onClose, data }) => {
   const words = useMemo(() => {
     if (!data) return [];
     
-    // 1. Extraer y normalizar texto
+    // 1. Extraer todas las notas
     const allNotes = (Object.values(data) as DayData[])
       .map(d => d.note || '')
       .join(' . '); 
 
-    const rawText = normalizeText(allNotes);
+    // 2. Normalizar protegiendo la Ñ
+    const cleanText = normalizeText(allNotes);
 
-    // 2. Tokenización inteligente
-    const cleanText = rawText.replace(/[^a-z0-9\s]/g, " ");
-    
-    const tokens = cleanText.split(/\s+/).filter(w => {
-        if (!w) return false;
-        if (WHITELIST_SHORT.has(w)) return true;
-        if (w.length < 3) return false; 
-        if (STOPWORDS.has(w)) return false; 
-        if (/^\d+$/.test(w)) return false; 
-        return true;
-    });
+    // 3. Tokenización (Permitiendo letras y números, y específicamente la ñ)
+    // El replace elimina todo lo que NO sea a-z, 0-9, ñ o espacio.
+    const tokens = cleanText.replace(/[^a-z0-9ñ\s]/g, " ").split(/\s+/);
 
-    // 3. Generación de Conceptos
     const counts: Record<string, number> = {};
 
-    tokens.forEach((token, index) => {
-      counts[token] = (counts[token] || 0) + 1;
+    tokens.forEach(token => {
+        if (!token) return;
+        
+        // Filtrado básico
+        if (token.length < 3 && !WHITELIST_SHORT.has(token)) return;
+        if (STOPWORDS.has(token)) return;
+        if (/^\d+$/.test(token)) return; // Ignorar solo números
 
-      // Detección de Bigramas
-      if (index < tokens.length - 1) {
-          const nextToken = tokens[index + 1];
-          if (token.length > 3 && nextToken.length > 3) {
-             const bigram = `${token} ${nextToken}`;
-             counts[bigram] = (counts[bigram] || 0) + 0.8; 
-          }
-      }
+        // Stemming (Unificar singular/plural)
+        // "años" -> "año"
+        const stem = getStem(token);
+
+        // Volver a chequear stopwords con el stem (por si "dias" -> "dia")
+        if (STOPWORDS.has(stem)) return;
+
+        counts[stem] = (counts[stem] || 0) + 1;
     });
 
-    // 4. Filtrado y Ordenamiento
+    // 4. Ordenamiento y corte
     let result = Object.entries(counts)
-      .map(([text, value]) => ({ text, value: Math.floor(value) }))
+      .map(([text, value]) => ({ text, value }))
       .filter(item => item.value >= 1)
       .sort((a, b) => b.value - a.value);
 
+    // Limitamos la cantidad de palabras para que no explote la nube
     const totalEntries = Object.keys(data).length;
-    const maxItemsToShow = totalEntries < 5 ? 10 : totalEntries < 20 ? 25 : 50;
+    const maxItemsToShow = totalEntries < 10 ? 15 : 40;
 
     return result.slice(0, maxItemsToShow);
   }, [data]);
 
   const maxCount = words.length > 0 ? words[0].value : 1;
+  const minCount = words.length > 0 ? words[words.length - 1].value : 0;
 
   if (!isOpen) return null;
 
@@ -172,13 +200,28 @@ const CloudModal: React.FC<CloudModalProps> = ({ isOpen, onClose, data }) => {
               <p className="text-xs uppercase tracking-widest">Escribe más notas en el diario para generar tu mapa mental.</p>
             </div>
           ) : (
-            <div className="flex flex-wrap justify-center items-center gap-x-6 gap-y-4 content-center min-h-full py-10">
+            <div className="flex flex-wrap justify-center items-center gap-x-4 gap-y-2 content-center min-h-full py-10">
               {words.map((w, i) => {
-                // Cálculo de tamaño
-                const relativeSize = Math.log(w.value + 1) / Math.log(maxCount + 1);
-                const size = Math.max(0.8, Math.min(4.0, 0.8 + relativeSize * 3.5));
-                const opacity = Math.max(0.4, Math.min(1, 0.5 + relativeSize));
+                // Algoritmo de Tamaño:
+                // Normalizamos el valor entre 0 y 1
+                let normalized = 0;
+                if (maxCount !== minCount) {
+                  normalized = (w.value - minCount) / (maxCount - minCount);
+                } else {
+                  normalized = 1; // Si todas tienen el mismo valor
+                }
+
+                // Usamos una función cuadrática para exagerar las diferencias
+                // Las palabras top serán mucho más grandes.
+                // Rango de tamaño: 0.8rem a 4.5rem
+                const minSize = 0.8;
+                const maxSize = 4.5;
+                const size = minSize + (Math.pow(normalized, 1.5) * (maxSize - minSize));
                 
+                // Opacidad también basada en relevancia
+                const opacity = 0.5 + (normalized * 0.5);
+
+                // Colores variados
                 const colors = [
                    'text-green-400', 'text-emerald-300', 'text-teal-200', 
                    'text-indigo-400', 'text-violet-300', 'text-purple-200',
@@ -195,14 +238,15 @@ const CloudModal: React.FC<CloudModalProps> = ({ isOpen, onClose, data }) => {
                     key={w.text}
                     onClick={(e) => handleWordClick(e, w.text)}
                     className={`
-                      ${colorClass} font-black uppercase tracking-tight transition-all duration-300 cursor-pointer relative group outline-none select-none appearance-none
+                      ${colorClass} font-black uppercase tracking-tight transition-all duration-500 cursor-pointer relative group outline-none select-none appearance-none leading-none
                       ${isTop ? 'z-10 drop-shadow-[0_0_15px_rgba(255,255,255,0.15)]' : 'z-0'}
-                      ${isSelected ? 'scale-110 z-20 brightness-125' : 'hover:scale-105'}
+                      ${isSelected ? 'scale-110 z-20 brightness-125' : 'hover:scale-110'}
                     `}
                     style={{ 
                       fontSize: `${size}rem`,
                       opacity: isSelected ? 1 : opacity,
-                      transform: isSelected ? 'rotate(0deg)' : `rotate(${(i % 2 === 0 ? 1 : -1) * (Math.random() * 5)}deg)` 
+                      transform: isSelected ? 'rotate(0deg)' : `rotate(${(i % 2 === 0 ? 1 : -1) * (Math.random() * 4)}deg)`,
+                      margin: `${Math.max(0.2, normalized)}rem` // Más margen para palabras grandes
                     }}
                   >
                     {w.text}
@@ -210,9 +254,9 @@ const CloudModal: React.FC<CloudModalProps> = ({ isOpen, onClose, data }) => {
                     {/* Tooltip Interactivo */}
                     <span className={`
                         absolute -top-10 left-1/2 -translate-x-1/2 
-                        bg-slate-900/90 text-white text-[12px] px-3 py-1.5 rounded-xl 
+                        bg-slate-900/95 text-white text-[12px] px-3 py-1.5 rounded-xl 
                         whitespace-nowrap pointer-events-none border border-slate-700/50 shadow-xl backdrop-blur-sm
-                        transition-all duration-200 origin-bottom
+                        transition-all duration-200 origin-bottom z-50
                         ${isSelected 
                             ? 'opacity-100 scale-100 translate-y-0' 
                             : 'opacity-0 scale-75 translate-y-2 group-hover:opacity-100 group-hover:scale-100 group-hover:translate-y-0'
@@ -220,7 +264,7 @@ const CloudModal: React.FC<CloudModalProps> = ({ isOpen, onClose, data }) => {
                     `}>
                         <span className="font-bold text-yellow-400">{w.value}</span> {w.value === 1 ? 'vez' : 'veces'}
                         {/* Triangulito del tooltip */}
-                        <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 border-l-4 border-l-transparent border-r-4 border-r-transparent border-t-4 border-t-slate-900/90"></span>
+                        <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 border-l-4 border-l-transparent border-r-4 border-r-transparent border-t-4 border-t-slate-900/95"></span>
                     </span>
                   </button>
                 );

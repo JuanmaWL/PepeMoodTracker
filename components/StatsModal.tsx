@@ -22,7 +22,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
   const [aiAnalysis, setAiAnalysis] = useState<string>("");
   const [loadingAi, setLoadingAi] = useState(false);
   const [errorAi, setErrorAi] = useState("");
-  const [selectedMonth, setSelectedMonth] = useState<number | 'all'>('all');
+  const [selectedMonth, setSelectedMonth] = useState<number | 'all'>(0);
   const [chartType, setChartType] = useState<ChartType>('bar'); // Barras por defecto ahora
 
   useEffect(() => {
