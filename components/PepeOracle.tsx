@@ -83,7 +83,7 @@ const PepeOracle: React.FC<PepeOracleProps> = ({ data }) => {
         1. Sé breve (máximo 50 palabras).
         2. NO USES MARKDOWN. Prohibido usar asteriscos (**), negritas o cursivas. Escribe texto plano natural.
         3. Usa jerga Millennial (pero natural, no forzada): "Adulting", "Cringe", "Mood", referencias a que "cualquier tiempo pasado fue mejor" o fatiga vital.
-        4. Si el mood es malo, sé sarcásticamente comprensivo (tipo: "te entiendo bro"). Si es bueno, celebra pero con ironía (tipo: "aprovéchalo antes de que se rompa algo").
+        4. Si el mood es malo, sé sarcásticamente comprensivo (tipo: "te entiendo, tío, ya lo siento."). Si es bueno, celebra pero con ironía (tipo: "aprovéchalo antes de que se rompa algo").
       `;
 
       const response = await ai.models.generateContent({

@@ -23,7 +23,7 @@ const SAVE_PHRASES = [
 // URL directa a un Pepe "Base" (Sad/Neutral) que permita CORS para poder editarlo
 // Usamos una versión fiable alojada para evitar errores de lienzo sucio (tainted canvas)
 const PEPE_BASE_SOURCE = "https://i.imgur.com/KJSjEue.png"; // Pepe clásico neutro para mejor edición
-const PEPE_FAIL_SOURCE = "https://media.tenor.com/Jjnsb7lqiIEAAAAM/pepe-the-frog-clown.gif"; // Pepe Clown para cuando falla la IA
+const PEPE_FAIL_SOURCE = "https://media.tenor.com/_hOeFNfH_58AAAAj/pepe-clown-clown-pepe.gif"; // Pepe Clown para cuando falla la IA
 
 const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete, initialData, dateStr }) => {
   const [level, setLevel] = useState<MoodLevel>(MoodLevel.None);

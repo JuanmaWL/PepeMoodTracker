@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { X, Sparkles, Music, Trophy, Brain, Quote, Loader2, TrendingUp, PieChart as PieChartIcon, BarChart3, Hexagon, Waves } from 'lucide-react';
+import { X, Sparkles, Music, Trophy, Brain, Quote, Loader2, TrendingUp, PieChart as PieChartIcon, BarChart3, Hexagon, Waves, CalendarRange, Filter, RefreshCw } from 'lucide-react';
 import { YearData, MoodLevel, DayData } from '../types';
 import { MOODS, MONTHS } from '../constants';
 import Heatmap from './Heatmap';
@@ -17,13 +17,16 @@ interface StatsModalProps {
 }
 
 type ChartType = 'area' | 'radar' | 'bar';
+type TimeRange = 'all' | 'last_7' | 'last_30' | string; // string for '0', '1', etc.
 
 const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
   const [aiAnalysis, setAiAnalysis] = useState<string>("");
   const [loadingAi, setLoadingAi] = useState(false);
   const [errorAi, setErrorAi] = useState("");
-  const [selectedMonth, setSelectedMonth] = useState<number | 'all'>(0);
-  const [chartType, setChartType] = useState<ChartType>('bar'); // Barras por defecto ahora
+  
+  // Por defecto Enero ('0'), como se pidió anteriormente, pero ahora soporta rangos
+  const [timeRange, setTimeRange] = useState<TimeRange>('0'); 
+  const [chartType, setChartType] = useState<ChartType>('bar');
 
   useEffect(() => {
     if (isOpen) {
@@ -33,18 +36,51 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
     }
   }, [isOpen]);
 
+  // Si cambia el filtro, reseteamos el análisis para obligar/permitir obtener uno nuevo acorde al periodo
+  useEffect(() => {
+    setAiAnalysis("");
+    setErrorAi("");
+  }, [timeRange]);
+
+  // Helper para mostrar etiqueta del rango actual
+  const getRangeLabel = () => {
+    if (timeRange === 'all') return 'Todo el Año';
+    if (timeRange === 'last_7') return 'Últimos 7 Días';
+    if (timeRange === 'last_30') return 'Últimos 30 Días';
+    return MONTHS[parseInt(timeRange)];
+  };
+
   const stats = useMemo(() => {
     const entries = Object.entries(data) as [string, DayData][];
-    const validEntries = entries.filter(([_, d]) => d.level > 0).sort((a, b) => a[0].localeCompare(b[0]));
+    // Ordenar cronológicamente
+    const allValidEntries = entries.filter(([_, d]) => d.level > 0).sort((a, b) => a[0].localeCompare(b[0]));
     
-    if (validEntries.length === 0) return null;
+    // FILTRADO PRINCIPAL
+    let filteredEntries: [string, DayData][] = [];
 
-    const totalDays = validEntries.length;
-    const totalScore = validEntries.reduce((acc, [_, d]) => acc + d.level, 0);
+    if (timeRange === 'all') {
+        filteredEntries = allValidEntries;
+    } else if (timeRange === 'last_7') {
+        filteredEntries = allValidEntries.slice(-7);
+    } else if (timeRange === 'last_30') {
+        filteredEntries = allValidEntries.slice(-30);
+    } else {
+        // Es un mes específico (0-11)
+        const monthIndex = parseInt(timeRange);
+        filteredEntries = allValidEntries.filter(([date]) => {
+             const [_, m] = date.split('-');
+             return parseInt(m) - 1 === monthIndex;
+        });
+    }
+
+    if (filteredEntries.length === 0) return null;
+
+    const totalDays = filteredEntries.length;
+    const totalScore = filteredEntries.reduce((acc, [_, d]) => acc + d.level, 0);
     const average = totalScore / totalDays;
 
     const distribution = [0, 0, 0, 0, 0, 0]; 
-    validEntries.forEach(([_, d]) => distribution[d.level]++);
+    filteredEntries.forEach(([_, d]) => distribution[d.level]++);
 
     const pieData = [
         { name: 'Fatal', value: distribution[MoodLevel.Fatal], color: MOODS[MoodLevel.Fatal].color },
@@ -55,7 +91,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
     ].filter(d => d.value > 0);
 
     // Datos diarios (para Barras y Área)
-    const lineData = validEntries.map(([date, d]) => {
+    const lineData = filteredEntries.map(([date, d]) => {
         const [y,m,day] = date.split('-');
         return {
             date: `${m}/${day}`,
@@ -66,41 +102,26 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
         };
     });
 
-    const filteredLineData = selectedMonth === 'all' 
-      ? lineData 
-      : lineData.filter(d => d.month === selectedMonth);
-
     // Datos para Radar (Promedio por día de la semana)
-    // 0 = Domingo, 1 = Lunes, ...
     const weekStats = [0, 0, 0, 0, 0, 0, 0].map(() => ({ sum: 0, count: 0 }));
     
-    // Filtrar entradas según el mes seleccionado también para el Radar
-    const entriesForRadar = selectedMonth === 'all'
-        ? validEntries
-        : validEntries.filter(([date]) => parseInt(date.split('-')[1]) - 1 === selectedMonth);
-
-    entriesForRadar.forEach(([date, d]) => {
-        // Truco: new Date('2024-01-01') a veces da problemas de zona horaria si no se especifica hora
-        // Usamos split para asegurar dia local
+    filteredEntries.forEach(([date, d]) => {
         const [y, m, day] = date.split('-').map(Number);
-        const dayOfWeek = new Date(y, m - 1, day).getDay(); // 0 (Sun) - 6 (Sat)
+        const dayOfWeek = new Date(y, m - 1, day).getDay(); 
         weekStats[dayOfWeek].sum += d.level;
         weekStats[dayOfWeek].count += 1;
     });
 
     const weekLabels = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-    // Reordenar para empezar en Lunes si se prefiere, pero dejaremos Dom -> Sáb estándar JS
     const radarData = weekLabels.map((label, i) => ({
         subject: label,
         A: weekStats[i].count > 0 ? parseFloat((weekStats[i].sum / weekStats[i].count).toFixed(2)) : 0,
         fullMark: 5
     }));
-
-    // Movemos Domingo al final para que el gráfico empiece visualmente en Lunes (L M X J V S D)
     const shiftedRadarData = [...radarData.slice(1), radarData[0]];
 
-    return { totalDays, average, pieData, lineData: filteredLineData, radarData: shiftedRadarData, validEntries };
-  }, [data, selectedMonth]);
+    return { totalDays, average, pieData, lineData, radarData: shiftedRadarData, filteredEntries };
+  }, [data, timeRange]);
 
   const parseAiResponse = (text: string) => {
     if (!text) return null;
@@ -112,7 +133,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
     const cleanStr = (s: string) => s.trim().replace(/^[:\s-]+/, '');
 
     const diagnosis = diagMatch ? cleanStr(diagMatch[1]) : cleanStr(text);
-    const soundtrack = soundMatch ? cleanStr(soundMatch[1]) : "";
+    const soundtrackFull = soundMatch ? cleanStr(soundMatch[1]) : "";
     const achievement = achievementMatch ? cleanStr(achievementMatch[1]) : "";
 
     const formatBold = (str: string) => {
@@ -126,7 +147,15 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
     };
 
     return (
-      <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-700">
+      <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-700 relative">
+        <button 
+             onClick={handleAskPepe}
+             className="absolute -top-2 -right-2 p-2 bg-indigo-500/20 hover:bg-indigo-500/40 rounded-full text-indigo-300 transition-colors z-10"
+             title="Regenerar Juicio"
+        >
+             <RefreshCw size={14} />
+        </button>
+
         <div className="bg-slate-900/40 p-4 rounded-2xl border border-indigo-500/20 relative">
           <Quote size={16} className="text-indigo-500/50 absolute top-3 left-3" />
           <p className="text-indigo-100 text-sm leading-relaxed pl-6 italic font-medium">
@@ -134,18 +163,23 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-3 mt-4">
-          {soundtrack && (
-            <div className="flex items-center gap-3 bg-pink-500/10 border border-pink-500/20 px-4 py-3 rounded-xl group transition-all hover:bg-pink-500/20 shadow-lg shadow-pink-950/20 cursor-default flex-1 min-w-[200px]">
-              <Music size={24} className="text-pink-400 group-hover:scale-110 transition-transform duration-200 shrink-0" />
-              <span className="text-[10px] font-black text-pink-200 uppercase tracking-wider leading-tight">
-                {soundtrack}
-              </span>
+        <div className="flex flex-col sm:flex-row gap-3 mt-4">
+          {soundtrackFull && (
+            <div className="flex items-start gap-3 bg-pink-500/10 border border-pink-500/20 px-4 py-3 rounded-xl group transition-all hover:bg-pink-500/20 shadow-lg shadow-pink-950/20 cursor-default flex-1">
+              <Music size={24} className="text-pink-400 group-hover:scale-110 transition-transform duration-200 shrink-0 mt-1" />
+              <div className="flex flex-col">
+                 <span className="text-[10px] font-black text-pink-200 uppercase tracking-wider leading-tight">
+                    Soundtrack
+                 </span>
+                 <p className="text-xs text-pink-100/90 leading-tight mt-1 font-medium italic">
+                    {soundtrackFull}
+                 </p>
+              </div>
             </div>
           )}
 
           {achievement && (
-            <div className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/20 px-4 py-3 rounded-xl group transition-all hover:bg-amber-500/20 shadow-lg shadow-amber-950/20 cursor-default flex-1 min-w-[200px]">
+            <div className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/20 px-4 py-3 rounded-xl group transition-all hover:bg-amber-500/20 shadow-lg shadow-amber-950/20 cursor-default flex-1">
               <Trophy size={20} className="text-amber-400 group-hover:scale-110 transition-transform duration-200 shrink-0" />
               <span className="text-[10px] font-black text-amber-200 uppercase tracking-wider leading-tight">
                 {achievement}
@@ -174,13 +208,13 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
     try {
         const ai = new GoogleGenAI({ apiKey: apiKey });
         
-        const filterText = selectedMonth === 'all' ? "reciente" : `de ${MONTHS[selectedMonth as number]}`;
-        const relevantEntries = selectedMonth === 'all' 
-          ? stats.validEntries.slice(-25) 
-          : stats.validEntries.filter(([date]) => parseInt(date.split('-')[1]) - 1 === selectedMonth);
+        // Descripción del periodo para la IA
+        const filterText = getRangeLabel();
+
+        const relevantEntries = stats.filteredEntries; // Ya está filtrado por el useMemo
 
         if (relevantEntries.length === 0) {
-          setErrorAi("No hay lore este mes para juzgar.");
+          setErrorAi("No hay lore en este periodo para juzgar.");
           setLoadingAi(false);
           return;
         }
@@ -191,21 +225,22 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
 
         const prompt = `
             ACTÚA COMO: Pepe the Frog versión Millennial.
-            CONTEXTO: Analiza el diario: ${filterText}.
+            CONTEXTO: Analiza el diario del usuario: "${filterText}".
             DATOS: ${summaryText}
 
             Misión (RESPUESTA ESTRUCTURADA OBLIGATORIA):
-            1. Usa las etiquetas [DIAGNÓSTICO], [SOUNDTRACK] y [LOGRO].
             
+            [DIAGNÓSTICO]: Frase lapidaria y sarcástica sobre cómo le ha ido al usuario en este periodo (${filterText}).
+            
+            [SOUNDTRACK]: Elige UNA canción (2000s, Nu Metal, Emo, Pop Punk, Rock Alternativo) que defina este periodo.
+            FORMATO SOUNDTRACK: "Titulo - Artista. Por qué: [Argumento gracioso/ácido de por qué esta canción encaja con su miseria o gloria]".
+            - Ejemplos: Linkin Park, Blink-182, Evanescence, Britney, My Chemical Romance, Avril Lavigne, Sum41, Simple Plan, Green Day, etc.
+            [LOGRO]: Logro desbloqueado sarcástico (max 8 palabras).
+
             REGLAS:
             - Texto natural, sarcástico pero nostálgico.
             - SIN Markdown ni asteriscos.
-            
-            [DIAGNÓSTICO]: Frase lapidaria sobre el mes/periodo.
-            [SOUNDTRACK]: Canción (2000s, Nu Metal, Emo, Pop Punk).
-            [LOGRO]: Logro desbloqueado sarcástico (max 8 palabras).
-
-            Máximo 90 palabras total.
+            - Máximo 100 palabras total.
         `;
         const response = await ai.models.generateContent({
             model: 'gemini-3-flash-preview',
@@ -305,8 +340,6 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
             </BarChart>
         );
     } else {
-        // RADAR CHART (Por día de la semana)
-        // Eliminado el DIV envoltorio que causaba conflicto con ResponsiveContainer
         return (
             <RadarChart cx="50%" cy="50%" outerRadius="75%" data={stats.radarData}>
                 <PolarGrid stroke="#334155" />
@@ -345,8 +378,8 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
       <div className="bg-slate-800 border border-slate-700 w-full max-w-[90vw] xl:max-w-7xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
         <div className="p-6 border-b border-slate-700 flex justify-between items-center bg-slate-800 shrink-0">
           <div className="flex items-center gap-3">
-            <span className="text-3xl">🐸</span>
-            <h2 className="text-2xl font-black text-white uppercase tracking-tight">Archivo de Lore</h2>
+            <span className="text-3xl">📊🐸</span>
+            <h2 className="text-2xl font-black text-white uppercase tracking-tight">Estadísticas</h2>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-slate-700 rounded-full text-slate-400">
             <X size={24} />
@@ -354,8 +387,9 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
         </div>
 
         <div className="p-6 overflow-y-auto space-y-6 custom-scrollbar">
+          
           {!stats ? (
-            <div className="text-center py-20 text-slate-500 italic">"Página en blanco. Escribe tu historia primero."</div>
+            <div className="text-center py-20 text-slate-500 italic">"No hay datos suficientes en este periodo."</div>
           ) : (
             <div className="flex flex-col gap-6">
               
@@ -364,10 +398,39 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                 <h3 className="text-slate-400 font-black text-xs uppercase tracking-widest mb-4 flex items-center gap-2 self-start w-full">
                   <Brain size={14} className="text-slate-500" /> Mapa de Calor Anual
                 </h3>
+                {/* Heatmap siempre muestra el año completo por diseño */}
                 <Heatmap data={data} year={new Date().getFullYear()} />
               </div>
 
-              {/* FILA 2: Grid de 3 columnas para Métricas y Oráculo */}
+              {/* FILA 2: BARRA DE CONTROL GLOBAL (FILTROS) */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-900/60 p-3 rounded-2xl border border-slate-700/50">
+                 <div className="flex items-center gap-2 text-slate-400 px-2">
+                     <Filter size={16} className="text-indigo-400" />
+                     <span className="text-[10px] uppercase font-black tracking-widest">Filtrar Análisis y Gráficas:</span>
+                 </div>
+                 
+                 <div className="flex-1 w-full sm:w-auto">
+                     <div className="relative group w-full sm:max-w-xs">
+                         <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-slate-400">
+                             <CalendarRange size={14} />
+                         </div>
+                         <select 
+                            value={timeRange} 
+                            onChange={(e) => setTimeRange(e.target.value)}
+                            className="w-full bg-slate-800 text-white text-xs font-bold py-2.5 px-4 pr-10 rounded-xl outline-none hover:bg-slate-700 transition-colors cursor-pointer border border-slate-700 focus:border-indigo-500 appearance-none uppercase tracking-wide shadow-sm"
+                         >
+                            <option value="last_7">Últimos 7 días</option>
+                            <option value="last_30">Últimos 30 días</option>
+                            <option disabled>──────────</option>
+                            {MONTHS.map((m, i) => <option key={m} value={i}>{m}</option>)}
+                            <option disabled>──────────</option>
+                            <option value="all">Todo el Año</option>
+                         </select>
+                     </div>
+                 </div>
+              </div>
+
+              {/* FILA 3: Grid de 3 columnas para Métricas y Oráculo */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 
                 {/* Columna Izquierda: Métricas Numéricas y Tarta */}
@@ -442,9 +505,13 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
 
                 {/* Columna Central y Derecha (Combinadas): Oráculo de Pepe */}
                 <div className="lg:col-span-2 bg-indigo-900/10 p-6 rounded-3xl border border-indigo-500/20 flex flex-col">
-                  <div className="flex justify-between items-start mb-4">
+                  {/* HEADER DEL CARD SIN FILTRO (AHORA GLOBAL) */}
+                  <div className="flex flex-row justify-between items-center mb-4 gap-4">
                     <span className="text-indigo-300 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
                       <Sparkles size={12} className="text-indigo-400 animate-pulse" /> Juicio de Pepe
+                    </span>
+                    <span className="text-[10px] font-bold text-indigo-400/60 bg-indigo-500/10 px-2 py-1 rounded-lg">
+                        Analizando: <span className="text-indigo-300">{getRangeLabel()}</span>
                     </span>
                   </div>
                   
@@ -474,11 +541,11 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                 </div>
               </div>
 
-              {/* FILA 3: Evolución de Vibra */}
+              {/* FILA 4: Evolución de Vibra */}
               <div className="bg-slate-900/50 p-6 rounded-3xl border border-slate-700 overflow-hidden w-full">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                     <h3 className="text-slate-400 font-black text-xs uppercase tracking-widest flex items-center gap-2">
-                        <TrendingUp size={14} /> Evolución de Vibra
+                        <TrendingUp size={14} /> Evolución de Vibra ({getRangeLabel()})
                     </h3>
                     
                     <div className="flex flex-wrap items-center gap-4">
@@ -506,19 +573,6 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                                 <Hexagon size={14} />
                             </button>
                          </div>
-
-                        {/* Selector de Mes */}
-                        <div className="flex items-center gap-3 bg-slate-800 p-1 rounded-xl border border-slate-700">
-                            <span className="text-[10px] font-bold text-slate-500 px-2 uppercase hidden sm:inline">Filtrar:</span>
-                            <select 
-                            value={selectedMonth} 
-                            onChange={(e) => setSelectedMonth(e.target.value === 'all' ? 'all' : parseInt(e.target.value))}
-                            className="bg-slate-700 text-white text-[10px] font-bold py-1.5 px-3 rounded-lg outline-none hover:bg-slate-600 transition-colors cursor-pointer"
-                            >
-                            <option value="all">Todo el año</option>
-                            {MONTHS.map((m, i) => <option key={m} value={i}>{m}</option>)}
-                            </select>
-                        </div>
                     </div>
                 </div>
 
