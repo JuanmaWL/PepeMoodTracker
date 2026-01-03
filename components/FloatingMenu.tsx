@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import { Download, Upload, BarChart2, RotateCcw, Search } from 'lucide-react';
+import SoundManager from '../utils/sounds';
 
 interface FloatingMenuProps {
   onExport: () => void;
@@ -13,8 +14,14 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({ onExport, onImport, onStats
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImportClick = () => {
+    SoundManager.play('click');
     fileInputRef.current?.click();
   };
+
+  const handleClick = (action: () => void) => {
+    SoundManager.play('click');
+    action();
+  }
 
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-800/90 backdrop-blur-md border border-slate-700/50 rounded-full shadow-2xl px-6 py-3 flex gap-4 md:gap-8 items-center">
@@ -27,7 +34,7 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({ onExport, onImport, onStats
       />
       
       <button 
-        onClick={onExport}
+        onClick={() => handleClick(onExport)}
         className="group flex flex-col items-center gap-1 text-slate-400 hover:text-green-400 transition-colors w-12 md:w-16"
         title="Descargar copia de seguridad"
       >
@@ -45,7 +52,7 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({ onExport, onImport, onStats
       </button>
 
       <button 
-        onClick={onSearch}
+        onClick={() => handleClick(onSearch)}
         className="group flex flex-col items-center gap-1 text-slate-400 hover:text-yellow-400 transition-colors w-12 md:w-16"
         title="Buscar en el Lore"
       >
@@ -54,7 +61,7 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({ onExport, onImport, onStats
       </button>
 
       <button 
-        onClick={onStats}
+        onClick={() => handleClick(onStats)}
         className="group flex flex-col items-center gap-1 text-slate-400 hover:text-blue-400 transition-colors w-12 md:w-16"
         title="Estadísticas"
       >
@@ -63,7 +70,7 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({ onExport, onImport, onStats
       </button>
 
       <button 
-        onClick={onReset}
+        onClick={() => handleClick(onReset)}
         className="group flex flex-col items-center gap-1 text-slate-400 hover:text-red-500 transition-colors w-12 md:w-16"
         title="Borrar todo"
       >

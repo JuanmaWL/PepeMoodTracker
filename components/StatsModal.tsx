@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { X, Sparkles, Music, Trophy, Brain, Quote, Loader2 } from 'lucide-react';
 import { YearData, MoodLevel, DayData } from '../types';
 import { MOODS, MONTHS } from '../constants';
@@ -20,6 +20,17 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
   const [loadingAi, setLoadingAi] = useState(false);
   const [errorAi, setErrorAi] = useState("");
   const [selectedMonth, setSelectedMonth] = useState<number | 'all'>('all');
+
+  // 1. Efecto para limpiar el estado del Oráculo al abrir el modal
+  useEffect(() => {
+    if (isOpen) {
+      setAiAnalysis("");
+      setErrorAi("");
+      setLoadingAi(false);
+      // Opcional: Si quieres reiniciar también el filtro de mes al abrir
+      // setSelectedMonth('all'); 
+    }
+  }, [isOpen]);
 
   const stats = useMemo(() => {
     const entries = Object.entries(data) as [string, DayData][];
@@ -156,36 +167,29 @@ const handleAskPepe = async () => {
         ).join("\n");
 
         const prompt = `
-            ACTÚA COMO: Pepe the Frog versión Millennial (nacido en los 90).
-            PERSONALIDAD: Eres un superviviente de la era analógica-digital. Pasaste de enviar zumbidos en MSN a tener ansiedad por un email del trabajo. Eres sarcástico, nostálgico y estás harto de la "vida adulta". Tu humor es una mezcla de referencias de los 2000s y cinismo actual.
-
+            ACTÚA COMO: Pepe the Frog versión Millennial (nacido en los 90). 
+            PERSONALIDAD: Eres sarcástico pero nostálgico. Has sobrevivido al fin del MSN Messenger, a la moda emo y a la crisis de 2008. Te quejas de la "vida adulta" (adulting), usas referencias a Harry Potter, Pokémon, El Señor de los Anillos o series de los 2000s con naturalidad.
+            
             CONTEXTO: Estás analizando el diario personal de un humano: ${filterText}.
             DATOS ESTADÍSTICOS: ${summaryText}
 
             Misión (RESPUESTA ESTRUCTURADA OBLIGATORIA):
             1. Usa las etiquetas [DIAGNÓSTICO], [SOUNDTRACK] y [LOGRO].
             
-            INSTRUCCIONES DE VARIEDAD (RNG MENTAL):
-            Para el [DIAGNÓSTICO], ELIGE ALEATORIAMENTE 1 REFERENCIA de estas listas para construir tu metáfora (no las uses todas, solo una para no saturar):
-            - LISTA A (Tecnología Vintage): Zumbidos de MSN, cerrar Tuenti/Fotolog, descargar en Ares/eMule al 99%, SMS sin saldo, Snake del Nokia, etc
-            - LISTA B (Cultura Pop 2000s): Harry Potter (Dementores/Hogwarts), El Señor de los Anillos (Gollum/Frodo), Pokémon (Magikarp/Charizard/Squirtle, etc), Los Simpson (temporadas viejas), Shrek, series españolas (Física o Química/Aquí no hay quien viva, etc).
-            - LISTA C (Dramas Adultos): Dolor de espalda/rodilla injustificado, precio del aceite de oliva, miedo a Hacienda, resacas de dos días, querer dormir a las 22:00.
-
             REGLA SUPREMA DE FORMATO:
             - Escribe texto natural, como si hablaras por WhatsApp.
-            - PROHIBIDO USAR ASTERISCOS (**) ni negritas. Texto plano absoluto.
-            - Español de España coloquial (usa jerga tipo: "movidón", "en plan", "ni tan mal", "me renta").
-
+            - PROHIBIDO USAR ASTERISCOS (**) para resaltar palabras. NO uses Markdown. 
+            - NO pongas palabras en cursiva ni negrita. Texto plano.
+            
             En [DIAGNÓSTICO]:
-            - Analiza el periodo y suelta una verdad incómoda mezclada con una referencia de las listas de arriba, sé libre.
-            - Tono: Tu colega de toda la vida que te dice la verdad con una cerveza en la mano.
-
+            - Analiza el mes y defínelo con una frase lapidaria en ESPAÑOL DE ESPAÑA.
+            - Tono: Como ese amigo que te dice la verdad aunque duela, pero te invita a una cerveza después.
+            
             En [SOUNDTRACK]:
-            - Elige un temazo de los 2000s que defina el mood (Nu Metal, Pop Punk, Emo o Pop 2000s).
-            - Ejemplos: Linkin Park, Blink-182, Evanescence, Britney, El Canto del Loco, My Chemical Romance, Avril Lavigne,  Sum41, Simple Plan, Taylor Swift, etc.
-
+            - Elige una canción que defina el periodo (preferiblemente Nu Metal, Pop Punk de los 2000, Emo, o hits nostálgicos tipo Linkin Park, Blink-182, Evanescence, Britney, etc).
+            
             En [LOGRO]:
-            - Un título de "Logro Desbloqueado" sarcástico (máx 8 palabras).
+            - Crea un "Logro Desbloqueado" sarcástico de máximo 8 palabras.
 
             Longitud total: Máximo 90 palabras.
         `;
@@ -229,12 +233,13 @@ const handleAskPepe = async () => {
                 <Heatmap data={data} year={new Date().getFullYear()} />
               </div>
 
+              {/* 2. Métricas centradas horizontal y verticalmente (items-center, text-center) */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="bg-slate-700/50 p-5 rounded-2xl border border-slate-600 flex flex-col justify-center">
+                <div className="bg-slate-700/50 p-5 rounded-2xl border border-slate-600 flex flex-col justify-center items-center text-center">
                   <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Total Días</span>
                   <span className="text-4xl font-black text-white">{stats.totalDays}</span>
                 </div>
-                <div className="bg-slate-700/50 p-5 rounded-2xl border border-slate-600 flex flex-col justify-center">
+                <div className="bg-slate-700/50 p-5 rounded-2xl border border-slate-600 flex flex-col justify-center items-center text-center">
                   <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Promedio</span>
                   <span className="text-4xl font-black" style={{ color: stats.average >= 3.5 ? '#22c55e' : stats.average >= 2.5 ? '#facc15' : '#ef4444' }}>
                     {stats.average.toFixed(1)}
@@ -297,9 +302,23 @@ const handleAskPepe = async () => {
                 <div className="bg-slate-900/50 p-6 rounded-3xl border border-slate-700 flex flex-col items-center">
                   <h3 className="text-slate-400 font-black text-xs uppercase mb-4 tracking-widest">Mezcla de Vibes</h3>
                   <div className="h-48 w-full relative flex items-center justify-center">
+                    
+                    {/* 3. Animación 'pepe-breath' (Zoom in/out suave) */}
                     <div className="absolute w-12 h-12 z-0 pointer-events-none mb-1">
-                      <img src="https://i.imgur.com/3OaT1ef.png" className="w-full h-full object-contain" alt="Pepe Center" />
+                      <img 
+                        src="https://i.imgur.com/3OaT1ef.png" 
+                        className="w-full h-full object-contain" 
+                        alt="Pepe Center" 
+                        style={{ animation: 'pepe-breath 3s ease-in-out infinite' }}
+                      />
                     </div>
+                    {/* Definición de la animación keyframes en línea para este componente */}
+                    <style>{`
+                      @keyframes pepe-breath {
+                        0%, 100% { transform: scale(1); }
+                        50% { transform: scale(1.15); }
+                      }
+                    `}</style>
                     
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>

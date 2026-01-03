@@ -9,6 +9,7 @@ import Particles from './components/Particles';
 import { YearData, DayData, MoodLevel } from './types';
 import { STORAGE_KEY, PEPE_BANNER } from './constants';
 import { Plus, Flame, Trash2, X, AlertTriangle } from 'lucide-react';
+import SoundManager from './utils/sounds';
 
 const APP_TITLES = [
   "Pepe Tracker 2026",
@@ -43,6 +44,11 @@ const App: React.FC = () => {
       };
       navigator.vibrate(patterns[type]);
     }
+  }, []);
+
+  // Preload sounds on mount
+  useEffect(() => {
+    SoundManager.preload();
   }, []);
 
   // Lógica de Racha (Streak) - Memoizada
@@ -107,6 +113,7 @@ const App: React.FC = () => {
 
   const handleDayClick = useCallback((dateStr: string) => {
     triggerHaptic('light');
+    SoundManager.play('click');
     setSelectedDate(dateStr);
     setIsMoodModalOpen(true);
   }, [triggerHaptic]);
@@ -130,6 +137,7 @@ const App: React.FC = () => {
 
   const handleToday = () => {
     triggerHaptic('medium');
+    SoundManager.play('open');
     const today = new Date();
     const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
     handleDayClick(dateStr);
@@ -137,6 +145,7 @@ const App: React.FC = () => {
 
   const handleExport = () => {
     triggerHaptic('light');
+    SoundManager.play('success');
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(yearData));
     const dl = document.createElement('a');
     dl.setAttribute("href", dataStr);
@@ -157,6 +166,7 @@ const App: React.FC = () => {
         const importedData = JSON.parse(content);
         if (typeof importedData === 'object' && importedData !== null) {
           triggerHaptic('medium');
+          SoundManager.play('success');
           setYearData(importedData);
         }
       } catch (err) {
@@ -264,13 +274,13 @@ const App: React.FC = () => {
             </div>
             <div className="flex flex-col w-full gap-3 pt-2">
               <button
-                onClick={() => { triggerHaptic('heavy'); setYearData({}); setShowResetConfirm(false); }}
+                onClick={() => { triggerHaptic('heavy'); SoundManager.play('trash'); setYearData({}); setShowResetConfirm(false); }}
                 className="w-full py-4 bg-red-600 hover:bg-red-500 text-white font-black uppercase tracking-[0.2em] text-xs rounded-2xl transition-all shadow-lg shadow-red-900/40 flex items-center justify-center gap-2"
               >
                 <Trash2 size={16} /> SÍ, BORRAR TODO
               </button>
               <button
-                onClick={() => { triggerHaptic('light'); setShowResetConfirm(false); }}
+                onClick={() => { triggerHaptic('light'); SoundManager.play('click'); setShowResetConfirm(false); }}
                 className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-slate-300 font-black uppercase tracking-[0.2em] text-xs rounded-2xl transition-all border border-slate-700"
               >
                 CANCELAR

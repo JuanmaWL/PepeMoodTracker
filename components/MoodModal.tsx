@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Save, MessageSquareText, Trash2 } from 'lucide-react';
 import { MOODS } from '../constants';
 import { MoodLevel, DayData } from '../types';
+import SoundManager from '../utils/sounds';
 
 interface MoodModalProps {
   isOpen: boolean;
@@ -43,14 +44,28 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
 
   if (!isOpen) return null;
 
+  const handleMoodSelect = (lvl: MoodLevel) => {
+    // Sonido de burbuja "pop" generado instantáneamente
+    SoundManager.play('pop');
+    setLevel(lvl);
+  };
+
   const handleSave = () => {
+    // Sonido de éxito (acorde placentero)
+    SoundManager.play('success');
     onSave({ level, note });
     onClose();
   };
 
   const handleConfirmDelete = () => {
+    SoundManager.play('trash');
     onDelete(dateStr);
     setIsConfirmingDelete(false);
+  };
+
+  const initiateDelete = () => {
+    SoundManager.play('click');
+    setIsConfirmingDelete(true);
   };
 
   const formatDateDisplay = (isoDate: string) => {
@@ -111,7 +126,7 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
                   <button
                     key={moodLvl}
                     disabled={isConfirmingDelete}
-                    onClick={() => setLevel(moodLvl as MoodLevel)}
+                    onClick={() => handleMoodSelect(moodLvl as MoodLevel)}
                     className={`group relative overflow-hidden p-4 rounded-[1.5rem] border-2 transition-all duration-300 flex items-center gap-4 text-left
                       ${isLastFull ? 'md:col-span-2' : ''}
                       ${isSelected 
@@ -199,7 +214,7 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
             <div className="flex flex-col sm:flex-row gap-3">
               {hasExistingData && (
                 <button
-                  onClick={() => setIsConfirmingDelete(true)}
+                  onClick={initiateDelete}
                   className="w-full sm:w-auto px-5 py-4 rounded-[1.25rem] bg-slate-800 hover:bg-red-900/40 text-slate-400 hover:text-red-400 font-black transition-all flex items-center justify-center gap-3 border border-slate-700"
                 >
                   <Trash2 size={24} />
