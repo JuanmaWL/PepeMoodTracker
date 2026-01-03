@@ -10,32 +10,6 @@ export const PEPE_MOOD_IMAGES = {
   LEVEL_1: "https://i.pinimg.com/originals/17/89/2a/17892a4da93c7a712a008b1c31ca1b27.gif",
 };
 
-// Colección de Pepes para el generador de memes
-export const MEME_TEMPLATES = {
-  HAPPY: [
-    "https://i.imgur.com/7d36j.jpg", // Feels Good Man
-    "https://i.imgur.com/e2h2X.jpg", // Smug Pepe
-    "https://i.imgur.com/U22X7.jpg", // Pepe Suit
-  ],
-  SAD: [
-    "https://i.imgur.com/R211w.jpg", // Sad Pepe
-    "https://i.imgur.com/3OaT1ef.png", // Pepe Hands (aprox)
-    "https://i.imgur.com/P5r2q.png", // Pepe Bed
-  ],
-  ANGRY: [
-    "https://i.imgur.com/v8tT4.jpg", // Angry Pepe
-    "https://i.imgur.com/G5Z1R.jpg", // Punching Pepe
-  ],
-  CLOWN: [
-    "https://i.imgur.com/idYAqJq.png", // Pepe Clown / Wine
-    "https://i.imgur.com/T0bF2.jpg", // Honk Honk
-  ],
-  NEUTRAL: [
-    "https://i.imgur.com/KJSjEue.png", // Standard Pepe
-    "https://i.imgur.com/5S1qf.jpg", // Thinking Pepe
-  ]
-};
-
 export const MOODS: Record<MoodLevel, MoodConfig> = {
   [MoodLevel.Legendary]: {
     level: MoodLevel.Legendary,
