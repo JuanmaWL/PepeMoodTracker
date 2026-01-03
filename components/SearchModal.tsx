@@ -26,15 +26,24 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, data, onJump
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/95 backdrop-blur-md animate-in fade-in">
       <div className="bg-slate-800 border border-slate-700 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col h-[80vh]">
+        
         <div className="p-6 border-b border-slate-700 bg-slate-800/50">
+          {/* Header Nuevo Estilo */}
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-black text-white flex items-center gap-3">
-              <Search className="text-green-500" /> BUSCADOR DE LORE
-            </h2>
-            <button onClick={onClose} className="p-2 hover:bg-slate-700 rounded-full text-slate-400">
+            <div className="flex items-center gap-3">
+                <div className="p-3 bg-green-500/10 rounded-xl text-green-400 animate-pulse">
+                    <Search size={24} />
+                </div>
+                <div>
+                    <h2 className="text-2xl font-black text-white uppercase tracking-tight leading-none">Buscador de Lore</h2>
+                    <p className="text-[10px] text-green-400/80 font-bold uppercase tracking-widest mt-1">Explorador de Eventos Canónicos</p>
+                </div>
+            </div>
+            <button onClick={onClose} className="p-2 hover:bg-slate-700 rounded-full text-slate-400 transition-colors">
               <X size={24} />
             </button>
           </div>
+
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={20} />
             <input 

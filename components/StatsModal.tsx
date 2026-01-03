@@ -395,12 +395,19 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/95 backdrop-blur-md animate-in fade-in">
       <div className="bg-slate-800 border border-slate-700 w-full max-w-[90vw] xl:max-w-7xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
-        <div className="p-6 border-b border-slate-700 flex justify-between items-center bg-slate-800 shrink-0">
+        
+        {/* HEADER REDISEÑADO AL ESTILO PEPE MINDSET */}
+        <div className="p-6 border-b border-slate-700 flex justify-between items-center bg-slate-800 shrink-0 relative z-10">
           <div className="flex items-center gap-3">
-            <span className="text-3xl">📊🐸</span>
-            <h2 className="text-2xl font-black text-white uppercase tracking-tight">Estadísticas</h2>
+            <div className="p-3 bg-indigo-500/10 rounded-xl text-indigo-400 animate-pulse">
+                <BarChart3 size={24} />
+            </div>
+            <div>
+                <h2 className="text-2xl font-black text-white uppercase tracking-tight leading-none">Estadísticas</h2>
+                <p className="text-[10px] text-indigo-400/80 font-bold uppercase tracking-widest mt-1">Análisis de rendimiento vital</p>
+            </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-700 rounded-full text-slate-400">
+          <button onClick={onClose} className="p-2 hover:bg-slate-700 rounded-full text-slate-400 transition-colors">
             <X size={24} />
           </button>
         </div>

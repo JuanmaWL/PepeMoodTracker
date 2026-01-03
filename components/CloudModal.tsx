@@ -11,6 +11,7 @@ interface CloudModalProps {
 
 // Lista de stopwords
 const STOPWORDS = new Set([
+  'san', // Agregado a petición
   'el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas', 'lo', 'al', 'del',
   'a', 'ante', 'bajo', 'cabe', 'con', 'contra', 'de', 'desde', 'durante',
   'en', 'entre', 'hacia', 'hasta', 'mediante', 'para', 'por', 'segun', 'sin',
@@ -53,17 +54,9 @@ const STOPWORDS = new Set([
 // Palabras cortas permitidas (excepciones)
 const WHITELIST_SHORT = new Set(['sol', 'mar', 'luz', 'paz', 'fe', 'ron', 'bar', 'gym', 'gas', 'red', 'gol', 'ojo', 'sed', 'fan']);
 
-// Función de Normalización Avanzada (Protege la Ñ)
+// Función de Normalización (Solo minúsculas para mantener acentos)
 const normalizeText = (text: string) => {
-  // 1. Minúsculas
-  let str = text.toLowerCase();
-  // 2. Proteger la ñ reemplazándola temporalmente
-  str = str.replace(/ñ/g, '###nz###');
-  // 3. Eliminar acentos
-  str = str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  // 4. Restaurar la ñ
-  str = str.replace(/###nz###/g, 'ñ');
-  return str;
+  return text.toLowerCase();
 };
 
 // Algoritmo simple de Stemming para español (Singularización)
@@ -105,12 +98,12 @@ const CloudModal: React.FC<CloudModalProps> = ({ isOpen, onClose, data }) => {
       .map(d => d.note || '')
       .join(' . '); 
 
-    // 2. Normalizar protegiendo la Ñ
+    // 2. Normalizar (manteniendo acentos ahora)
     const cleanText = normalizeText(allNotes);
 
-    // 3. Tokenización (Permitiendo letras y números, y específicamente la ñ)
-    // El replace elimina todo lo que NO sea a-z, 0-9, ñ o espacio.
-    const tokens = cleanText.replace(/[^a-z0-9ñ\s]/g, " ").split(/\s+/);
+    // 3. Tokenización (Permitiendo letras, números, ñ Y ACENTOS)
+    // El replace permite a-z, 0-9, ñ, á, é, í, ó, ú, ü y espacios.
+    const tokens = cleanText.replace(/[^a-z0-9ñáéíóúü\s]/g, " ").split(/\s+/);
 
     const counts: Record<string, number> = {};
 
@@ -262,7 +255,8 @@ const CloudModal: React.FC<CloudModalProps> = ({ isOpen, onClose, data }) => {
                             : 'opacity-0 scale-75 translate-y-2 group-hover:opacity-100 group-hover:scale-100 group-hover:translate-y-0'
                         }
                     `}>
-                        <span className="font-bold text-yellow-400">{w.value}</span> {w.value === 1 ? 'vez' : 'veces'}
+                        <span className="font-bold text-yellow-400 mr-1">{w.value}</span>
+                        {w.value === 1 ? 'vez' : 'veces'}
                         {/* Triangulito del tooltip */}
                         <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 border-l-4 border-l-transparent border-r-4 border-r-transparent border-t-4 border-t-slate-900/95"></span>
                     </span>
