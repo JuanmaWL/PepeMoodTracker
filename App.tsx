@@ -197,7 +197,7 @@ const App: React.FC = () => {
               <img 
                 src={PEPE_BANNER} 
                 alt="Pepe" 
-                className="block w-full h-full object-cover p-0 transition-transform duration-1000 group-hover:scale-110"
+                className="block max-w-full max-h-full object-contain p-0 transition-transform duration-1000 scale-[0.8] group-hover:scale-110"
                 onError={() => setBannerError(true)}
               />
             ) : (
