@@ -3,6 +3,7 @@ import Calendar from './components/Calendar';
 import MoodModal from './components/MoodModal';
 import StatsModal from './components/StatsModal';
 import SearchModal from './components/SearchModal';
+import CloudModal from './components/CloudModal';
 import FloatingMenu from './components/FloatingMenu';
 import PepeOracle from './components/PepeOracle';
 import Particles from './components/Particles';
@@ -32,6 +33,7 @@ const App: React.FC = () => {
   const [isMoodModalOpen, setIsMoodModalOpen] = useState(false);
   const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [isCloudModalOpen, setIsCloudModalOpen] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   // Lógica de Vibración Háptica para móviles
@@ -195,7 +197,7 @@ const App: React.FC = () => {
               <img 
                 src={PEPE_BANNER} 
                 alt="Pepe" 
-                className="block w-full h-full object-contain p-2 transition-transform duration-1000 group-hover:scale-110"
+                className="block w-full h-full object-cover p-0 transition-transform duration-1000 group-hover:scale-110"
                 onError={() => setBannerError(true)}
               />
             ) : (
@@ -233,6 +235,7 @@ const App: React.FC = () => {
         onStats={() => { triggerHaptic('light'); setIsStatsModalOpen(true); }}
         onReset={() => { triggerHaptic('medium'); setShowResetConfirm(true); }}
         onSearch={() => { triggerHaptic('light'); setIsSearchModalOpen(true); }}
+        onCloud={() => { triggerHaptic('light'); setIsCloudModalOpen(true); }}
       />
 
       <MoodModal
@@ -258,6 +261,12 @@ const App: React.FC = () => {
           setSelectedDate(date);
           setIsMoodModalOpen(true);
         }}
+      />
+
+      <CloudModal
+        isOpen={isCloudModalOpen}
+        onClose={() => setIsCloudModalOpen(false)}
+        data={yearData}
       />
 
       {showResetConfirm && (

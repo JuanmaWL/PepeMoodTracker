@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { X, Save, MessageSquareText, Trash2 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Save, MessageSquareText, Trash2, Wand2, Download, Loader2, Share2 } from 'lucide-react';
 import { MOODS } from '../constants';
 import { MoodLevel, DayData } from '../types';
 import SoundManager from '../utils/sounds';
+import { GoogleGenAI } from "@google/genai";
 
 interface MoodModalProps {
   isOpen: boolean;
@@ -14,16 +15,9 @@ interface MoodModalProps {
 }
 
 const SAVE_PHRASES = [
-  "REGISTRAR LORE",
-  "INMORTALIZAR MOMENTO",
-  "ACTUALIZAR STATUS",
-  "CHECKEAR VIBES",
-  "GUARDAR PROGRESO",
-  "CONFIRMAR EXISTENCIA",
-  "SUBIR AL ARCHIVO",
-  "SINCRONIZAR VIVENCIA",
-  "PUBLICAR LORE",
-  "ESTABLECER CANON"
+  "REGISTRAR LORE", "INMORTALIZAR MOMENTO", "ACTUALIZAR STATUS",
+  "CHECKEAR VIBES", "GUARDAR PROGRESO", "CONFIRMAR EXISTENCIA",
+  "SUBIR AL ARCHIVO", "SINCRONIZAR VIVENCIA", "PUBLICAR LORE", "ESTABLECER CANON"
 ];
 
 const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete, initialData, dateStr }) => {
@@ -31,12 +25,22 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
   const [note, setNote] = useState('');
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [buttonText, setButtonText] = useState(SAVE_PHRASES[0]);
+  
+  // Estados para Meme Generator
+  const [isMemeMode, setIsMemeMode] = useState(false);
+  const [generatingMeme, setGeneratingMeme] = useState(false);
+  const [memeUrl, setMemeUrl] = useState<string | null>(null);
+  const [loadingStep, setLoadingStep] = useState<string>(""); // Para mostrar qué está haciendo la AI
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     if (isOpen) {
       setLevel(initialData.level || MoodLevel.None);
       setNote(initialData.note || '');
       setIsConfirmingDelete(false);
+      setIsMemeMode(false);
+      setMemeUrl(null);
+      setLoadingStep("");
       const randomPhrase = SAVE_PHRASES[Math.floor(Math.random() * SAVE_PHRASES.length)];
       setButtonText(randomPhrase);
     }
@@ -45,13 +49,11 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
   if (!isOpen) return null;
 
   const handleMoodSelect = (lvl: MoodLevel) => {
-    // Sonido de burbuja "pop" generado instantáneamente
     SoundManager.play('pop');
     setLevel(lvl);
   };
 
   const handleSave = () => {
-    // Sonido de éxito (acorde placentero)
     SoundManager.play('success');
     onSave({ level, note });
     onClose();
@@ -76,6 +78,179 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
     return lower.charAt(0).toUpperCase() + lower.slice(1);
   };
 
+  // --- MEME GENERATOR LOGIC ---
+
+  const generateMeme = async () => {
+    if (!note || level === MoodLevel.None) return;
+    
+    setGeneratingMeme(true);
+    setMemeUrl(null);
+    SoundManager.play('magic');
+
+    try {
+        const apiKey = (import.meta as any).env?.VITE_PEPE_MOOD_KEY || (process as any).env?.NEXT_PUBLIC_PEPE_MOOD_KEY || process.env.API_KEY;
+        const ai = new GoogleGenAI({ apiKey: apiKey });
+
+        // PASO 1: Generar texto y prompt visual con el modelo de TEXTO
+        setLoadingStep("Pensando ideas...");
+        
+        const textPrompt = `
+            Contexto: Diario de Pepe the Frog. Mood: ${MOODS[level].label}. Nota: "${note}".
+            TAREA: Genera un objeto JSON con:
+            - topText: Texto superior para meme (muy breve, impactante).
+            - bottomText: Texto inferior para meme (punchline sarcástico).
+            - imagePrompt: Una descripción visual detallada en INGLÉS para generar una imagen de "Pepe the Frog" (dibujo estilo meme cartoon) haciendo algo relacionado con la nota. Ejemplo: "A cartoon drawing of Pepe the Frog crying in front of a computer".
+            
+            Responde SOLO EL JSON.
+        `;
+
+        const textResult = await ai.models.generateContent({
+            model: 'gemini-3-flash-preview',
+            contents: textPrompt,
+            config: { responseMimeType: 'application/json' }
+        });
+
+        const json = JSON.parse(textResult.text || "{}");
+        const topText = (json.topText || "").toUpperCase();
+        const bottomText = (json.bottomText || "").toUpperCase();
+        const imagePrompt = json.imagePrompt || "A funny cartoon drawing of Pepe the Frog face";
+
+        // PASO 2: Generar la imagen con el modelo de IMAGEN
+        setLoadingStep("Dibujando a Pepe...");
+        
+        // Mejoramos el prompt para asegurar el estilo
+        const finalImagePrompt = `${imagePrompt}. High quality meme art, flat color, clean lines, internet culture style.`;
+
+        const imageResult = await ai.models.generateContent({
+            model: 'gemini-2.5-flash-image',
+            contents: {
+                parts: [{ text: finalImagePrompt }]
+            },
+             config: {
+                imageConfig: {
+                    aspectRatio: "1:1",
+                    // No seteamos mimeType de respuesta para imagen, el SDK lo maneja o devuelve default
+                }
+            }
+        });
+
+        // Extraer la imagen en Base64 de la respuesta
+        let base64Image = "";
+        
+        // Iteramos las partes para encontrar la imagen (según doc standard)
+        if (imageResult.candidates?.[0]?.content?.parts) {
+            for (const part of imageResult.candidates[0].content.parts) {
+                if (part.inlineData && part.inlineData.data) {
+                    base64Image = `data:image/png;base64,${part.inlineData.data}`;
+                    break;
+                }
+            }
+        }
+
+        if (!base64Image) {
+            throw new Error("No se pudo generar la imagen");
+        }
+
+        // PASO 3: Dibujar en Canvas (Componer Imagen + Texto)
+        setLoadingStep("Horneando meme...");
+        await drawMeme(base64Image, topText, bottomText);
+
+    } catch (e) {
+        console.error("Meme error", e);
+        // Fallback en caso de error crítico
+        await drawMeme("https://i.imgur.com/KJSjEue.png", "ERROR 404", "PEPE NO ENCONTRADO");
+    } finally {
+        setGeneratingMeme(false);
+        setLoadingStep("");
+    }
+  };
+
+  const drawMeme = (imgSrc: string, top: string, bottom: string) => {
+    return new Promise<void>((resolve, reject) => {
+        const canvas = canvasRef.current;
+        if (!canvas) return resolve();
+        
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return resolve();
+
+        const img = new Image();
+        // Importante para imágenes externas, aunque ahora usamos base64 mayormente
+        img.crossOrigin = "anonymous"; 
+        img.src = imgSrc;
+
+        img.onload = () => {
+            canvas.width = 500;
+            canvas.height = 500;
+
+            // Dibujar fondo negro por si la imagen tiene transparencia
+            ctx.fillStyle = "black";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Image (Cover)
+            const ratio = Math.max(canvas.width / img.width, canvas.height / img.height);
+            const x = (canvas.width - img.width * ratio) / 2;
+            const y = (canvas.height - img.height * ratio) / 2;
+            
+            ctx.drawImage(img, 0, 0, img.width, img.height, x, y, img.width * ratio, img.height * ratio);
+
+            // Text Styles (Classic Meme Font)
+            ctx.fillStyle = "white";
+            ctx.strokeStyle = "black";
+            ctx.lineWidth = 6;
+            ctx.font = "900 48px Impact, sans-serif";
+            ctx.textAlign = "center";
+            
+            // Función auxiliar para dibujar texto con borde
+            const drawText = (text: string, x: number, y: number, maxWidth: number, baseline: CanvasTextBaseline) => {
+                ctx.textBaseline = baseline;
+                ctx.strokeText(text, x, y, maxWidth);
+                ctx.fillText(text, x, y, maxWidth);
+            };
+
+            // Draw Top
+            drawText(top, 250, 15, 480, "top");
+
+            // Draw Bottom
+            drawText(bottom, 250, 485, 480, "bottom");
+
+            // Watermark
+            ctx.font = "bold 12px sans-serif";
+            ctx.fillStyle = "rgba(255,255,255,0.6)";
+            ctx.textAlign = "right";
+            ctx.lineWidth = 2;
+            ctx.textBaseline = "bottom";
+            ctx.strokeText("PepeMoodYear", 490, 495);
+            ctx.fillText("PepeMoodYear", 490, 495);
+
+            setMemeUrl(canvas.toDataURL('image/png'));
+            resolve();
+        };
+
+        img.onerror = () => {
+             // Fallback canvas
+             ctx.fillStyle = "#1e293b";
+             ctx.fillRect(0,0,500,500);
+             ctx.fillStyle = "white";
+             ctx.textAlign = "center";
+             ctx.fillText("Error cargando imagen :(", 250, 250);
+             setMemeUrl(canvas.toDataURL('image/png'));
+             resolve();
+        };
+    });
+  };
+
+  const handleDownloadMeme = () => {
+     if (memeUrl) {
+         const link = document.createElement('a');
+         link.download = `pepe_meme_${dateStr}.png`;
+         link.href = memeUrl;
+         link.click();
+         SoundManager.play('success');
+     }
+  };
+
+  // --- RENDER ---
+
   const moodLevels = [
     MoodLevel.Legendary,
     MoodLevel.MoiBiens,
@@ -91,7 +266,7 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
       <div className="bg-slate-900 border border-slate-800 w-full max-w-xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[95vh] ring-1 ring-white/10">
         
         {/* Header */}
-        <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-900/50 backdrop-blur-sm">
+        <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-900/50 backdrop-blur-sm relative z-10">
           <div>
             <h2 className="text-xl md:text-2xl font-black text-slate-100 tracking-tight leading-none">
               {formatDateDisplay(dateStr)}
@@ -107,10 +282,11 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-6 overflow-y-auto custom-scrollbar">
+        <div className="p-6 space-y-6 overflow-y-auto custom-scrollbar bg-gradient-to-b from-slate-900 to-slate-950">
           
           {/* Mood Selection */}
-          <div>
+          {!isMemeMode && (
+          <div className="animate-in fade-in slide-in-from-left-4 duration-500">
             <div className="flex items-center gap-3 mb-4 px-1">
               <span className="text-xs font-black text-slate-400 uppercase tracking-widest opacity-80">Selecciona tu vibra</span>
               <div className="h-px flex-1 bg-slate-800"></div>
@@ -167,28 +343,92 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
               })}
             </div>
           </div>
+          )}
 
           {/* Note Input */}
           <div className={`animate-in slide-in-from-bottom duration-500 delay-150 ${isConfirmingDelete ? 'opacity-30 pointer-events-none' : ''}`}>
-            <div className="flex justify-between items-center mb-4 px-1">
+             
+             {/* Header de la sección de texto + Botón Meme */}
+             <div className="flex justify-between items-center mb-4 px-1">
               <div className="flex items-center gap-2">
                 <MessageSquareText size={18} className="text-slate-500" />
                 <span className="text-xs font-black text-slate-400 uppercase tracking-widest opacity-80">Lore del día</span>
               </div>
-              <span className="text-[10px] text-slate-600 font-bold uppercase italic tracking-wider">Opcional</span>
+              
+              {!isMemeMode && level !== MoodLevel.None && note.length > 5 && (
+                <button 
+                  onClick={() => setIsMemeMode(true)}
+                  className="flex items-center gap-1.5 bg-gradient-to-r from-purple-500 to-indigo-600 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase text-white hover:brightness-110 transition-all shadow-lg shadow-purple-500/30 animate-in fade-in zoom-in"
+                >
+                    <Wand2 size={12} /> Memeify
+                </button>
+              )}
             </div>
-            <textarea
-              className="w-full h-32 bg-slate-950/60 border border-slate-800 rounded-3xl p-5 text-slate-200 focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500/50 placeholder-slate-700 resize-none font-medium transition-all text-base leading-relaxed shadow-inner"
-              placeholder="¿Qué ha pasado hoy? Describe el momento..."
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-            />
+            
+            {!isMemeMode ? (
+                <textarea
+                className="w-full h-32 bg-slate-950/60 border border-slate-800 rounded-3xl p-5 text-slate-200 focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500/50 placeholder-slate-700 resize-none font-medium transition-all text-base leading-relaxed shadow-inner"
+                placeholder="¿Qué ha pasado hoy? Describe el momento..."
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                />
+            ) : (
+                <div className="bg-slate-950 rounded-3xl p-6 border border-purple-500/30 text-center animate-in zoom-in duration-300">
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-purple-300 font-black text-xs uppercase tracking-widest flex items-center gap-2">
+                            <Wand2 size={14} /> AI Meme Factory
+                        </h3>
+                        <button onClick={() => setIsMemeMode(false)} className="text-slate-500 hover:text-white text-[10px] font-bold uppercase">Cerrar</button>
+                    </div>
+                    
+                    <div className="relative aspect-square w-full max-w-[350px] mx-auto bg-slate-900 rounded-xl overflow-hidden border border-slate-800 flex items-center justify-center">
+                        <canvas ref={canvasRef} className="hidden" /> {/* Hidden canvas for processing */}
+                        
+                        {generatingMeme ? (
+                            <div className="flex flex-col items-center gap-3">
+                                <Loader2 size={40} className="text-purple-500 animate-spin" />
+                                <span className="text-xs font-bold text-purple-400 animate-pulse">{loadingStep || "Invocando a Pepe..."}</span>
+                            </div>
+                        ) : memeUrl ? (
+                            <img src={memeUrl} alt="Meme generado" className="w-full h-full object-contain animate-in fade-in duration-500" />
+                        ) : (
+                            <div className="flex flex-col items-center gap-4 p-8">
+                                <span className="text-4xl">🐸✨</span>
+                                <p className="text-xs text-slate-400 max-w-[200px]">Pepe creará una imagen única sobre tu día.</p>
+                                <button 
+                                    onClick={generateMeme}
+                                    className="px-6 py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-lg shadow-purple-600/30"
+                                >
+                                    Generar Ahora
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    {memeUrl && !generatingMeme && (
+                        <div className="mt-4 flex gap-2 justify-center">
+                             <button 
+                                onClick={generateMeme}
+                                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
+                            >
+                                Regenerar
+                            </button>
+                            <button 
+                                onClick={handleDownloadMeme}
+                                className="px-5 py-2 bg-green-600 hover:bg-green-500 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-2 shadow-lg shadow-green-600/20"
+                            >
+                                <Download size={14} /> Descargar
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
           </div>
 
         </div>
 
         {/* Footer */}
-        <div className="p-4 md:p-6 border-t border-slate-800 bg-slate-900/80 backdrop-blur-md relative">
+        <div className="p-4 md:p-6 border-t border-slate-800 bg-slate-900/80 backdrop-blur-md relative z-10">
           
           {isConfirmingDelete ? (
             <div className="flex flex-col gap-3 animate-in fade-in zoom-in duration-300">
@@ -212,7 +452,7 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
             </div>
           ) : (
             <div className="flex flex-col sm:flex-row gap-3">
-              {hasExistingData && (
+              {hasExistingData && !isMemeMode && (
                 <button
                   onClick={initiateDelete}
                   className="w-full sm:w-auto px-5 py-4 rounded-[1.25rem] bg-slate-800 hover:bg-red-900/40 text-slate-400 hover:text-red-400 font-black transition-all flex items-center justify-center gap-3 border border-slate-700"
