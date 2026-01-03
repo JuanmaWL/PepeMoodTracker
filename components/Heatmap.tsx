@@ -8,60 +8,84 @@ interface HeatmapProps {
 }
 
 const Heatmap: React.FC<HeatmapProps> = ({ data, year }) => {
-  const startDate = new Date(year, 0, 1);
-  const endDate = new Date(year, 11, 31);
+  const months = Array.from({ length: 12 }, (_, i) => i); // 0..11
+  const days = Array.from({ length: 31 }, (_, i) => i + 1); // 1..31
   
-  // Create an array of all days in the year
-  const days = [];
-  let curr = new Date(startDate);
-  while (curr <= endDate) {
-    days.push(new Date(curr));
-    curr.setDate(curr.getDate() + 1);
-  }
-
-  // Group days by week (Sunday to Saturday)
-  const weeks: Date[][] = [];
-  let currentWeek: Date[] = [];
-  
-  // Fill the first week with empty slots if the year doesn't start on Sunday
-  const firstDayOfWeek = startDate.getDay();
-  for (let i = 0; i < firstDayOfWeek; i++) {
-    currentWeek.push(null as any);
-  }
-
-  days.forEach(day => {
-    currentWeek.push(day);
-    if (day.getDay() === 6) {
-      weeks.push(currentWeek);
-      currentWeek = [];
-    }
-  });
-  if (currentWeek.length > 0) weeks.push(currentWeek);
+  const monthInitials = ['E', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
 
   return (
-    <div className="w-full overflow-x-auto pb-2 custom-scrollbar">
-      <div className="flex gap-1 min-w-max">
-        {weeks.map((week, wIndex) => (
-          <div key={wIndex} className="flex flex-col gap-1">
-            {Array.from({ length: 7 }).map((_, dIndex) => {
-              const day = week[dIndex];
-              if (!day) return <div key={dIndex} className="w-3 h-3 rounded-[2px] bg-slate-800/20" />;
-              
-              const dateStr = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
-              const entry = data[dateStr];
-              const level = entry?.level || MoodLevel.None;
-              const color = level !== MoodLevel.None ? MOODS[level].color : '#1e293b';
+    <div className="w-full flex flex-col items-center">
+      {/* Contenedor adaptativo: max-w-lg en móvil, más ancho en escritorio */}
+      <div className="w-full max-w-lg md:max-w-4xl mx-auto bg-slate-950/30 p-4 rounded-2xl border border-slate-800/50 transition-all duration-500">
+        
+        <div className="grid grid-cols-[auto_repeat(12,_1fr)] gap-x-1 gap-y-[2px]">
+          
+          {/* Header Row: Month Initials */}
+          <div className="h-4"></div> {/* Esquina vacía */}
+          {months.map((m) => (
+            <div key={m} className="h-4 flex items-center justify-center">
+              <span className="text-[8px] md:text-[10px] font-black text-slate-500 uppercase">
+                {monthInitials[m]}
+              </span>
+            </div>
+          ))}
 
-              return (
-                <div 
-                  key={dateStr}
-                  className="w-3 h-3 rounded-[2px] transition-colors duration-500"
-                  style={{ backgroundColor: color }}
-                  title={`${dateStr}: ${level !== MoodLevel.None ? MOODS[level].label : 'Sin registro'}`}
-                />
-              );
-            })}
-          </div>
+          {/* Rows: Days 1-31 */}
+          {days.map((day) => (
+            <React.Fragment key={day}>
+              {/* Day Label (Left Axis) - Solo mostramos cada 5 días para limpiar visualmente */}
+              <div className="w-4 flex items-center justify-end pr-1">
+                <span className="text-[8px] font-bold text-slate-600">
+                  {day % 5 === 0 || day === 1 ? day : ''}
+                </span>
+              </div>
+
+              {/* Month Cells for this Day */}
+              {months.map((month) => {
+                // Verificar si el día es válido para este mes (ej: Feb 30)
+                const date = new Date(year, month, day);
+                const isValidDate = date.getMonth() === month;
+
+                if (!isValidDate) {
+                  return <div key={`${month}-${day}`} className="bg-transparent" />;
+                }
+
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const entry = data[dateStr];
+                const level = entry?.level || MoodLevel.None;
+                const config = MOODS[level];
+
+                return (
+                  <div
+                    key={`${month}-${day}`}
+                    className={`
+                      aspect-square md:aspect-[2.5/1] rounded-[1px] sm:rounded-[2px] transition-all duration-300 relative group
+                      ${level === MoodLevel.None ? 'bg-slate-800/40' : ''}
+                    `}
+                    style={{ 
+                      backgroundColor: level !== MoodLevel.None ? config.color : undefined 
+                    }}
+                  >
+                    {/* Tooltip simple en hover */}
+                    <div className="opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 -translate-x-1/2 mb-1 z-20 pointer-events-none transition-opacity">
+                       <div className="bg-slate-900 text-white text-[8px] px-1.5 py-0.5 rounded border border-slate-700 whitespace-nowrap shadow-xl">
+                         {dateStr}
+                       </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+      
+      {/* Leyenda mini */}
+      <div className="flex flex-wrap justify-center gap-2 mt-4 opacity-60">
+        {[MoodLevel.Fatal, MoodLevel.Regular, MoodLevel.Normal, MoodLevel.MoiBiens, MoodLevel.Legendary].map(lvl => (
+            <div key={lvl} className="flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: MOODS[lvl as MoodLevel].color }} />
+            </div>
         ))}
       </div>
     </div>
