@@ -65,9 +65,7 @@ const PepeOracle: React.FC<PepeOracleProps> = ({ data }) => {
     setIsMagicActive(true);
 
     try {
-      // Prioridad a variables de entorno externas para Vercel/Netlify
       const apiKey = (import.meta as any).env?.VITE_PEPE_MOOD_KEY || (process as any).env?.NEXT_PUBLIC_PEPE_MOOD_KEY || process.env.API_KEY;
-      
       const ai = new GoogleGenAI({ apiKey: apiKey });
       
       const prompt = `
@@ -100,6 +98,15 @@ const PepeOracle: React.FC<PepeOracleProps> = ({ data }) => {
       <div className={`bg-slate-950/80 backdrop-blur-3xl border border-indigo-500/30 rounded-[4rem] p-10 md:p-16 shadow-[0_0_80px_rgba(99,102,241,0.1)] relative overflow-hidden group transition-all duration-1000
         ${isMagicActive ? 'magic-channeling shadow-[0_0_120px_rgba(167,139,250,0.5)] ring-4 ring-purple-400/50' : 'hover:shadow-[0_0_100px_rgba(99,102,241,0.2)]'}
       `}>
+        {/* Imagen de fondo sutil solicitada */}
+        <div className="absolute inset-0 z-0 pointer-events-none opacity-[0.06] mix-blend-overlay">
+          <img 
+            src="https://i.imgur.com/0JD4l8Q.png" 
+            className="w-full h-full object-cover grayscale brightness-150" 
+            alt="" 
+          />
+        </div>
+
         <div className="absolute -top-24 -left-24 w-96 h-96 bg-purple-600/10 blur-[120px] rounded-full animate-pulse"></div>
         <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-indigo-600/10 blur-[120px] rounded-full animate-pulse" style={{ animationDelay: '3s' }}></div>
 
@@ -141,7 +148,7 @@ const PepeOracle: React.FC<PepeOracleProps> = ({ data }) => {
                 Oráculo Supremo
               </h3>
               <div className="flex items-center justify-center lg:justify-start gap-4 text-purple-400/70 font-black text-sm uppercase tracking-[0.5em]">
-                <BrainCircuit size={18} /> Lore Analysis Engine v3.0
+                <BrainCircuit size={18} /> Pepe Analysis Engine v3.3
               </div>
             </div>
             

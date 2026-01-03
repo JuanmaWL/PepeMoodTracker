@@ -66,7 +66,6 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
     const soundMatch = text.match(/\[SOUNDTRACK\](.*?)(\[|$)/s);
     const achievementMatch = text.match(/\[LOGRO\](.*?)(\[|$)/s);
 
-    // Limpiamos los dos puntos iniciales y espacios que a veces añade la IA
     const cleanStr = (s: string) => s.trim().replace(/^[:\s-]+/, '');
 
     const diagnosis = diagMatch ? cleanStr(diagMatch[1]) : cleanStr(text);
@@ -91,19 +90,30 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
             {formatBold(diagnosis)}
           </p>
         </div>
-
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-3 mt-4">
           {soundtrack && (
-            <div className="flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 px-3 py-2 rounded-xl group transition-all hover:bg-indigo-500/20">
-              <Music size={14} className="text-indigo-400 group-hover:scale-125 transition-transform" />
-              <span className="text-[10px] font-black text-indigo-300 uppercase tracking-wider">{soundtrack}</span>
+            <div className="flex items-center gap-3 bg-pink-500/10 border border-pink-500/20 px-4 py-3 rounded-xl group transition-all hover:bg-pink-500/20 shadow-lg shadow-pink-950/20 cursor-default flex-1 min-w-[250px]">
+              {/* Color ROSA para la música */}
+              <Music 
+                size={28} 
+                className="text-pink-400 group-hover:scale-110 transition-transform duration-200 ease-out shrink-0" 
+              />
+              <span className="text-[11px] font-black text-pink-200 uppercase tracking-wider leading-tight">
+                {soundtrack}
+              </span>
             </div>
           )}
-          
+
           {achievement && (
-            <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/20 px-3 py-2 rounded-xl group transition-all hover:bg-green-500/20">
-              <Trophy size={14} className="text-green-400 group-hover:scale-125 transition-transform" />
-              <span className="text-[10px] font-black text-green-300 uppercase tracking-wider">{achievement}</span>
+            <div className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/20 px-4 py-3 rounded-xl group transition-all hover:bg-amber-500/20 shadow-lg shadow-amber-950/20 cursor-default flex-1 min-w-[250px]">
+              {/* Color ÁMBAR/DORADO para el trofeo */}
+              <Trophy 
+                size={24} 
+                className="text-amber-400 group-hover:scale-110 transition-transform duration-200 ease-out shrink-0" 
+              />
+              <span className="text-[11px] font-black text-amber-200 uppercase tracking-wider leading-tight">
+                {achievement}
+              </span>
             </div>
           )}
         </div>

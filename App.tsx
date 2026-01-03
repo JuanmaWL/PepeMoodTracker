@@ -127,6 +127,31 @@ const App: React.FC = () => {
     dl.remove();
   };
 
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const content = event.target?.result as string;
+        const importedData = JSON.parse(content);
+        
+        // Validación básica de estructura
+        if (typeof importedData === 'object' && importedData !== null) {
+          setYearData(importedData);
+        } else {
+          alert("El archivo no tiene un formato válido de Pepe Lore, lince.");
+        }
+      } catch (err) {
+        console.error("Import error:", err);
+        alert("Error al procesar el JSON. ¿Estás seguro de que esto es lore real?");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
   const handleReset = () => {
     setYearData({});
     setShowResetConfirm(false);
@@ -140,7 +165,7 @@ const App: React.FC = () => {
         {streak > 0 && (
           <div className="mb-4 lg:absolute lg:top-0 lg:right-12 flex items-center gap-2 bg-slate-900/60 backdrop-blur-md border border-orange-500/40 px-5 py-2.5 rounded-full shadow-[0_0_20px_rgba(249,115,22,0.2)] animate-in fade-in slide-in-from-top duration-700 z-30">
             <Flame size={20} className="text-orange-500 fill-orange-500 animate-pulse" />
-            <span className="text-xs md:text-sm font-black text-white tracking-widest">{streak} DÍAS DE LORE</span>
+            <span className="text-xs md:text-sm font-black text-white tracking-widest">{streak} DÍAS DE RACHA</span>
           </div>
         )}
 
@@ -158,10 +183,10 @@ const App: React.FC = () => {
             )}
           </div>
         </div>
-        <h1 className="text-4xl md:text-6xl font-black bg-gradient-to-r from-green-400 via-emerald-300 to-green-600 bg-clip-text text-transparent py-2 px-6 leading-tight animate-shimmer tracking-tighter uppercase">
+        <h1 className="text-4xl md:text-6xl font-black bg-gradient-to-r from-green-400 via-emerald-300 to-green-600 bg-clip-text text-transparent py-2 px-6 leading-tight animate-shimmer tracking-tighter uppercase text-center">
           {selectedTitle}
         </h1>
-        <p className="text-slate-400 font-bold tracking-[0.2em] text-[10px] md:text-sm mt-1 italic opacity-90 uppercase">
+        <p className="text-slate-400 font-bold tracking-[0.2em] text-[10px] md:text-sm mt-1 italic opacity-90 uppercase text-center">
           {dynamicSubtitle}
         </p>
       </header>
@@ -184,6 +209,7 @@ const App: React.FC = () => {
 
       <FloatingMenu 
         onExport={handleExport}
+        onImport={handleImport}
         onStats={() => setIsStatsModalOpen(true)}
         onReset={() => setShowResetConfirm(true)}
         onSearch={() => setIsSearchModalOpen(true)}

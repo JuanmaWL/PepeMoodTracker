@@ -77,9 +77,9 @@ const Calendar: React.FC<CalendarProps> = ({ yearData, onDayClick, currentYear }
                       Día {d}
                     </div>
 
-                    {/* Note Indicator */}
+                    {/* Note Indicator - Reforzado y alineado arriba a la derecha */}
                     {hasNote && (
-                      <div className={`absolute top-1 right-1 w-1.5 h-1.5 rounded-full shadow-sm ${moodLevel === MoodLevel.None ? 'bg-green-500' : 'bg-white'}`} />
+                      <div className={`absolute -top-1.5 -right-1.5 w-3.5 h-3.5 bg-yellow-300 rounded-full border-2 border-slate-900 shadow-[0_0_10px_rgba(253,224,71,0.5)] z-20 transition-all group-hover:scale-125 group-hover:rotate-12`} />
                     )}
                   </button>
                 );
