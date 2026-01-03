@@ -105,9 +105,9 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
         const textPrompt = `
             Contexto: Diario de Pepe the Frog. Mood: ${MOODS[level].label}. Nota: "${note}".
             TAREA: Genera un objeto JSON con:
-            - topText: Texto superior para meme (muy breve, impactante).
-            - bottomText: Texto inferior para meme (punchline sarcástico).
-            - imagePrompt: Una descripción visual detallada en INGLÉS para generar una imagen de "Pepe the Frog" (dibujo estilo meme cartoon) haciendo algo relacionado con la nota.
+            - topText: Texto superior para meme (muy breve, impactante, español).
+            - bottomText: Texto inferior para meme (punchline sarcástico, español).
+            - imagePrompt: Una descripción visual en INGLÉS para "A meme cartoon drawing of Pepe the Frog...".
             - moodType: Uno de estos: 'HAPPY', 'SAD', 'ANGRY', 'CLOWN', 'NEUTRAL'.
             
             Responde SOLO EL JSON.
@@ -125,12 +125,13 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
         memeTypeKey = json.moodType || "NEUTRAL";
         const imagePrompt = json.imagePrompt || "A funny cartoon drawing of Pepe the Frog";
 
-        // PASO 2: Intentar Generar la imagen con IA
+        // PASO 2: Intentar Generar la imagen con Gemini 2.5 Flash Image
+        // Este modelo es multimodal y suele estar incluido en la mayoría de keys estándar
         setLoadingStep("Dibujando a Pepe...");
         let base64Image = null;
 
         try {
-            const finalImagePrompt = `${imagePrompt}. High quality meme art, flat color, clean lines, internet culture style, pepe the frog character.`;
+            const finalImagePrompt = `${imagePrompt}. High quality meme art, flat color, clean lines, internet culture style, pepe the frog character, 2D vector style.`;
             
             const imageResult = await ai.models.generateContent({
                 model: 'gemini-2.5-flash-image',
@@ -149,11 +150,12 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
                 }
             }
         } catch (imgError) {
-            console.warn("Fallo generación imagen, usando fallback", imgError);
-            // No lanzamos error, dejamos que base64Image sea null para usar el fallback
+            console.warn("Fallo generación imagen AI, usando fallback:", imgError);
+            // IMPORTANTE: No lanzamos error aquí, dejamos que base64Image sea null
+            // para que el código fluya hacia el uso de plantillas.
         }
 
-        // PASO 3: Si no hay imagen de IA (por error o seguridad), usamos plantilla
+        // PASO 3: Si no hay imagen de IA (por error, cuota o fallo), usamos plantilla
         // pero mantenemos el texto generado por IA.
         let imageToUse = base64Image;
         if (!imageToUse) {
@@ -168,8 +170,11 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
 
     } catch (e) {
         console.error("Meme error crítico", e);
-        // Fallback total si falla incluso la generación de texto
-        await drawMeme(MOODS[level].image || MEME_TEMPLATES.NEUTRAL[0], "ERROR 500", "PEPE NECESITA UN DESCANSO");
+        // Fallback total de emergencia: Plantilla + Texto de error amigable
+        // Esto solo ocurre si falla incluso la generación de texto (Gemini Flash)
+        const templates = MEME_TEMPLATES.NEUTRAL;
+        const fallbackImg = templates[0];
+        await drawMeme(fallbackImg, "PEPE ESTÁ", "FUERA DE SERVICIO");
     } finally {
         setGeneratingMeme(false);
         setLoadingStep("");
@@ -241,7 +246,7 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
         };
 
         img.onerror = () => {
-             // Fallback finalísimo
+             // Fallback finalísimo si la imagen (incluso la plantilla) no carga
              ctx.fillStyle = "#1e293b";
              ctx.fillRect(0,0,500,500);
              ctx.fillStyle = "white";
