@@ -146,6 +146,25 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
       });
     };
 
+    const renderSoundtrackContent = (fullText: string) => {
+        // Detectar separador para dividir Canción / Por qué
+        const separatorRegex = /Por qué:|Why:/i;
+        const splitIndex = fullText.search(separatorRegex);
+
+        if (splitIndex !== -1) {
+            const songPart = fullText.substring(0, splitIndex).replace(/[.-]+$/, '').trim();
+            const reasonPart = fullText.substring(splitIndex).trim();
+
+            return (
+                <div className="flex flex-col gap-1">
+                    <span className="block font-bold border-b border-pink-500/20 pb-1 mb-1">{songPart}</span>
+                    <span className="block font-normal opacity-90">{reasonPart}</span>
+                </div>
+            );
+        }
+        return fullText;
+    };
+
     return (
       <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-700 relative">
         <button 
@@ -167,13 +186,13 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
           {soundtrackFull && (
             <div className="flex items-start gap-3 bg-pink-500/10 border border-pink-500/20 px-4 py-3 rounded-xl group transition-all hover:bg-pink-500/20 shadow-lg shadow-pink-950/20 cursor-default flex-1">
               <Music size={24} className="text-pink-400 group-hover:scale-110 transition-transform duration-200 shrink-0 mt-1" />
-              <div className="flex flex-col">
-                 <span className="text-[10px] font-black text-pink-200 uppercase tracking-wider leading-tight">
+              <div className="flex flex-col w-full">
+                 <span className="text-[10px] font-black text-pink-200 uppercase tracking-wider leading-tight mb-1">
                     Soundtrack
                  </span>
-                 <p className="text-xs text-pink-100/90 leading-tight mt-1 font-medium italic">
-                    {soundtrackFull}
-                 </p>
+                 <div className="text-sm text-pink-100/90 leading-snug font-medium italic">
+                    {renderSoundtrackContent(soundtrackFull)}
+                 </div>
               </div>
             </div>
           )}
@@ -491,7 +510,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                         </div>
                         <div className="grid grid-cols-2 gap-x-2 gap-y-1 mt-2">
                             {stats.pieData.map(d => (
-                            <div key={d.name} className="flex items-center justify-between text-[9px] font-bold">
+                            <div key={d.name} className="flex items-center justify-between text-xs font-bold">
                                 <div className="flex items-center gap-1.5 text-slate-300">
                                 <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: d.color }} />
                                 <span>{d.name}</span>
