@@ -407,49 +407,55 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
 
         <div className="p-6 overflow-y-auto space-y-6 custom-scrollbar">
           
-          {!stats ? (
-            <div className="text-center py-20 text-slate-500 italic">"No hay datos suficientes en este periodo."</div>
-          ) : (
-            <div className="flex flex-col gap-6">
-              
-              {/* FILA 1: Heatmap Panorámico */}
-              <div className="bg-slate-900/40 p-5 rounded-3xl border border-slate-700 flex flex-col items-center justify-center overflow-hidden">
-                <h3 className="text-slate-400 font-black text-xs uppercase tracking-widest mb-4 flex items-center gap-2 self-start w-full">
-                  <Brain size={14} className="text-slate-500" /> Mapa de Calor Anual
-                </h3>
-                {/* Heatmap siempre muestra el año completo por diseño */}
-                <Heatmap data={data} year={new Date().getFullYear()} />
-              </div>
+          {/* SECCIÓN 1: HEATMAP (Siempre visible) */}
+          <div className="bg-slate-900/40 p-5 rounded-3xl border border-slate-700 flex flex-col items-center justify-center overflow-hidden">
+            <h3 className="text-slate-400 font-black text-xs uppercase tracking-widest mb-4 flex items-center gap-2 self-start w-full">
+              <Brain size={14} className="text-slate-500" /> Mapa de Calor Anual
+            </h3>
+            <Heatmap data={data} year={new Date().getFullYear()} />
+          </div>
 
-              {/* FILA 2: BARRA DE CONTROL GLOBAL (FILTROS) */}
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-900/60 p-3 rounded-2xl border border-slate-700/50">
-                 <div className="flex items-center gap-2 text-slate-400 px-2">
-                     <Filter size={16} className="text-indigo-400" />
-                     <span className="text-[10px] uppercase font-black tracking-widest">Filtrar Análisis y Gráficas:</span>
-                 </div>
-                 
-                 <div className="flex-1 w-full sm:w-auto">
-                     <div className="relative group w-full sm:max-w-xs">
-                         <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-slate-400">
-                             <CalendarRange size={14} />
-                         </div>
-                         <select 
-                            value={timeRange} 
-                            onChange={(e) => setTimeRange(e.target.value)}
-                            className="w-full bg-slate-800 text-white text-xs font-bold py-2.5 px-4 pr-10 rounded-xl outline-none hover:bg-slate-700 transition-colors cursor-pointer border border-slate-700 focus:border-indigo-500 appearance-none uppercase tracking-wide shadow-sm"
-                         >
-                            <option value="last_7">Últimos 7 días</option>
-                            <option value="last_30">Últimos 30 días</option>
-                            <option disabled>──────────</option>
-                            {MONTHS.map((m, i) => <option key={m} value={i}>{m}</option>)}
-                            <option disabled>──────────</option>
-                            <option value="all">Todo el Año</option>
-                         </select>
+          {/* SECCIÓN 2: FILTROS (Siempre visible) */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-900/60 p-3 rounded-2xl border border-slate-700/50">
+             <div className="flex items-center gap-2 text-slate-400 px-2">
+                 <Filter size={16} className="text-indigo-400" />
+                 <span className="text-[10px] uppercase font-black tracking-widest">Filtrar Análisis y Gráficas:</span>
+             </div>
+             
+             <div className="flex-1 w-full sm:w-auto">
+                 <div className="relative group w-full sm:max-w-xs">
+                     <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-slate-400">
+                         <CalendarRange size={14} />
                      </div>
+                     <select 
+                        value={timeRange} 
+                        onChange={(e) => setTimeRange(e.target.value)}
+                        className="w-full bg-slate-800 text-white text-xs font-bold py-2.5 px-4 pr-10 rounded-xl outline-none hover:bg-slate-700 transition-colors cursor-pointer border border-slate-700 focus:border-indigo-500 appearance-none uppercase tracking-wide shadow-sm"
+                     >
+                        <option value="last_7">Últimos 7 días</option>
+                        <option value="last_30">Últimos 30 días</option>
+                        <option disabled>──────────</option>
+                        {MONTHS.map((m, i) => <option key={m} value={i}>{m}</option>)}
+                        <option disabled>──────────</option>
+                        <option value="all">Todo el Año</option>
+                     </select>
                  </div>
-              </div>
+             </div>
+          </div>
 
-              {/* FILA 3: Grid de 3 columnas para Métricas y Oráculo */}
+          {/* SECCIÓN 3: CONTENIDO CONDICIONAL (Charts, Pepe, Stats) */}
+          {!stats ? (
+             <div className="flex flex-col items-center justify-center py-16 text-center space-y-4 bg-slate-900/20 rounded-3xl border border-slate-800/50 border-dashed animate-in fade-in">
+                <div className="opacity-30 text-6xl grayscale filter">🐸</div>
+                <div className="space-y-1">
+                    <p className="text-slate-400 font-bold text-sm">Nada por aquí...</p>
+                    <p className="text-slate-500 text-xs italic">"No hay lore registrado en este periodo."</p>
+                </div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4">
+              
+              {/* Grid de 3 columnas para Métricas y Oráculo */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 
                 {/* Columna Izquierda: Métricas Numéricas y Tarta */}
