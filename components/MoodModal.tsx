@@ -132,12 +132,17 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
 
         try {
             const finalImagePrompt = `${imagePrompt}. High quality meme art, flat color, clean lines, internet culture style, pepe the frog character, 2D vector style.`;
-            
+          
             const imageResult = await ai.models.generateContent({
                 model: 'gemini-2.5-flash-image',
                 contents: { parts: [{ text: finalImagePrompt }] },
                 config: {
-                    imageConfig: { aspectRatio: "1:1" }
+                    // 👇 ESTO ES CLAVE PARA NANO BANANA / GEMINI IMAGE
+                    responseModalities: ["IMAGE"], 
+                    
+                    imageConfig: { 
+                        aspectRatio: "1:1" 
+                    }
                 }
             });
 
