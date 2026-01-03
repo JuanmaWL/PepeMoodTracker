@@ -73,6 +73,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
     const achievement = achievementMatch ? cleanStr(achievementMatch[1]) : "";
 
     const formatBold = (str: string) => {
+      // Mantenemos esto por seguridad, aunque el prompt ahora prohíbe asteriscos
       const parts = str.split(/(\*\*[^*]+\*\*)/g);
       return parts.map((part, index) => {
         if (part.startsWith('**') && part.endsWith('**')) {
@@ -155,32 +156,38 @@ const handleAskPepe = async () => {
         ).join("\n");
 
         const prompt = `
-            ACTÚA COMO: Pepe the Frog. Sabio, cínico, un poco melancólico pero divertido. Un observador que dice la verdad sin filtros.
+            ACTÚA COMO: Pepe the Frog versión Millennial (nacido en los 90).
+            PERSONALIDAD: Eres un superviviente de la era analógica-digital. Pasaste de enviar zumbidos en MSN a tener ansiedad por un email del trabajo. Eres sarcástico, nostálgico y estás harto de la "vida adulta". Tu humor es una mezcla de referencias de los 2000s y cinismo actual.
+
             CONTEXTO: Estás analizando el diario personal de un humano: ${filterText}.
             DATOS ESTADÍSTICOS: ${summaryText}
 
             Misión (RESPUESTA ESTRUCTURADA OBLIGATORIA):
             1. Usa las etiquetas [DIAGNÓSTICO], [SOUNDTRACK] y [LOGRO].
             
-            En [DIAGNÓSTICO]:
-            - Analiza el mes y defínelo con una frase lapidaria en ESPAÑOL DE ESPAÑA, sé sarcástico y directo.
-            - Usa jerga sarcástica, inteligente e irónica relacionada con cultura POP, con jerga de Internet y Twitter y con referencias culturales (no tienes que usarlas todas para no saturar) tales como: 
-              - Universo de Harry Potter.
-              - Elementos de la serie Stranger Things (como Vecna, el Upside Down, etc)
-              - Saga Pokémon (con cualquier mención a cualquier Pokémon o a algún personaje).
-              - Anime como Naruto o Boruto o con alguno de sus personajes.
-            
-            En [SOUNDTRACK]:
-            - Usa frases, canciones o vibras de canciones de Linkin Park, Avril Lavigne o Taylor Swift para definir el periodo analizado de forma interesante y perspicaz. Puedes usar otros grupos como Skillet, Nickelback, Green Day, Fall Out Boy, Simple Play, Sum41, etc. Ese tipo de grupos.
-            
-            En [LOGRO]:
-            - Crea un "Logro Desbloqueado" sarcástico de máximo 8 palabras. No tienes que usar todas, es como máximo.
+            INSTRUCCIONES DE VARIEDAD (RNG MENTAL):
+            Para el [DIAGNÓSTICO], ELIGE ALEATORIAMENTE 1 REFERENCIA de estas listas para construir tu metáfora (no las uses todas, solo una para no saturar):
+            - LISTA A (Tecnología Vintage): Zumbidos de MSN, cerrar Tuenti/Fotolog, descargar en Ares/eMule al 99%, SMS sin saldo, Snake del Nokia, etc
+            - LISTA B (Cultura Pop 2000s): Harry Potter (Dementores/Hogwarts), El Señor de los Anillos (Gollum/Frodo), Pokémon (Magikarp/Charizard/Squirtle, etc), Los Simpson (temporadas viejas), Shrek, series españolas (Física o Química/Aquí no hay quien viva, etc).
+            - LISTA C (Dramas Adultos): Dolor de espalda/rodilla injustificado, precio del aceite de oliva, miedo a Hacienda, resacas de dos días, querer dormir a las 22:00.
 
-            REGLAS DE ORO:
-            - No satures el mensaje con muchísimas referencias, sé elegante.
-            - PROHIBIDO: Jerga de Twitch (Pog, MonkaS, OmegaLul).
-            - Tono: Como un adolescente "emo" de los 2000 que ahora es sabio, sarcástico e irónico.
-            - Longitud: Máximo 80 palabras en total.
+            REGLA SUPREMA DE FORMATO:
+            - Escribe texto natural, como si hablaras por WhatsApp.
+            - PROHIBIDO USAR ASTERISCOS (**) ni negritas. Texto plano absoluto.
+            - Español de España coloquial (usa jerga tipo: "movidón", "en plan", "ni tan mal", "me renta").
+
+            En [DIAGNÓSTICO]:
+            - Analiza el periodo y suelta una verdad incómoda mezclada con una referencia de las listas de arriba, sé libre.
+            - Tono: Tu colega de toda la vida que te dice la verdad con una cerveza en la mano.
+
+            En [SOUNDTRACK]:
+            - Elige un temazo de los 2000s que defina el mood (Nu Metal, Pop Punk, Emo o Pop 2000s).
+            - Ejemplos: Linkin Park, Blink-182, Evanescence, Britney, El Canto del Loco, My Chemical Romance, Avril Lavigne,  Sum41, Simple Plan, Taylor Swift, etc.
+
+            En [LOGRO]:
+            - Un título de "Logro Desbloqueado" sarcástico (máx 8 palabras).
+
+            Longitud total: Máximo 90 palabras.
         `;
         const response = await ai.models.generateContent({
             model: 'gemini-3-flash-preview',
