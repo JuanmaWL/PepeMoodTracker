@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Calendar from './components/Calendar';
 import MoodModal from './components/MoodModal';
 import StatsModal from './components/StatsModal';
@@ -33,10 +33,25 @@ const App: React.FC = () => {
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
-  // Lógica de Racha (Streak)
+  // Lógica de Vibración Háptica para móviles
+  const triggerHaptic = useCallback((type: 'light' | 'medium' | 'heavy' = 'light') => {
+    if ('vibrate' in navigator) {
+      const patterns = {
+        light: 10,
+        medium: 30,
+        heavy: [50, 30, 50]
+      };
+      navigator.vibrate(patterns[type]);
+    }
+  }, []);
+
+  // Lógica de Racha (Streak) - Memoizada
   const streak = useMemo(() => {
-    const dates = Object.keys(yearData).sort().reverse();
-    if (dates.length === 0) return 0;
+    const entries = Object.entries(yearData)
+      .filter(([_, d]) => d.level > 0)
+      .sort((a, b) => b[0].localeCompare(a[0]));
+    
+    if (entries.length === 0) return 0;
 
     let count = 0;
     const today = new Date();
@@ -45,17 +60,16 @@ const App: React.FC = () => {
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = yesterday.toISOString().split('T')[0];
 
+    // Si no hay registro hoy ni ayer, la racha es 0
     if (!yearData[todayStr] && !yearData[yesterdayStr]) return 0;
 
-    let checkDate = yearData[todayStr] ? today : yesterday;
+    let currentDate = yearData[todayStr] ? today : yesterday;
     
     while (true) {
-      const dateStr = checkDate.toISOString().split('T')[0];
+      const dateStr = currentDate.toISOString().split('T')[0];
       if (yearData[dateStr] && yearData[dateStr].level > 0) {
         count++;
-        const nextCheck = new Date(checkDate);
-        nextCheck.setDate(nextCheck.getDate() - 1);
-        checkDate = nextCheck;
+        currentDate.setDate(currentDate.getDate() - 1);
       } else {
         break;
       }
@@ -91,18 +105,21 @@ const App: React.FC = () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(yearData));
   }, [yearData]);
 
-  const handleDayClick = (dateStr: string) => {
+  const handleDayClick = useCallback((dateStr: string) => {
+    triggerHaptic('light');
     setSelectedDate(dateStr);
     setIsMoodModalOpen(true);
-  };
+  }, [triggerHaptic]);
 
   const handleSaveDay = (data: DayData) => {
     if (!selectedDate) return;
+    triggerHaptic('medium');
     setYearData(prev => ({ ...prev, [selectedDate]: data }));
   };
 
   const handleDeleteDay = (dateToDelete: string) => {
     if (!dateToDelete) return;
+    triggerHaptic('heavy');
     setYearData(prev => {
       const { [dateToDelete]: _, ...rest } = prev;
       return rest;
@@ -112,12 +129,14 @@ const App: React.FC = () => {
   };
 
   const handleToday = () => {
+    triggerHaptic('medium');
     const today = new Date();
     const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
     handleDayClick(dateStr);
   };
 
   const handleExport = () => {
+    triggerHaptic('light');
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(yearData));
     const dl = document.createElement('a');
     dl.setAttribute("href", dataStr);
@@ -136,25 +155,16 @@ const App: React.FC = () => {
       try {
         const content = event.target?.result as string;
         const importedData = JSON.parse(content);
-        
-        // Validación básica de estructura
         if (typeof importedData === 'object' && importedData !== null) {
+          triggerHaptic('medium');
           setYearData(importedData);
-        } else {
-          alert("El archivo no tiene un formato válido de Pepe Lore, lince.");
         }
       } catch (err) {
         console.error("Import error:", err);
-        alert("Error al procesar el JSON. ¿Estás seguro de que esto es lore real?");
       }
     };
     reader.readAsText(file);
     e.target.value = '';
-  };
-
-  const handleReset = () => {
-    setYearData({});
-    setShowResetConfirm(false);
   };
 
   return (
@@ -195,7 +205,7 @@ const App: React.FC = () => {
 
       <button
         onClick={handleToday}
-        className="group relative mb-12 inline-flex items-center gap-3 px-10 py-5 bg-gradient-to-br from-green-600 to-emerald-700 rounded-2xl text-white font-black text-xl shadow-[0_10px_30px_-5px_rgba(34,197,94,0.5)] hover:shadow-[0_15px_40px_-5px_rgba(34,197,94,0.7)] transition-all"
+        className="group relative mb-12 inline-flex items-center gap-3 px-10 py-5 bg-gradient-to-br from-green-600 to-emerald-700 rounded-2xl text-white font-black text-xl shadow-[0_10px_30px_-5px_rgba(34,197,94,0.5)] hover:shadow-[0_15px_40px_-5px_rgba(34,197,94,0.7)] transition-all active:scale-95"
       >
         <Plus size={24} className="group-hover:rotate-90 transition-transform" /> 
         REGISTRAR HOY
@@ -210,9 +220,9 @@ const App: React.FC = () => {
       <FloatingMenu 
         onExport={handleExport}
         onImport={handleImport}
-        onStats={() => setIsStatsModalOpen(true)}
-        onReset={() => setShowResetConfirm(true)}
-        onSearch={() => setIsSearchModalOpen(true)}
+        onStats={() => { triggerHaptic('light'); setIsStatsModalOpen(true); }}
+        onReset={() => { triggerHaptic('medium'); setShowResetConfirm(true); }}
+        onSearch={() => { triggerHaptic('light'); setIsSearchModalOpen(true); }}
       />
 
       <MoodModal
@@ -240,7 +250,6 @@ const App: React.FC = () => {
         }}
       />
 
-      {/* Custom Reset Confirmation Modal */}
       {showResetConfirm && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-xl animate-in fade-in duration-300">
           <div className="bg-slate-900 border-2 border-red-500/50 w-full max-w-md rounded-[2.5rem] shadow-[0_0_50px_rgba(239,68,68,0.2)] overflow-hidden p-6 md:p-8 flex flex-col items-center text-center space-y-6">
@@ -255,13 +264,13 @@ const App: React.FC = () => {
             </div>
             <div className="flex flex-col w-full gap-3 pt-2">
               <button
-                onClick={handleReset}
+                onClick={() => { triggerHaptic('heavy'); setYearData({}); setShowResetConfirm(false); }}
                 className="w-full py-4 bg-red-600 hover:bg-red-500 text-white font-black uppercase tracking-[0.2em] text-xs rounded-2xl transition-all shadow-lg shadow-red-900/40 flex items-center justify-center gap-2"
               >
                 <Trash2 size={16} /> SÍ, BORRAR TODO
               </button>
               <button
-                onClick={() => setShowResetConfirm(false)}
+                onClick={() => { triggerHaptic('light'); setShowResetConfirm(false); }}
                 className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-slate-300 font-black uppercase tracking-[0.2em] text-xs rounded-2xl transition-all border border-slate-700"
               >
                 CANCELAR

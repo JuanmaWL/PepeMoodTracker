@@ -99,7 +99,7 @@ const PepeOracle: React.FC<PepeOracleProps> = ({ data }) => {
         ${isMagicActive ? 'magic-channeling shadow-[0_0_120px_rgba(167,139,250,0.5)] ring-4 ring-purple-400/50' : 'hover:shadow-[0_0_100px_rgba(99,102,241,0.2)]'}
       `}>
         {/* Imagen de fondo sutil solicitada */}
-        <div className="absolute inset-0 z-0 pointer-events-none opacity-[0.06] mix-blend-overlay">
+        <div className="absolute inset-0 z-0 pointer-events-none opacity-[0.12] mix-blend-overlay">
           <img 
             src="https://i.imgur.com/0JD4l8Q.png" 
             className="w-full h-full object-cover grayscale brightness-150" 

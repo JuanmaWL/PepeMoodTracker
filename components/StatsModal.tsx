@@ -90,33 +90,34 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
             {formatBold(diagnosis)}
           </p>
         </div>
-        <div className="flex flex-wrap gap-3 mt-4">
-          {soundtrack && (
-            <div className="flex items-center gap-3 bg-pink-500/10 border border-pink-500/20 px-4 py-3 rounded-xl group transition-all hover:bg-pink-500/20 shadow-lg shadow-pink-950/20 cursor-default flex-1 min-w-[250px]">
-              {/* Color ROSA para la música */}
-              <Music 
-                size={28} 
-                className="text-pink-400 group-hover:scale-110 transition-transform duration-200 ease-out shrink-0" 
-              />
-              <span className="text-[11px] font-black text-pink-200 uppercase tracking-wider leading-tight">
-                {soundtrack}
-              </span>
-            </div>
-          )}
 
-          {achievement && (
-            <div className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/20 px-4 py-3 rounded-xl group transition-all hover:bg-amber-500/20 shadow-lg shadow-amber-950/20 cursor-default flex-1 min-w-[250px]">
-              {/* Color ÁMBAR/DORADO para el trofeo */}
-              <Trophy 
-                size={24} 
-                className="text-amber-400 group-hover:scale-110 transition-transform duration-200 ease-out shrink-0" 
-              />
-              <span className="text-[11px] font-black text-amber-200 uppercase tracking-wider leading-tight">
-                {achievement}
-              </span>
-            </div>
-          )}
-        </div>
+<div className="flex flex-wrap gap-3 mt-4">
+  {soundtrack && (
+    <div className="flex items-center gap-3 bg-pink-500/10 border border-pink-500/20 px-4 py-3 rounded-xl group transition-all hover:bg-pink-500/20 shadow-lg shadow-pink-950/20 cursor-default flex-1 min-w-[250px]">
+      {/* Color ROSA para la música */}
+      <Music 
+        size={28} 
+        className="text-pink-400 group-hover:scale-110 transition-transform duration-200 ease-out shrink-0" 
+      />
+      <span className="text-[11px] font-black text-pink-200 uppercase tracking-wider leading-tight">
+        {soundtrack}
+      </span>
+    </div>
+  )}
+
+  {achievement && (
+    <div className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/20 px-4 py-3 rounded-xl group transition-all hover:bg-amber-500/20 shadow-lg shadow-amber-950/20 cursor-default flex-1 min-w-[250px]">
+      {/* Color ÁMBAR/DORADO para el trofeo */}
+      <Trophy 
+        size={24} 
+        className="text-amber-400 group-hover:scale-110 transition-transform duration-200 ease-out shrink-0" 
+      />
+      <span className="text-[11px] font-black text-amber-200 uppercase tracking-wider leading-tight">
+        {achievement}
+      </span>
+    </div>
+  )}
+</div>
       </div>
     );
   };
