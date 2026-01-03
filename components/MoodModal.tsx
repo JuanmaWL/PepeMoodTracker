@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Save, MessageSquareText, Trash2, Wand2, Download, Loader2, Share2 } from 'lucide-react';
-import { MOODS } from '../constants';
+import { MOODS, MEME_TEMPLATES } from '../constants';
 import { MoodLevel, DayData } from '../types';
 import SoundManager from '../utils/sounds';
 import { GoogleGenAI } from "@google/genai";
@@ -87,8 +87,16 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
     setMemeUrl(null);
     SoundManager.play('magic');
 
+    let generatedTopText = "";
+    let generatedBottomText = "";
+    let memeTypeKey = "NEUTRAL";
+
+    // Intentamos recuperar la API Key con todas las estrategias posibles
+    const apiKey = (import.meta as any).env?.VITE_PEPE_MOOD_KEY || (process as any).env?.NEXT_PUBLIC_PEPE_MOOD_KEY || process.env.API_KEY;
+
     try {
-        const apiKey = (import.meta as any).env?.VITE_PEPE_MOOD_KEY || (process as any).env?.NEXT_PUBLIC_PEPE_MOOD_KEY || process.env.API_KEY;
+        if (!apiKey) throw new Error("API Key faltante");
+
         const ai = new GoogleGenAI({ apiKey: apiKey });
 
         // PASO 1: Generar texto y prompt visual con el modelo de TEXTO
@@ -99,7 +107,8 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
             TAREA: Genera un objeto JSON con:
             - topText: Texto superior para meme (muy breve, impactante).
             - bottomText: Texto inferior para meme (punchline sarcástico).
-            - imagePrompt: Una descripción visual detallada en INGLÉS para generar una imagen de "Pepe the Frog" (dibujo estilo meme cartoon) haciendo algo relacionado con la nota. Ejemplo: "A cartoon drawing of Pepe the Frog crying in front of a computer".
+            - imagePrompt: Una descripción visual detallada en INGLÉS para generar una imagen de "Pepe the Frog" (dibujo estilo meme cartoon) haciendo algo relacionado con la nota.
+            - moodType: Uno de estos: 'HAPPY', 'SAD', 'ANGRY', 'CLOWN', 'NEUTRAL'.
             
             Responde SOLO EL JSON.
         `;
@@ -111,54 +120,56 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
         });
 
         const json = JSON.parse(textResult.text || "{}");
-        const topText = (json.topText || "").toUpperCase();
-        const bottomText = (json.bottomText || "").toUpperCase();
-        const imagePrompt = json.imagePrompt || "A funny cartoon drawing of Pepe the Frog face";
+        generatedTopText = (json.topText || "CUANDO").toUpperCase();
+        generatedBottomText = (json.bottomText || "TEXTO DE EJEMPLO").toUpperCase();
+        memeTypeKey = json.moodType || "NEUTRAL";
+        const imagePrompt = json.imagePrompt || "A funny cartoon drawing of Pepe the Frog";
 
-        // PASO 2: Generar la imagen con el modelo de IMAGEN
+        // PASO 2: Intentar Generar la imagen con IA
         setLoadingStep("Dibujando a Pepe...");
-        
-        // Mejoramos el prompt para asegurar el estilo
-        const finalImagePrompt = `${imagePrompt}. High quality meme art, flat color, clean lines, internet culture style.`;
+        let base64Image = null;
 
-        const imageResult = await ai.models.generateContent({
-            model: 'gemini-2.5-flash-image',
-            contents: {
-                parts: [{ text: finalImagePrompt }]
-            },
-             config: {
-                imageConfig: {
-                    aspectRatio: "1:1",
-                    // No seteamos mimeType de respuesta para imagen, el SDK lo maneja o devuelve default
+        try {
+            const finalImagePrompt = `${imagePrompt}. High quality meme art, flat color, clean lines, internet culture style, pepe the frog character.`;
+            
+            const imageResult = await ai.models.generateContent({
+                model: 'gemini-2.5-flash-image',
+                contents: { parts: [{ text: finalImagePrompt }] },
+                config: {
+                    imageConfig: { aspectRatio: "1:1" }
+                }
+            });
+
+            if (imageResult.candidates?.[0]?.content?.parts) {
+                for (const part of imageResult.candidates[0].content.parts) {
+                    if (part.inlineData && part.inlineData.data) {
+                        base64Image = `data:image/png;base64,${part.inlineData.data}`;
+                        break;
+                    }
                 }
             }
-        });
-
-        // Extraer la imagen en Base64 de la respuesta
-        let base64Image = "";
-        
-        // Iteramos las partes para encontrar la imagen (según doc standard)
-        if (imageResult.candidates?.[0]?.content?.parts) {
-            for (const part of imageResult.candidates[0].content.parts) {
-                if (part.inlineData && part.inlineData.data) {
-                    base64Image = `data:image/png;base64,${part.inlineData.data}`;
-                    break;
-                }
-            }
+        } catch (imgError) {
+            console.warn("Fallo generación imagen, usando fallback", imgError);
+            // No lanzamos error, dejamos que base64Image sea null para usar el fallback
         }
 
-        if (!base64Image) {
-            throw new Error("No se pudo generar la imagen");
+        // PASO 3: Si no hay imagen de IA (por error o seguridad), usamos plantilla
+        // pero mantenemos el texto generado por IA.
+        let imageToUse = base64Image;
+        if (!imageToUse) {
+            setLoadingStep("Usando plantilla clásica...");
+            const templates = MEME_TEMPLATES[memeTypeKey as keyof typeof MEME_TEMPLATES] || MEME_TEMPLATES.NEUTRAL;
+            imageToUse = templates[Math.floor(Math.random() * templates.length)];
         }
 
-        // PASO 3: Dibujar en Canvas (Componer Imagen + Texto)
+        // PASO 4: Dibujar
         setLoadingStep("Horneando meme...");
-        await drawMeme(base64Image, topText, bottomText);
+        await drawMeme(imageToUse!, generatedTopText, generatedBottomText);
 
     } catch (e) {
-        console.error("Meme error", e);
-        // Fallback en caso de error crítico
-        await drawMeme("https://i.imgur.com/KJSjEue.png", "ERROR 404", "PEPE NO ENCONTRADO");
+        console.error("Meme error crítico", e);
+        // Fallback total si falla incluso la generación de texto
+        await drawMeme(MOODS[level].image || MEME_TEMPLATES.NEUTRAL[0], "ERROR 500", "PEPE NECESITA UN DESCANSO");
     } finally {
         setGeneratingMeme(false);
         setLoadingStep("");
@@ -174,7 +185,6 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
         if (!ctx) return resolve();
 
         const img = new Image();
-        // Importante para imágenes externas, aunque ahora usamos base64 mayormente
         img.crossOrigin = "anonymous"; 
         img.src = imgSrc;
 
@@ -182,35 +192,39 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
             canvas.width = 500;
             canvas.height = 500;
 
-            // Dibujar fondo negro por si la imagen tiene transparencia
             ctx.fillStyle = "black";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Draw Image (Cover)
+            // Cover fit
             const ratio = Math.max(canvas.width / img.width, canvas.height / img.height);
             const x = (canvas.width - img.width * ratio) / 2;
             const y = (canvas.height - img.height * ratio) / 2;
             
             ctx.drawImage(img, 0, 0, img.width, img.height, x, y, img.width * ratio, img.height * ratio);
 
-            // Text Styles (Classic Meme Font)
+            // Meme Font Settings
             ctx.fillStyle = "white";
             ctx.strokeStyle = "black";
             ctx.lineWidth = 6;
             ctx.font = "900 48px Impact, sans-serif";
             ctx.textAlign = "center";
             
-            // Función auxiliar para dibujar texto con borde
             const drawText = (text: string, x: number, y: number, maxWidth: number, baseline: CanvasTextBaseline) => {
                 ctx.textBaseline = baseline;
+                // Simple word wrap logic could go here, but for memes one-liners are standard
+                // We'll just scale down if too long
+                let fontSize = 48;
+                ctx.font = `900 ${fontSize}px Impact, sans-serif`;
+                while (ctx.measureText(text).width > maxWidth && fontSize > 20) {
+                    fontSize -= 2;
+                    ctx.font = `900 ${fontSize}px Impact, sans-serif`;
+                }
+                
                 ctx.strokeText(text, x, y, maxWidth);
                 ctx.fillText(text, x, y, maxWidth);
             };
 
-            // Draw Top
             drawText(top, 250, 15, 480, "top");
-
-            // Draw Bottom
             drawText(bottom, 250, 485, 480, "bottom");
 
             // Watermark
@@ -227,12 +241,12 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
         };
 
         img.onerror = () => {
-             // Fallback canvas
+             // Fallback finalísimo
              ctx.fillStyle = "#1e293b";
              ctx.fillRect(0,0,500,500);
              ctx.fillStyle = "white";
              ctx.textAlign = "center";
-             ctx.fillText("Error cargando imagen :(", 250, 250);
+             ctx.fillText("Error de imagen", 250, 250);
              setMemeUrl(canvas.toDataURL('image/png'));
              resolve();
         };

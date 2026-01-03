@@ -25,7 +25,7 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({ onExport, onImport, onStats
   }
 
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-800/90 backdrop-blur-md border border-slate-700/50 rounded-full shadow-2xl px-4 py-3 md:px-6 flex gap-2 md:gap-6 items-center overflow-x-auto max-w-[95vw] custom-scrollbar-hide">
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-800/95 backdrop-blur-md border border-slate-700/50 rounded-full shadow-2xl px-3 py-3 md:px-6 flex gap-2 md:gap-6 items-center justify-center max-w-[95vw] overflow-hidden">
       <input 
         type="file" 
         ref={fileInputRef} 
@@ -36,19 +36,19 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({ onExport, onImport, onStats
       
       <button 
         onClick={() => handleClick(onExport)}
-        className="group flex flex-col items-center gap-1 text-slate-400 hover:text-green-400 transition-colors min-w-[2.5rem] md:min-w-[3rem]"
+        className="group flex flex-col items-center gap-1 text-slate-400 hover:text-green-400 transition-colors w-10 md:min-w-[3rem]"
         title="Descargar copia de seguridad"
       >
-        <Download size={20} className="group-hover:-translate-y-1 transition-transform" />
+        <Download size={22} className="group-hover:-translate-y-1 transition-transform" />
         <span className="hidden md:block text-[9px] font-bold uppercase tracking-wider text-center">Export</span>
       </button>
 
       <button 
         onClick={handleImportClick}
-        className="group flex flex-col items-center gap-1 text-slate-400 hover:text-indigo-400 transition-colors min-w-[2.5rem] md:min-w-[3rem]"
+        className="group flex flex-col items-center gap-1 text-slate-400 hover:text-indigo-400 transition-colors w-10 md:min-w-[3rem]"
         title="Cargar copia de seguridad"
       >
-        <Upload size={20} className="group-hover:-translate-y-1 transition-transform" />
+        <Upload size={22} className="group-hover:-translate-y-1 transition-transform" />
         <span className="hidden md:block text-[9px] font-bold uppercase tracking-wider text-center">Import</span>
       </button>
 
@@ -57,19 +57,19 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({ onExport, onImport, onStats
 
       <button 
         onClick={() => handleClick(onSearch)}
-        className="group flex flex-col items-center gap-1 text-slate-400 hover:text-yellow-400 transition-colors min-w-[2.5rem] md:min-w-[3rem]"
+        className="group flex flex-col items-center gap-1 text-slate-400 hover:text-yellow-400 transition-colors w-10 md:min-w-[3rem]"
         title="Buscar en el Lore"
       >
-        <Search size={20} className="group-hover:-translate-y-1 transition-transform" />
+        <Search size={22} className="group-hover:-translate-y-1 transition-transform" />
         <span className="hidden md:block text-[9px] font-bold uppercase tracking-wider text-center">Buscar</span>
       </button>
 
       <button 
         onClick={() => handleClick(onCloud)}
-        className="group flex flex-col items-center gap-1 text-slate-400 hover:text-pink-400 transition-colors min-w-[2.5rem] md:min-w-[3rem]"
+        className="group flex flex-col items-center gap-1 text-slate-400 hover:text-pink-400 transition-colors w-10 md:min-w-[3rem]"
         title="Nube de palabras"
       >
-        <Cloud size={20} className="group-hover:-translate-y-1 transition-transform" />
+        <Cloud size={22} className="group-hover:-translate-y-1 transition-transform" />
         <span className="hidden md:block text-[9px] font-bold uppercase tracking-wider text-center">Nube</span>
       </button>
 
@@ -78,19 +78,19 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({ onExport, onImport, onStats
 
       <button 
         onClick={() => handleClick(onStats)}
-        className="group flex flex-col items-center gap-1 text-slate-400 hover:text-blue-400 transition-colors min-w-[2.5rem] md:min-w-[3rem]"
+        className="group flex flex-col items-center gap-1 text-slate-400 hover:text-blue-400 transition-colors w-10 md:min-w-[3rem]"
         title="Estadísticas"
       >
-        <BarChart2 size={20} className="group-hover:-translate-y-1 transition-transform" />
+        <BarChart2 size={22} className="group-hover:-translate-y-1 transition-transform" />
         <span className="hidden md:block text-[9px] font-bold uppercase tracking-wider text-center">Stats</span>
       </button>
 
       <button 
         onClick={() => handleClick(onReset)}
-        className="group flex flex-col items-center gap-1 text-slate-400 hover:text-red-500 transition-colors min-w-[2.5rem] md:min-w-[3rem]"
+        className="group flex flex-col items-center gap-1 text-slate-400 hover:text-red-500 transition-colors w-10 md:min-w-[3rem]"
         title="Borrar todo"
       >
-        <RotateCcw size={20} className="group-hover:rotate-180 transition-transform duration-500" />
+        <RotateCcw size={22} className="group-hover:rotate-180 transition-transform duration-500" />
         <span className="hidden md:block text-[9px] font-bold uppercase tracking-wider text-center">Reset</span>
       </button>
     </div>
