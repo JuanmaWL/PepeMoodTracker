@@ -154,7 +154,7 @@ const CloudModal: React.FC<CloudModalProps> = ({ isOpen, onClose, data }) => {
             </div>
             <div>
                 <h2 className="text-2xl font-black text-white uppercase tracking-tight leading-none">Pepe Mindset</h2>
-                <p className="text-[10px] text-pink-400/80 font-bold uppercase tracking-widest mt-1">Los conceptos que dominan tu año</p>
+                <p className="text-[10px] text-pink-400/80 font-bold uppercase tracking-widest mt-1">Las palabras del año</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-slate-700 rounded-full text-slate-400 transition-colors">

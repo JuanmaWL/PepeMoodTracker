@@ -27,9 +27,21 @@ const PEPE_STATIC_JUDGES = [
   "https://i.imgur.com/X8dsbBP.png"  // Smart
 ];
 
+const LOADING_PHRASES = [
+  "PROCESANDO PECADOS...",
+  "JUZGANDO TUS DECISIONES...",
+  "REVISANDO EL HISTORIAL DE CRINGE...",
+  "CONSULTANDO EL LIBRO GORDO...",
+  "APLICANDO LEY MARCIAL...",
+  "CALCULANDO EL NIVEL DE BASADO...",
+  "AUDITANDO TUS EMOCIONES...",
+  "EMITIENDO SENTENCIA FINAL..."
+];
+
 const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
   const [aiAnalysis, setAiAnalysis] = useState<string>("");
   const [loadingAi, setLoadingAi] = useState(false);
+  const [loadingText, setLoadingText] = useState("PROCESANDO PECADOS...");
   const [errorAi, setErrorAi] = useState("");
   const [judgeImage, setJudgeImage] = useState(PEPE_STATIC_JUDGES[0]);
   
@@ -167,62 +179,95 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
             const reasonPart = fullText.substring(splitIndex).trim();
 
             return (
-                <div className="flex flex-col gap-1">
-                    <span className="block font-bold border-b border-pink-500/20 pb-1 mb-1">{songPart}</span>
-                    <span className="block font-normal opacity-90">{reasonPart}</span>
+                <div className="text-pink-100 text-sm leading-relaxed text-justify md:text-left">
+                    <strong className="block font-bold text-pink-200 border-b border-pink-500/20 pb-1 mb-1">{songPart}</strong>
+                    <span className="opacity-90 block pt-1">{reasonPart}</span>
                 </div>
             );
         }
-        return fullText;
+        return <span className="text-pink-100 text-sm text-justify md:text-left block">{fullText}</span>;
     };
 
+    // Diseño unificado de Tarjetas usando FLOAT para permitir wrap de texto
+    // Corrección Fix #2: Usamos 'group/card' para aislar el hover
     return (
-      <div className="space-y-4 animate-in fade-in slide-in-from-right duration-700 relative w-full">
-        <div className="bg-slate-900/60 p-5 rounded-2xl border border-indigo-500/30 relative shadow-lg">
-          <Quote size={20} className="text-indigo-500/50 absolute top-3 left-3" />
-          <p className="text-indigo-100 text-sm md:text-base leading-relaxed pl-8 italic font-medium">
-            {formatBold(diagnosis)}
-          </p>
-        </div>
-
-        <div className="flex flex-col gap-3">
-          {soundtrackFull && (
-            <div className="flex items-start gap-3 bg-pink-500/10 border border-pink-500/20 px-4 py-3 rounded-xl group transition-all hover:bg-pink-500/20 shadow-lg shadow-pink-950/20 cursor-default">
-              <Music size={20} className="text-pink-400 group-hover:scale-110 transition-transform duration-200 shrink-0 mt-1" />
-              <div className="flex flex-col w-full">
-                 <span className="text-[10px] font-black text-pink-200 uppercase tracking-wider leading-tight mb-1">
-                    Soundtrack
-                 </span>
-                 <div className="text-sm text-pink-100/90 leading-snug font-medium italic">
-                    {renderSoundtrackContent(soundtrackFull)}
-                 </div>
-              </div>
-            </div>
-          )}
-
-          {achievement && (
-            <div className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/20 px-4 py-3 rounded-xl group transition-all hover:bg-amber-500/20 shadow-lg shadow-amber-950/20 cursor-default">
-              <Trophy size={18} className="text-amber-400 group-hover:scale-110 transition-transform duration-200 shrink-0" />
-              <div className="flex flex-col">
-                <span className="text-[10px] font-black text-amber-200 uppercase tracking-wider leading-tight">
-                    Logro Desbloqueado
-                </span>
-                <span className="text-sm font-bold text-amber-100">
-                    {achievement}
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
+      <div className="space-y-4 animate-in fade-in slide-in-from-right duration-700 w-full relative">
         
-        {/* BOTÓN REGENERAR VISTOSO Y MEJOR UBICADO */}
+        {/* CARD DIAGNÓSTICO */}
+        {/* Usamos 'flow-root' o 'clearfix' implícito para contener el float */}
+        <div className="group/card relative p-4 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 hover:bg-indigo-500/10 hover:border-indigo-500/30 transition-all duration-300 cursor-default flow-root">
+           
+           {/* Icono con FLOAT LEFT */}
+           <div className="float-left mr-4 mb-1 relative">
+              {/* Glow individual en hover usando nombre de grupo */}
+              <div className="absolute inset-0 bg-indigo-500 rounded-full blur-md opacity-0 group-hover/card:opacity-30 transition-opacity duration-300"></div>
+              <div className="relative p-2 rounded-xl bg-indigo-500/10 text-indigo-400 group-hover/card:scale-110 group-hover/card:rotate-3 transition-transform duration-300">
+                  <Quote size={18} />
+              </div>
+           </div>
+
+           {/* Contenido (Fluirá alrededor del float) */}
+           <div className="text-[10px] font-black text-indigo-400/60 uppercase tracking-widest mb-1 group-hover/card:text-indigo-400 transition-colors">
+              Diagnóstico
+           </div>
+           <p className="text-indigo-100 text-sm leading-relaxed font-medium italic text-justify md:text-left">
+              {formatBold(diagnosis)}
+           </p>
+        </div>
+
+        {/* CARD SOUNDTRACK */}
+        {soundtrackFull && (
+          <div className="group/card relative p-4 rounded-2xl bg-pink-500/5 border border-pink-500/10 hover:bg-pink-500/10 hover:border-pink-500/30 transition-all duration-300 cursor-default flow-root">
+             
+             {/* Icono con FLOAT LEFT */}
+             <div className="float-left mr-4 mb-1 relative">
+                <div className="absolute inset-0 bg-pink-500 rounded-full blur-md opacity-0 group-hover/card:opacity-30 transition-opacity duration-300"></div>
+                <div className="relative p-2 rounded-xl bg-pink-500/10 text-pink-400 group-hover/card:scale-110 group-hover/card:-rotate-3 transition-transform duration-300">
+                    <Music size={18} />
+                </div>
+             </div>
+
+             {/* Contenido */}
+             <div className="text-[10px] font-black text-pink-400/60 uppercase tracking-widest mb-1 group-hover/card:text-pink-400 transition-colors">
+                Soundtrack
+             </div>
+             {renderSoundtrackContent(soundtrackFull)}
+          </div>
+        )}
+
+        {/* CARD LOGRO */}
+        {achievement && (
+          <div className="group/card relative p-4 rounded-2xl bg-amber-500/5 border border-amber-500/10 hover:bg-amber-500/10 hover:border-amber-500/30 transition-all duration-300 cursor-default flow-root">
+             
+             {/* Icono con FLOAT LEFT */}
+             <div className="float-left mr-4 mb-1 relative">
+                <div className="absolute inset-0 bg-amber-500 rounded-full blur-md opacity-0 group-hover/card:opacity-30 transition-opacity duration-300"></div>
+                <div className="relative p-2 rounded-xl bg-amber-500/10 text-amber-400 group-hover/card:scale-110 group-hover/card:rotate-3 transition-transform duration-300">
+                    <Trophy size={18} />
+                </div>
+             </div>
+
+             {/* Contenido */}
+             <div className="text-[10px] font-black text-amber-400/60 uppercase tracking-widest mb-1 group-hover/card:text-amber-400 transition-colors">
+                Logro
+             </div>
+             <p className="text-amber-100 text-sm font-bold leading-snug text-justify md:text-left">
+                {achievement}
+             </p>
+          </div>
+        )}
+
+        {/* BOTÓN APELAR SENTENCIA (Rediseñado tipo Action Button) */}
         <button 
              onClick={handleAskPepe}
-             className="w-full mt-2 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 hover:border-indigo-500/60 text-indigo-300 rounded-xl py-3 flex items-center justify-center gap-2 transition-all hover:shadow-[0_0_15px_rgba(99,102,241,0.2)] group"
+             className="w-full group/card relative flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-[0_4px_20px_-5px_rgba(79,70,229,0.4)] hover:shadow-[0_10px_30px_-5px_rgba(79,70,229,0.5)] transition-all duration-300 active:scale-98 overflow-hidden mt-4"
              title="Regenerar Juicio"
         >
-             <RefreshCw size={16} className="group-hover:rotate-180 transition-transform duration-500" />
-             <span className="text-xs font-black uppercase tracking-widest">Apelar Sentencia (Regenerar)</span>
+             {/* Glow interno */}
+             <div className="absolute inset-0 bg-white/10 opacity-0 group-hover/card:opacity-20 transition-opacity duration-300"></div>
+             
+             <RefreshCw size={18} className="group-hover/card:rotate-180 transition-transform duration-700" />
+             <span className="font-black text-xs uppercase tracking-widest">Apelar Sentencia (Regenerar)</span>
         </button>
       </div>
     );
@@ -239,6 +284,11 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
     if (!stats) return;
 
     SoundManager.play('magic');
+    
+    // Seleccionar frase aleatoria
+    const randomPhrase = LOADING_PHRASES[Math.floor(Math.random() * LOADING_PHRASES.length)];
+    setLoadingText(randomPhrase);
+
     setLoadingAi(true);
     setErrorAi("");
     setAiAnalysis("");
@@ -585,7 +635,9 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                     {/* Header */}
                     <div className="relative z-20 flex flex-row justify-between items-center p-6 pb-2">
                         <span className="text-indigo-300 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
-                            <Gavel size={14} className="text-yellow-300 animate-[bounce_2s_infinite]" /> Tribunal Supremo de Pepe
+                            <Gavel size={14} className="text-yellow-300 animate-[bounce_2s_infinite]" /> 
+                            <span className="md:hidden">Tribunal de Pepe</span>
+                            <span className="hidden md:inline">Tribunal Supremo de Pepe</span>
                         </span>
                         <span className="text-[10px] font-bold text-indigo-400/60 bg-indigo-500/10 px-2 py-1 rounded-lg border border-indigo-500/20">
                             Expediente: <span className="text-indigo-300">{getRangeLabel()}</span>
@@ -669,8 +721,8 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                                 <div className="flex flex-col gap-2 items-center lg:items-start w-full animate-pulse">
                                     <div className="h-4 w-3/4 bg-indigo-500/20 rounded"></div>
                                     <div className="h-4 w-1/2 bg-indigo-500/20 rounded"></div>
-                                    <div className="h-10 w-full bg-indigo-500/10 rounded-xl mt-4 border border-indigo-500/20 flex items-center justify-center text-indigo-300 text-xs font-mono uppercase tracking-widest">
-                                        PROCESANDO PECADOS...
+                                    <div className="h-10 w-full bg-indigo-500/10 rounded-xl mt-4 border border-indigo-500/20 flex items-center justify-center text-indigo-300 text-xs font-mono uppercase tracking-widest px-4">
+                                        {loadingText}
                                     </div>
                                 </div>
                              ) : aiAnalysis ? (

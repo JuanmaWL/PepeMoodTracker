@@ -302,7 +302,7 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
           {!isMemeMode && (
           <div className="animate-in fade-in slide-in-from-left-4 duration-500">
             <div className="flex items-center gap-3 mb-6 px-1">
-              <span className="text-xs font-black text-slate-400 uppercase tracking-widest opacity-80">Selecciona tu Pepe</span>
+              <span className="text-xs font-black text-slate-400 uppercase tracking-widest opacity-80">Selecciona tu personaje</span>
               <div className="h-px flex-1 bg-gradient-to-r from-slate-800 to-transparent"></div>
             </div>
             
