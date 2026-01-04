@@ -16,6 +16,8 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({ onExport, onImport, onStats
 
   const handleImportClick = () => {
     SoundManager.play('click');
+    // Resetear valor para permitir cargar el mismo archivo dos veces si falla
+    if (fileInputRef.current) fileInputRef.current.value = '';
     fileInputRef.current?.click();
   };
 
@@ -24,8 +26,51 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({ onExport, onImport, onStats
     action();
   }
 
+  // Componente de Botón Reutilizable para consistencia
+  const MenuButton = ({ 
+    icon: Icon, 
+    label, 
+    onClick, 
+    colorClass = "hover:text-white", 
+    rotateIcon = false 
+  }: { 
+    icon: any, 
+    label: string, 
+    onClick: () => void, 
+    colorClass?: string,
+    rotateIcon?: boolean
+  }) => (
+    <button 
+      onClick={onClick}
+      className={`
+        group relative flex flex-col items-center justify-center gap-1 
+        w-10 h-10 md:w-16 md:h-auto 
+        text-slate-400 ${colorClass} transition-all duration-300 
+        active:scale-90 outline-none
+      `}
+      title={label}
+      aria-label={label}
+    >
+      <div className="p-2 rounded-xl group-hover:bg-white/5 transition-colors">
+        <Icon 
+          size={20} 
+          className={`transition-transform duration-300 ${rotateIcon ? 'group-hover:rotate-180' : 'group-hover:-translate-y-0.5'}`} 
+        />
+      </div>
+      <span className="hidden md:block text-[9px] font-black uppercase tracking-widest opacity-60 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+        {label}
+      </span>
+    </button>
+  );
+
+  const Separator = () => (
+    <div className="hidden md:block w-px h-8 bg-slate-700/50 mx-1"></div>
+  );
+
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-800/95 backdrop-blur-md border border-slate-700/50 rounded-full shadow-2xl px-3 py-3 md:px-6 flex gap-2 md:gap-6 items-center justify-center max-w-[95vw] overflow-hidden">
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-max max-w-[95vw]">
+      
+      {/* Input oculto para importación */}
       <input 
         type="file" 
         ref={fileInputRef} 
@@ -33,66 +78,64 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({ onExport, onImport, onStats
         accept=".json" 
         className="hidden" 
       />
-      
-      <button 
-        onClick={() => handleClick(onExport)}
-        className="group flex flex-col items-center gap-1 text-slate-400 hover:text-green-400 transition-colors w-10 md:min-w-[3rem]"
-        title="Descargar copia de seguridad"
-      >
-        <Download size={22} className="group-hover:-translate-y-1 transition-transform" />
-        <span className="hidden md:block text-[9px] font-bold uppercase tracking-wider text-center">Export</span>
-      </button>
 
-      <button 
-        onClick={handleImportClick}
-        className="group flex flex-col items-center gap-1 text-slate-400 hover:text-indigo-400 transition-colors w-10 md:min-w-[3rem]"
-        title="Cargar copia de seguridad"
-      >
-        <Upload size={22} className="group-hover:-translate-y-1 transition-transform" />
-        <span className="hidden md:block text-[9px] font-bold uppercase tracking-wider text-center">Import</span>
-      </button>
+      {/* Contenedor Dock */}
+      <div className="
+        flex items-center gap-1 md:gap-6 px-2 py-2 md:px-8 md:py-4
+        bg-slate-900/90 backdrop-blur-xl 
+        border border-slate-700/60 ring-1 ring-white/5
+        rounded-[2rem] shadow-[0_10px_40px_-10px_rgba(0,0,0,0.6)]
+        animate-in slide-in-from-bottom-10 fade-in duration-500
+      ">
+        
+        <MenuButton 
+          icon={Download} 
+          label="Exportar" 
+          onClick={() => handleClick(onExport)} 
+          colorClass="hover:text-green-400"
+        />
 
-      {/* Separador oculto en móvil */}
-      <div className="hidden md:block w-px h-8 bg-slate-700/50 mx-1"></div>
+        <MenuButton 
+          icon={Upload} 
+          label="Importar" 
+          onClick={handleImportClick} 
+          colorClass="hover:text-indigo-400"
+        />
 
-      <button 
-        onClick={() => handleClick(onSearch)}
-        className="group flex flex-col items-center gap-1 text-slate-400 hover:text-yellow-400 transition-colors w-10 md:min-w-[3rem]"
-        title="Buscar en el Lore"
-      >
-        <Search size={22} className="group-hover:-translate-y-1 transition-transform" />
-        <span className="hidden md:block text-[9px] font-bold uppercase tracking-wider text-center">Buscar</span>
-      </button>
+        <Separator />
 
-      <button 
-        onClick={() => handleClick(onCloud)}
-        className="group flex flex-col items-center gap-1 text-slate-400 hover:text-pink-400 transition-colors w-10 md:min-w-[3rem]"
-        title="Nube de palabras"
-      >
-        <Cloud size={22} className="group-hover:-translate-y-1 transition-transform" />
-        <span className="hidden md:block text-[9px] font-bold uppercase tracking-wider text-center">Nube</span>
-      </button>
+        <MenuButton 
+          icon={Search} 
+          label="Buscar" 
+          onClick={() => handleClick(onSearch)} 
+          colorClass="hover:text-yellow-400"
+        />
 
-      {/* Separador oculto en móvil */}
-      <div className="hidden md:block w-px h-8 bg-slate-700/50 mx-1"></div>
+        <MenuButton 
+          icon={Cloud} 
+          label="Nube" 
+          onClick={() => handleClick(onCloud)} 
+          colorClass="hover:text-pink-400"
+        />
 
-      <button 
-        onClick={() => handleClick(onStats)}
-        className="group flex flex-col items-center gap-1 text-slate-400 hover:text-blue-400 transition-colors w-10 md:min-w-[3rem]"
-        title="Estadísticas"
-      >
-        <BarChart2 size={22} className="group-hover:-translate-y-1 transition-transform" />
-        <span className="hidden md:block text-[9px] font-bold uppercase tracking-wider text-center">Stats</span>
-      </button>
+        <Separator />
 
-      <button 
-        onClick={() => handleClick(onReset)}
-        className="group flex flex-col items-center gap-1 text-slate-400 hover:text-red-500 transition-colors w-10 md:min-w-[3rem]"
-        title="Borrar todo"
-      >
-        <RotateCcw size={22} className="group-hover:rotate-180 transition-transform duration-500" />
-        <span className="hidden md:block text-[9px] font-bold uppercase tracking-wider text-center">Reset</span>
-      </button>
+        <MenuButton 
+          icon={BarChart2} 
+          label="Stats" 
+          onClick={() => handleClick(onStats)} 
+          colorClass="hover:text-blue-400"
+        />
+
+        <MenuButton 
+          icon={RotateCcw} 
+          label="Reset" 
+          onClick={() => handleClick(onReset)} 
+          colorClass="hover:text-red-500"
+          rotateIcon={true}
+        />
+
+      </div>
     </div>
   );
 };
