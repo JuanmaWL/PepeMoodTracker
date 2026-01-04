@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Save, MessageSquareText, Trash2, Download, Loader2, Image as ImageIcon, Sparkles, RefreshCw } from 'lucide-react';
+import { X, Save, MessageSquareText, Trash2, Download, Loader2, Image as ImageIcon, Sparkles, RefreshCw, ChevronRight, Info, Star } from 'lucide-react';
 import { MOODS } from '../constants';
 import { MoodLevel, DayData } from '../types';
 import SoundManager from '../utils/sounds';
@@ -15,7 +15,7 @@ interface MoodModalProps {
 }
 
 const SAVE_PHRASES = [
-  "REGISTRAR LORE", "INMORTALIZAR MOMENTO", "ACTUALIZAR STATUS",
+  "REGISTRAR LORE", "INMORTALIZAR MOMENTO", "ACTUALIZAR STATUS", "GUARDAR DÍA",
   "CHECKEAR VIBES", "GUARDAR PROGRESO", "CONFIRMAR EXISTENCIA",
   "SUBIR AL ARCHIVO", "SINCRONIZAR VIVENCIA", "PUBLICAR LORE", "ESTABLECER CANON"
 ];
@@ -30,6 +30,7 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
   const [note, setNote] = useState('');
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [buttonText, setButtonText] = useState(SAVE_PHRASES[0]);
+  const [showInfo, setShowInfo] = useState(false);
   
   // Estados para Pepe Magic Image Editor
   const [isMemeMode, setIsMemeMode] = useState(false);
@@ -45,6 +46,7 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
       setNote(initialData.note || '');
       setIsConfirmingDelete(false);
       setIsMemeMode(false);
+      setShowInfo(false);
       setMemeUrl(null);
       setMagicExcuse(null);
       setGeneratingMeme(false);
@@ -90,6 +92,11 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
     setMemeUrl(null);
     setMagicExcuse(null);
   };
+  
+  const toggleInfo = () => {
+    SoundManager.play('click');
+    setShowInfo(!showInfo);
+  }
 
   const formatDateDisplay = (isoDate: string) => {
     const [y, m, d] = isoDate.split('-').map(Number);
@@ -212,19 +219,31 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
 
   // --- RENDER ---
 
+  // Invertimos el orden para que en desktop vaya de peor (izq) a mejor (der) o viceversa según preferencia.
+  // En este diseño: Izquierda (Fatal) -> Derecha (Legendario) es una progresión lógica
   const moodLevels = [
-    MoodLevel.Legendary,
-    MoodLevel.MoiBiens,
-    MoodLevel.Normal,
+    MoodLevel.Fatal,
     MoodLevel.Regular,
-    MoodLevel.Fatal
+    MoodLevel.Normal,
+    MoodLevel.MoiBiens,
+    MoodLevel.Legendary
   ];
 
   const hasExistingData = initialData.level !== MoodLevel.None || (initialData.note && initialData.note.trim() !== "");
 
+  // Color de fondo dinámico según la selección actual
+  const activeColor = level !== MoodLevel.None ? MOODS[level].color : 'transparent';
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md animate-in fade-in duration-300">
-      <div className="bg-slate-900 border border-slate-800 w-full max-w-xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[95vh] ring-1 ring-white/10">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/95 backdrop-blur-md animate-in fade-in duration-300">
+      
+      {/* Fondo ambiental dinámico */}
+      <div 
+        className="absolute inset-0 z-0 transition-colors duration-1000 ease-in-out opacity-20 pointer-events-none"
+        style={{ background: `radial-gradient(circle at 50% 30%, ${activeColor}, transparent 70%)` }}
+      />
+
+      <div className="bg-slate-900 border border-slate-800 w-full max-w-5xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[95vh] ring-1 ring-white/10 relative z-10">
         
         {/* Header */}
         <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-900/50 backdrop-blur-sm relative z-10">
@@ -232,7 +251,22 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
             <h2 className="text-xl md:text-2xl font-black text-slate-100 tracking-tight leading-none">
               {formatDateDisplay(dateStr)}
             </h2>
-            <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em] mt-2">Status de hoy</p>
+            <div className="flex items-center gap-2 mt-2">
+                 <span className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em]">Status:</span>
+                 {level !== MoodLevel.None ? (
+                     <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full text-slate-900" style={{ backgroundColor: MOODS[level].color }}>
+                         {MOODS[level].label}
+                     </span>
+                 ) : (
+                     <span className="text-slate-600 text-[10px] font-black uppercase tracking-widest">Pendiente</span>
+                 )}
+                 <button 
+                    onClick={toggleInfo}
+                    className="ml-2 p-1 rounded-full hover:bg-slate-800 text-slate-500 hover:text-indigo-400 transition-colors"
+                 >
+                    <Info size={14} />
+                 </button>
+            </div>
           </div>
           <button 
             onClick={onClose} 
@@ -242,62 +276,146 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
           </button>
         </div>
 
+        {/* Info / Legend Panel */}
+        {showInfo && (
+            <div className="bg-slate-950/80 border-b border-slate-800 p-4 animate-in slide-in-from-top-2 duration-300">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    {moodLevels.map((lvl) => (
+                        <div key={lvl} className="flex flex-col items-center bg-slate-900 rounded-xl p-2 border border-slate-800/50">
+                            <span className="text-[10px] font-bold mb-1" style={{ color: MOODS[lvl].color }}>{MOODS[lvl].label}</span>
+                            <div className="flex gap-0.5">
+                                {[...Array(5)].map((_, i) => (
+                                    <Star key={i} size={8} className={i < lvl ? "fill-current" : "opacity-20"} style={{ color: MOODS[lvl].color }} />
+                                ))}
+                            </div>
+                            <span className="text-[9px] text-slate-500 mt-1">{lvl}/5 Puntos</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        )}
+
         {/* Content */}
-        <div className="p-6 space-y-6 overflow-y-auto custom-scrollbar bg-gradient-to-b from-slate-900 to-slate-950">
+        <div className="p-4 md:p-8 space-y-8 overflow-y-auto custom-scrollbar bg-gradient-to-b from-slate-900 to-slate-950">
           
-          {/* Mood Selection */}
+          {/* Mood Selection - Diseño "Holographic Cards" */}
           {!isMemeMode && (
           <div className="animate-in fade-in slide-in-from-left-4 duration-500">
-            <div className="flex items-center gap-3 mb-4 px-1">
-              <span className="text-xs font-black text-slate-400 uppercase tracking-widest opacity-80">Selecciona tu vibra</span>
-              <div className="h-px flex-1 bg-slate-800"></div>
+            <div className="flex items-center gap-3 mb-6 px-1">
+              <span className="text-xs font-black text-slate-400 uppercase tracking-widest opacity-80">Selecciona tu Pepe</span>
+              <div className="h-px flex-1 bg-gradient-to-r from-slate-800 to-transparent"></div>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {moodLevels.map((moodLvl, index) => {
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 md:gap-4">
+              {moodLevels.map((moodLvl) => {
                 const config = MOODS[moodLvl as MoodLevel];
                 const isSelected = level === moodLvl;
-                const isLastFull = index === moodLevels.length - 1;
                 
                 return (
                   <button
                     key={moodLvl}
                     disabled={isConfirmingDelete}
                     onClick={() => handleMoodSelect(moodLvl as MoodLevel)}
-                    className={`group relative overflow-hidden p-4 rounded-[1.5rem] border-2 transition-all duration-300 flex items-center gap-4 text-left
-                      ${isLastFull ? 'md:col-span-2' : ''}
+                    className={`
+                      group relative overflow-visible rounded-2xl transition-all duration-300 w-full flex md:flex-col items-center
+                      border-2
                       ${isSelected 
-                        ? 'ring-4 ring-white/5 scale-[1.02] shadow-xl z-10' 
-                        : 'hover:scale-[1.01] hover:brightness-110 opacity-70 hover:opacity-100'
+                        ? 'scale-[1.02] z-10 shadow-[0_0_20px_rgba(0,0,0,0.5)]' 
+                        : 'hover:scale-[1.01] hover:bg-slate-800/50 border-slate-800 opacity-60 hover:opacity-100'
                       }
                       ${isConfirmingDelete ? 'blur-[1px] grayscale opacity-50 pointer-events-none' : ''}
                     `}
                     style={{ 
-                      borderColor: isSelected ? config.color : `${config.color}33`, 
-                      backgroundColor: isSelected ? `${config.color}25` : `${config.color}10`, 
+                      borderColor: isSelected ? config.color : undefined,
+                      backgroundColor: isSelected ? `${config.color}15` : 'transparent', // 15 = low opacity hex
+                      boxShadow: isSelected ? `0 0 20px ${config.color}20` : undefined
                     }}
                   >
-                    <div className="w-16 h-16 rounded-2xl bg-white overflow-hidden shrink-0 border border-white/10 shadow-lg flex items-center justify-center">
-                         <img 
-                           src={config.image} 
-                           alt={config.label} 
-                           className={`w-full h-full object-contain p-1.5 transition-all duration-500
-                             ${isSelected ? 'scale-110' : 'opacity-90 group-hover:scale-105 group-hover:opacity-100'}
-                           `} 
-                         />
+                    {/* Background Gradient Effect on Hover/Active */}
+                    <div 
+                        className={`absolute inset-0 bg-gradient-to-br from-white/5 to-transparent transition-opacity duration-300 rounded-2xl ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} 
+                        style={{ background: isSelected ? `linear-gradient(135deg, ${config.color}30 0%, transparent 100%)` : undefined }}
+                    />
+
+                    {/* Image Container */}
+                    <div className="p-3 md:p-4 shrink-0 relative">
+                        {/* EFECTO GLOW/PARTÍCULAS TRASERO (Solo seleccionado) */}
+                        {isSelected && (
+                            <>
+                                {/* Aura pulsante (Respiración) */}
+                                <div className="absolute inset-0 bg-current rounded-full blur-xl opacity-40 animate-pulse"
+                                     style={{ color: config.color }}></div>
+                                {/* Anillo de energía que se expande (Onda de choque) */}
+                                <div className="absolute inset-0 rounded-full border-2 opacity-0 animate-[ping_2.5s_cubic-bezier(0,0,0.2,1)_infinite]"
+                                     style={{ borderColor: config.color }}></div>
+                            </>
+                        )}
+
+                        <div className={`
+                            w-16 h-16 md:w-24 md:h-24 rounded-full overflow-hidden transition-all duration-500 relative
+                            ${isSelected 
+                                ? 'scale-110 shadow-2xl ring-2 ring-offset-2 ring-offset-slate-900 animate-[pulse_3s_ease-in-out_infinite]' 
+                                : 'group-hover:scale-105 grayscale-[0.5] group-hover:grayscale-0'
+                            }
+                        `}
+                        style={{ 
+                            boxShadow: isSelected ? `0 0 25px ${config.color}80` : undefined,
+                            borderColor: config.color
+                        }}
+                        >
+                            {/* Inner Background for image (darker to pop) */}
+                            <div className="absolute inset-0 bg-slate-950/50"></div>
+                            <img 
+                                src={config.image} 
+                                alt={config.label} 
+                                className="w-full h-full object-cover relative z-10" 
+                            />
+                        </div>
                     </div>
 
-                    <div className="flex-1 min-w-0">
-                      <div className="font-black text-sm md:text-base leading-tight tracking-tight mb-1 truncate" style={{ color: isSelected ? '#fff' : config.color }}>
+                    {/* Text Container */}
+                    <div className="flex-1 md:w-full flex flex-col justify-center md:items-center p-3 md:pt-0 md:pb-5 text-left md:text-center relative z-10">
+                      <div 
+                        className="font-black text-sm md:text-lg uppercase tracking-tight leading-none mb-1 transition-colors" 
+                        style={{ color: isSelected ? config.color : '#94a3b8' }} // slate-400 if not selected
+                      >
                         {config.label}
                       </div>
-                      <div className={`text-[10px] md:text-xs font-bold uppercase tracking-wider transition-colors truncate ${isSelected ? 'text-slate-100' : 'text-slate-500'}`}>
+                      <div className={`text-[10px] font-bold uppercase tracking-wider transition-colors ${isSelected ? 'text-slate-300' : 'text-slate-600'}`}>
                         {config.subLabel}
+                      </div>
+
+                      {/* STAR RATING VISUALIZER */}
+                      {/* Fixed: w-full to span, justify-start for mobile stability, h-3 for fixed height */}
+                      <div className="w-full flex gap-1 mt-2 justify-start md:justify-center items-center h-3">
+                          {[...Array(5)].map((_, i) => (
+                             <Star 
+                                key={i} 
+                                size={10} 
+                                className={`${i < moodLvl ? "fill-current" : "opacity-20"} transition-all duration-300`}
+                                style={{ 
+                                    color: isSelected || i < moodLvl ? config.color : 'currentColor',
+                                    // Efecto Glow para las estrellas activas cuando el mood está seleccionado
+                                    filter: (isSelected && i < moodLvl) ? `drop-shadow(0 0 4px ${config.color})` : 'none',
+                                    // Scale con transformOrigin center para evitar desplazamiento
+                                    transform: isSelected && i < moodLvl ? 'scale(1.3)' : 'scale(1)',
+                                    transformOrigin: 'center'
+                                }}
+                             />
+                          ))}
                       </div>
                     </div>
 
+                    {/* Mobile: Arrow indicator */}
                     {isSelected && (
-                      <div className="w-3 h-3 rounded-full shadow-[0_0_12px_currentColor] shrink-0" style={{ backgroundColor: config.color }} />
+                        <div className="md:hidden pr-4 text-white animate-pulse">
+                            <ChevronRight size={20} style={{ color: config.color }} />
+                        </div>
+                    )}
+                    
+                    {/* Desktop: Active Bottom Bar */}
+                    {isSelected && (
+                        <div className="absolute bottom-0 left-0 right-0 h-1 hidden md:block" style={{ backgroundColor: config.color }}></div>
                     )}
                   </button>
                 );
@@ -313,13 +431,13 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
              <div className="flex justify-between items-center mb-4 px-1">
               <div className="flex items-center gap-2">
                 <MessageSquareText size={18} className="text-slate-500" />
-                <span className="text-xs font-black text-slate-400 uppercase tracking-widest opacity-80">Lore del día</span>
+                <span className="text-xs font-black text-slate-400 uppercase tracking-widest opacity-80">Lore del día (opcional)</span>
               </div>
               
               {!isMemeMode && level !== MoodLevel.None && (
                 <button 
                   onClick={() => setIsMemeMode(true)}
-                  className="flex items-center gap-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase text-white hover:brightness-110 transition-all shadow-lg shadow-purple-500/30 animate-in fade-in zoom-in"
+                  className="flex items-center gap-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase text-white hover:brightness-110 transition-all shadow-lg shadow-purple-500/30 animate-in fade-in zoom-in hover:scale-105 active:scale-95"
                 >
                     <Sparkles size={12} className="text-yellow-200" /> Pepe Magic
                 </button>
@@ -327,12 +445,17 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
             </div>
             
             {!isMemeMode ? (
-                <textarea
-                className="w-full h-32 bg-slate-950/60 border border-slate-800 rounded-3xl p-5 text-slate-200 focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500/50 placeholder-slate-700 resize-none font-medium transition-all text-base leading-relaxed shadow-inner"
-                placeholder="¿Qué ha pasado hoy? Describe el momento..."
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                />
+                <div className="relative group">
+                    <textarea
+                    className="w-full h-32 md:h-40 bg-slate-950/40 border border-slate-800 rounded-3xl p-6 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-transparent placeholder-slate-700 resize-none font-medium transition-all text-base leading-relaxed shadow-inner group-hover:bg-slate-950/60"
+                    placeholder="¿Qué ha pasado hoy? Describe el momento..."
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    />
+                    <div className="absolute bottom-4 right-4 pointer-events-none">
+                        <span className="text-[10px] font-bold text-slate-700 uppercase tracking-widest">{note.length} caracteres</span>
+                    </div>
+                </div>
             ) : (
                 <div className="bg-slate-950 rounded-3xl p-4 md:p-6 border border-purple-500/30 text-center animate-in zoom-in duration-300">
                     <div className="flex justify-between items-center mb-4">
@@ -409,7 +532,7 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
         </div>
 
         {/* Footer */}
-        <div className="p-4 md:p-6 border-t border-slate-800 bg-slate-900/80 backdrop-blur-md relative z-10">
+        <div className="p-4 md:p-8 border-t border-slate-800 bg-slate-900/80 backdrop-blur-md relative z-10">
           
           {isConfirmingDelete ? (
             <div className="flex flex-col gap-3 animate-in fade-in zoom-in duration-300">
