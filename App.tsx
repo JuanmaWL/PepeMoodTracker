@@ -9,7 +9,7 @@ import PepeOracle from './components/PepeOracle';
 import Particles from './components/Particles';
 import { YearData, DayData, MoodLevel } from './types';
 import { STORAGE_KEY, PEPE_BANNER } from './constants';
-import { Plus, Flame, Trash2, X, AlertTriangle } from 'lucide-react';
+import { Plus, Flame, Trash2, AlertTriangle } from 'lucide-react';
 import SoundManager from './utils/sounds';
 
 const APP_TITLES = [
@@ -55,7 +55,7 @@ const App: React.FC = () => {
 
   // Lógica de Racha (Streak) - Memoizada
   const streak = useMemo(() => {
-    const entries = Object.entries(yearData)
+    const entries = (Object.entries(yearData) as [string, DayData][])
       .filter(([_, d]) => d.level > 0)
       .sort((a, b) => b[0].localeCompare(a[0]));
     

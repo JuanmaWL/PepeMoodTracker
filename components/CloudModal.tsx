@@ -11,7 +11,7 @@ interface CloudModalProps {
 
 // Lista de stopwords
 const STOPWORDS = new Set([
-  'san', // Agregado a petición
+  'san', 
   'el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas', 'lo', 'al', 'del',
   'a', 'ante', 'bajo', 'cabe', 'con', 'contra', 'de', 'desde', 'durante',
   'en', 'entre', 'hacia', 'hasta', 'mediante', 'para', 'por', 'segun', 'sin',
@@ -51,36 +51,27 @@ const STOPWORDS = new Set([
   'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
 ]);
 
-// Palabras cortas permitidas (excepciones)
 const WHITELIST_SHORT = new Set(['sol', 'mar', 'luz', 'paz', 'fe', 'ron', 'bar', 'gym', 'gas', 'red', 'gol', 'ojo', 'sed', 'fan']);
 
-// Función de Normalización (Solo minúsculas para mantener acentos)
 const normalizeText = (text: string) => {
   return text.toLowerCase();
 };
 
-// Algoritmo simple de Stemming para español (Singularización)
 const getStem = (word: string) => {
   if (WHITELIST_SHORT.has(word)) return word;
   if (word.length <= 3) return word;
 
-  // Plurales en -ces (feliz -> felices, luz -> luces)
   if (word.endsWith('ces')) {
     return word.slice(0, -3) + 'z';
   }
   
-  // Plurales en -es (árbol -> árboles)
   if (word.endsWith('es')) {
     const stem = word.slice(0, -2);
-    // Evitar romper palabras cortas
     if (stem.length > 2) return stem;
   }
 
-  // Plurales en -s (gato -> gatos)
   if (word.endsWith('s') && !word.endsWith('ss')) {
     const stem = word.slice(0, -1);
-    // Evitar romper palabras que terminan en s pero no son plurales obvios
-    // o dejar raíces demasiado cortas
     if (stem.length > 2) return stem;
   }
 
@@ -93,16 +84,11 @@ const CloudModal: React.FC<CloudModalProps> = ({ isOpen, onClose, data }) => {
   const words = useMemo(() => {
     if (!data) return [];
     
-    // 1. Extraer todas las notas
     const allNotes = (Object.values(data) as DayData[])
       .map(d => d.note || '')
       .join(' . '); 
 
-    // 2. Normalizar (manteniendo acentos ahora)
     const cleanText = normalizeText(allNotes);
-
-    // 3. Tokenización (Permitiendo letras, números, ñ Y ACENTOS)
-    // El replace permite a-z, 0-9, ñ, á, é, í, ó, ú, ü y espacios.
     const tokens = cleanText.replace(/[^a-z0-9ñáéíóúü\s]/g, " ").split(/\s+/);
 
     const counts: Record<string, number> = {};
@@ -110,28 +96,22 @@ const CloudModal: React.FC<CloudModalProps> = ({ isOpen, onClose, data }) => {
     tokens.forEach(token => {
         if (!token) return;
         
-        // Filtrado básico
         if (token.length < 3 && !WHITELIST_SHORT.has(token)) return;
         if (STOPWORDS.has(token)) return;
-        if (/^\d+$/.test(token)) return; // Ignorar solo números
+        if (/^\d+$/.test(token)) return; 
 
-        // Stemming (Unificar singular/plural)
-        // "años" -> "año"
         const stem = getStem(token);
 
-        // Volver a chequear stopwords con el stem (por si "dias" -> "dia")
         if (STOPWORDS.has(stem)) return;
 
         counts[stem] = (counts[stem] || 0) + 1;
     });
 
-    // 4. Ordenamiento y corte
     let result = Object.entries(counts)
       .map(([text, value]) => ({ text, value }))
       .filter(item => item.value >= 1)
       .sort((a, b) => b.value - a.value);
 
-    // Limitamos la cantidad de palabras para que no explote la nube
     const totalEntries = Object.keys(data).length;
     const maxItemsToShow = totalEntries < 10 ? 15 : 40;
 
@@ -187,34 +167,30 @@ const CloudModal: React.FC<CloudModalProps> = ({ isOpen, onClose, data }) => {
             onClick={handleBackgroundClick}
         >
           {words.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-slate-500 opacity-60 text-center px-6">
-              <CloudFog size={64} className="mb-4 text-slate-700" />
-              <p className="italic text-lg text-slate-400 mb-2">"Tu mente está en blanco, compañero."</p>
-              <p className="text-xs uppercase tracking-widest">Escribe más notas en el diario para generar tu mapa mental.</p>
+            <div className="h-full flex flex-col items-center justify-center text-center px-6 animate-in fade-in zoom-in duration-300">
+                <div className="bg-slate-800/50 p-6 rounded-full mb-6 border border-slate-700/50 shadow-[0_0_30px_rgba(236,72,153,0.1)] transform hover:scale-105 transition-transform duration-500 group">
+                    <BrainCircuit size={48} className="text-pink-400/50 group-hover:text-pink-400/80 transition-colors" />
+                </div>
+                <h3 className="text-xl font-black text-slate-400 mb-2 uppercase tracking-tight">Nada por aquí</h3>
+                <p className="text-xs uppercase tracking-widest text-slate-500 max-w-xs leading-relaxed">
+                  Tu mapa mental está vacío. Registra pensamientos para conectar las neuronas de Pepe.
+                </p>
             </div>
           ) : (
             <div className="flex flex-wrap justify-center items-center gap-x-4 gap-y-2 content-center min-h-full py-10">
               {words.map((w, i) => {
-                // Algoritmo de Tamaño:
-                // Normalizamos el valor entre 0 y 1
                 let normalized = 0;
                 if (maxCount !== minCount) {
                   normalized = (w.value - minCount) / (maxCount - minCount);
                 } else {
-                  normalized = 1; // Si todas tienen el mismo valor
+                  normalized = 1; 
                 }
 
-                // Usamos una función cuadrática para exagerar las diferencias
-                // Las palabras top serán mucho más grandes.
-                // Rango de tamaño: 0.8rem a 4.5rem
                 const minSize = 0.8;
                 const maxSize = 4.5;
                 const size = minSize + (Math.pow(normalized, 1.5) * (maxSize - minSize));
-                
-                // Opacidad también basada en relevancia
                 const opacity = 0.5 + (normalized * 0.5);
 
-                // Colores variados
                 const colors = [
                    'text-green-400', 'text-emerald-300', 'text-teal-200', 
                    'text-indigo-400', 'text-violet-300', 'text-purple-200',
@@ -239,12 +215,11 @@ const CloudModal: React.FC<CloudModalProps> = ({ isOpen, onClose, data }) => {
                       fontSize: `${size}rem`,
                       opacity: isSelected ? 1 : opacity,
                       transform: isSelected ? 'rotate(0deg)' : `rotate(${(i % 2 === 0 ? 1 : -1) * (Math.random() * 4)}deg)`,
-                      margin: `${Math.max(0.2, normalized)}rem` // Más margen para palabras grandes
+                      margin: `${Math.max(0.2, normalized)}rem` 
                     }}
                   >
                     {w.text}
                     
-                    {/* Tooltip Interactivo */}
                     <span className={`
                         absolute -top-10 left-1/2 -translate-x-1/2 
                         bg-slate-900/95 text-white text-[12px] px-3 py-1.5 rounded-xl 
@@ -257,7 +232,6 @@ const CloudModal: React.FC<CloudModalProps> = ({ isOpen, onClose, data }) => {
                     `}>
                         <span className="font-bold text-yellow-400 mr-1">{w.value}</span>
                         {w.value === 1 ? 'vez' : 'veces'}
-                        {/* Triangulito del tooltip */}
                         <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 border-l-4 border-l-transparent border-r-4 border-r-transparent border-t-4 border-t-slate-900/95"></span>
                     </span>
                   </button>

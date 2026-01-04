@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Save, MessageSquareText, Trash2, Wand2, Download, Loader2, Image as ImageIcon, Sparkles, RefreshCw } from 'lucide-react';
+import { X, Save, MessageSquareText, Trash2, Download, Loader2, Image as ImageIcon, Sparkles, RefreshCw } from 'lucide-react';
 import { MOODS } from '../constants';
 import { MoodLevel, DayData } from '../types';
 import SoundManager from '../utils/sounds';
