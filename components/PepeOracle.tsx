@@ -74,7 +74,7 @@ const PepeOracle: React.FC<PepeOracleProps> = ({ data }) => {
       
       const prompt = `
         ACTÚA COMO: Pepe el Oráculo Millennial.
-        PERSONALIDAD: Has vivido el auge y caída de Tuenti, recuerdas cuando YouTube no tenía anuncios y tu espalda te duele sin motivo. Eres un sabio de Internet, nostálgico, irónico y un poco cansado de la "vida moderna".
+        PERSONALIDAD: Eres un sabio de Internet, nostálgico, irónico y un poco cansado de la "vida moderna".
         
         CONTEXTO: Vas a dar un "Veredicto de Vida", un oráculo futuro basado en los últimos días del usuario.
         LORE RECIENTE: ${JSON.stringify(recent)}
@@ -82,7 +82,7 @@ const PepeOracle: React.FC<PepeOracleProps> = ({ data }) => {
         REGLAS DE ORO:
         1. Sé breve (máximo 50 palabras).
         2. NO USES MARKDOWN. Prohibido usar asteriscos (**), negritas o cursivas. Escribe texto plano natural.
-        3. Usa jerga Millennial (pero natural, no forzada): "Adulting", "Cringe", "Mood", referencias a que "cualquier tiempo pasado fue mejor" o fatiga vital.
+        3. Usa jerga Millennial natural, no forzada): Puedes usar "Cringe", "Mood" o referencias a que "cualquier tiempo pasado fue mejor".
         4. Si el mood es malo, sé sarcásticamente comprensivo (tipo: "te entiendo, tío, ya lo siento."). Si es bueno, celebra pero con ironía (tipo: "aprovéchalo antes de que se rompa algo").
       `;
 
@@ -186,15 +186,35 @@ const PepeOracle: React.FC<PepeOracleProps> = ({ data }) => {
                   }
                 `}
               >
+                {/* Efecto de partículas CSS en el botón */}
+                {loading && (
+                  <div className="absolute inset-0 w-full h-full pointer-events-none overflow-hidden">
+                    {[...Array(6)].map((_, i) => (
+                       <div 
+                         key={i}
+                         className="absolute bg-white/30 rounded-full animate-ping"
+                         style={{
+                            left: `${Math.random() * 100}%`,
+                            top: `${Math.random() * 100}%`,
+                            width: `${Math.random() * 10 + 2}px`,
+                            height: `${Math.random() * 10 + 2}px`,
+                            animationDuration: `${Math.random() * 1 + 0.5}s`,
+                            animationDelay: `${Math.random() * 0.5}s`
+                         }}
+                       />
+                    ))}
+                  </div>
+                )}
+
                 {loading ? (
                   <>
-                    <Loader2 size={24} className="animate-spin" />
-                    <span>Transcendiendo...</span>
+                    <Loader2 size={24} className="animate-spin relative z-10" />
+                    <span className="relative z-10">Transcendiendo...</span>
                   </>
                 ) : (
                   <>
-                    <Zap size={24} className="fill-current animate-pulse text-yellow-300" />
-                    <span>Dictar Veredicto</span>
+                    <Zap size={24} className="fill-current animate-pulse text-yellow-300 relative z-10" />
+                    <span className="relative z-10">Dictar Veredicto</span>
                   </>
                 )}
                 {!loading && (

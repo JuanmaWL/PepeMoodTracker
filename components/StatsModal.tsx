@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { X, Sparkles, Music, Trophy, Brain, Quote, Loader2, TrendingUp, PieChart as PieChartIcon, BarChart3, Hexagon, Waves, CalendarRange, Filter, RefreshCw } from 'lucide-react';
+import { X, Sparkles, Music, Trophy, Brain, Quote, Loader2, TrendingUp, PieChart as PieChartIcon, BarChart3, Hexagon, Waves, CalendarRange, Filter, RefreshCw, Zap, Gavel } from 'lucide-react';
 import { YearData, MoodLevel, DayData } from '../types';
 import { MOODS, MONTHS } from '../constants';
 import Heatmap from './Heatmap';
@@ -9,6 +9,7 @@ import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis
 } from 'recharts';
 import { GoogleGenAI } from "@google/genai";
+import SoundManager from '../utils/sounds';
 
 interface StatsModalProps {
   isOpen: boolean;
@@ -19,10 +20,18 @@ interface StatsModalProps {
 type ChartType = 'area' | 'radar' | 'bar';
 type TimeRange = 'all' | 'last_7' | 'last_30' | string; // string for '0', '1', etc.
 
+// Assets separados para el estado de carga y el estado estático
+const PEPE_LOADING_GIF = "https://media.tenor.com/ZXGXXDLOt00AAAAj/pepe-noting.gif";
+const PEPE_STATIC_JUDGES = [
+  "https://i.imgur.com/b9Q4BeW.png", // Tuxedo
+  "https://i.imgur.com/X8dsbBP.png"  // Smart
+];
+
 const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
   const [aiAnalysis, setAiAnalysis] = useState<string>("");
   const [loadingAi, setLoadingAi] = useState(false);
   const [errorAi, setErrorAi] = useState("");
+  const [judgeImage, setJudgeImage] = useState(PEPE_STATIC_JUDGES[0]);
   
   // Por defecto Enero ('0'), como se pidió anteriormente, pero ahora soporta rangos
   const [timeRange, setTimeRange] = useState<TimeRange>('0'); 
@@ -33,6 +42,8 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
       setAiAnalysis("");
       setErrorAi("");
       setLoadingAi(false);
+      // Seleccionar un juez estático aleatorio al abrir
+      setJudgeImage(PEPE_STATIC_JUDGES[Math.floor(Math.random() * PEPE_STATIC_JUDGES.length)]);
     }
   }, [isOpen]);
 
@@ -166,26 +177,18 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
     };
 
     return (
-      <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-700 relative">
-        <button 
-             onClick={handleAskPepe}
-             className="absolute -top-2 -right-2 p-2 bg-indigo-500/20 hover:bg-indigo-500/40 rounded-full text-indigo-300 transition-colors z-10"
-             title="Regenerar Juicio"
-        >
-             <RefreshCw size={14} />
-        </button>
-
-        <div className="bg-slate-900/40 p-4 rounded-2xl border border-indigo-500/20 relative">
-          <Quote size={16} className="text-indigo-500/50 absolute top-3 left-3" />
-          <p className="text-indigo-100 text-sm leading-relaxed pl-6 italic font-medium">
+      <div className="space-y-4 animate-in fade-in slide-in-from-right duration-700 relative w-full">
+        <div className="bg-slate-900/60 p-5 rounded-2xl border border-indigo-500/30 relative shadow-lg">
+          <Quote size={20} className="text-indigo-500/50 absolute top-3 left-3" />
+          <p className="text-indigo-100 text-sm md:text-base leading-relaxed pl-8 italic font-medium">
             {formatBold(diagnosis)}
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 mt-4">
+        <div className="flex flex-col gap-3">
           {soundtrackFull && (
-            <div className="flex items-start gap-3 bg-pink-500/10 border border-pink-500/20 px-4 py-3 rounded-xl group transition-all hover:bg-pink-500/20 shadow-lg shadow-pink-950/20 cursor-default flex-1">
-              <Music size={24} className="text-pink-400 group-hover:scale-110 transition-transform duration-200 shrink-0 mt-1" />
+            <div className="flex items-start gap-3 bg-pink-500/10 border border-pink-500/20 px-4 py-3 rounded-xl group transition-all hover:bg-pink-500/20 shadow-lg shadow-pink-950/20 cursor-default">
+              <Music size={20} className="text-pink-400 group-hover:scale-110 transition-transform duration-200 shrink-0 mt-1" />
               <div className="flex flex-col w-full">
                  <span className="text-[10px] font-black text-pink-200 uppercase tracking-wider leading-tight mb-1">
                     Soundtrack
@@ -198,14 +201,29 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
           )}
 
           {achievement && (
-            <div className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/20 px-4 py-3 rounded-xl group transition-all hover:bg-amber-500/20 shadow-lg shadow-amber-950/20 cursor-default flex-1">
-              <Trophy size={20} className="text-amber-400 group-hover:scale-110 transition-transform duration-200 shrink-0" />
-              <span className="text-[10px] font-black text-amber-200 uppercase tracking-wider leading-tight">
-                {achievement}
-              </span>
+            <div className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/20 px-4 py-3 rounded-xl group transition-all hover:bg-amber-500/20 shadow-lg shadow-amber-950/20 cursor-default">
+              <Trophy size={18} className="text-amber-400 group-hover:scale-110 transition-transform duration-200 shrink-0" />
+              <div className="flex flex-col">
+                <span className="text-[10px] font-black text-amber-200 uppercase tracking-wider leading-tight">
+                    Logro Desbloqueado
+                </span>
+                <span className="text-sm font-bold text-amber-100">
+                    {achievement}
+                </span>
+              </div>
             </div>
           )}
         </div>
+        
+        {/* BOTÓN REGENERAR VISTOSO Y MEJOR UBICADO */}
+        <button 
+             onClick={handleAskPepe}
+             className="w-full mt-2 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 hover:border-indigo-500/60 text-indigo-300 rounded-xl py-3 flex items-center justify-center gap-2 transition-all hover:shadow-[0_0_15px_rgba(99,102,241,0.2)] group"
+             title="Regenerar Juicio"
+        >
+             <RefreshCw size={16} className="group-hover:rotate-180 transition-transform duration-500" />
+             <span className="text-xs font-black uppercase tracking-widest">Apelar Sentencia (Regenerar)</span>
+        </button>
       </div>
     );
   };
@@ -220,9 +238,12 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
     
     if (!stats) return;
 
+    SoundManager.play('magic');
     setLoadingAi(true);
     setErrorAi("");
     setAiAnalysis("");
+    // Nota: La imagen cambia a PEPE_LOADING_GIF automáticamente en el render cuando loadingAi es true.
+    // No cambiamos el estado judgeImage aquí para mantener el estático para cuando termine.
 
     try {
         const ai = new GoogleGenAI({ apiKey: apiKey });
@@ -267,6 +288,10 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
         });
 
         setAiAnalysis(response.text || "[DIAGNÓSTICO] Pepe se ha quedado sin palabras.");
+        
+        // Al terminar, asignamos un nuevo juez estático aleatorio
+        setJudgeImage(PEPE_STATIC_JUDGES[Math.floor(Math.random() * PEPE_STATIC_JUDGES.length)]);
+
     } catch (e) {
         setErrorAi("Pepe está AFK (Error API).");
     } finally {
@@ -536,40 +561,144 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                 </div>
 
                 {/* Columna Central y Derecha (Combinadas): Oráculo de Pepe */}
-                <div className="lg:col-span-2 bg-indigo-900/10 p-6 rounded-3xl border border-indigo-500/20 flex flex-col">
-                  {/* HEADER DEL CARD SIN FILTRO (AHORA GLOBAL) */}
-                  <div className="flex flex-row justify-between items-center mb-4 gap-4">
-                    <span className="text-indigo-300 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
-                      <Sparkles size={12} className="text-indigo-400 animate-pulse" /> Juicio de Pepe
-                    </span>
-                    <span className="text-[10px] font-bold text-indigo-400/60 bg-indigo-500/10 px-2 py-1 rounded-lg">
-                        Analizando: <span className="text-indigo-300">{getRangeLabel()}</span>
-                    </span>
-                  </div>
+                <div className="lg:col-span-2 flex flex-col relative overflow-hidden rounded-3xl border border-indigo-500/30 bg-slate-900 group">
+                    {/* Background "Magic" Elements */}
+                    <div className="absolute inset-0 z-0">
+                         {/* Partículas CSS de Fondo */}
+                         {[...Array(10)].map((_, i) => (
+                             <div 
+                                key={i}
+                                className="absolute rounded-full bg-indigo-500/10 blur-xl animate-pulse"
+                                style={{
+                                    top: `${Math.random() * 100}%`,
+                                    left: `${Math.random() * 100}%`,
+                                    width: `${Math.random() * 100 + 50}px`,
+                                    height: `${Math.random() * 100 + 50}px`,
+                                    animationDuration: `${Math.random() * 3 + 2}s`,
+                                    animationDelay: `${Math.random() * 2}s`
+                                }}
+                             />
+                         ))}
+                         <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-indigo-950/20 to-slate-900 z-0"></div>
+                    </div>
+
+                    {/* Header */}
+                    <div className="relative z-20 flex flex-row justify-between items-center p-6 pb-2">
+                        <span className="text-indigo-300 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                            <Gavel size={14} className="text-yellow-300 animate-[bounce_2s_infinite]" /> Tribunal Supremo de Pepe
+                        </span>
+                        <span className="text-[10px] font-bold text-indigo-400/60 bg-indigo-500/10 px-2 py-1 rounded-lg border border-indigo-500/20">
+                            Expediente: <span className="text-indigo-300">{getRangeLabel()}</span>
+                        </span>
+                    </div>
                   
-                  <div className="flex-1 flex flex-col justify-center">
-                    {loadingAi ? (
-                        <div className="h-32 flex flex-col items-center justify-center gap-3 text-indigo-400">
-                        <Loader2 size={32} className="animate-spin" />
-                        <span className="text-[10px] font-black uppercase tracking-widest animate-pulse">Consultando el Lore...</span>
+                    {/* Main Content Area */}
+                    <div className="flex-1 flex flex-col lg:flex-row items-center justify-center p-6 gap-8 relative z-10">
+                    
+                        {/* THE PEPE JUDGE IMAGE */}
+                        <div className={`
+                            relative transition-all duration-700
+                            ${loadingAi ? 'w-32 h-32 lg:w-40 lg:h-40' : aiAnalysis ? 'w-24 h-24 lg:w-32 lg:h-32' : 'w-40 h-40 lg:w-48 lg:h-48'}
+                        `}>
+                             {/* Aura Ring */}
+                             <div className={`absolute -inset-4 bg-indigo-500/20 rounded-full blur-xl transition-all duration-500 ${loadingAi ? 'animate-pulse scale-110' : 'opacity-50'}`}></div>
+                             
+                             {/* Image Container */}
+                             <div className={`
+                                w-full h-full rounded-full overflow-hidden border-4 shadow-2xl relative transition-all duration-500
+                                ${loadingAi 
+                                    ? 'border-indigo-400 shadow-[0_0_30px_rgba(99,102,241,0.5)] bg-slate-950' 
+                                    : 'border-slate-700 shadow-xl bg-slate-800'
+                                }
+                                ${!loadingAi && !aiAnalysis ? 'animate-[float_4s_ease-in-out_infinite]' : ''}
+                             `}>
+                                <img 
+                                    src={loadingAi ? PEPE_LOADING_GIF : judgeImage} 
+                                    alt="Pepe Judge" 
+                                    className={`
+                                        w-full h-full transition-all duration-500
+                                        ${loadingAi 
+                                            ? 'object-contain p-1 opacity-90 animate-[color-pulse_2s_ease-in-out_infinite]' // GIF: Fluid BW/Color pulse
+                                            : 'object-contain p-2 bg-slate-900' // Static
+                                        }
+                                    `} 
+                                />
+                                
+                                {/* Definición de la animación de pulso de color en línea */}
+                                <style>{`
+                                    @keyframes color-pulse {
+                                        0%, 100% { filter: grayscale(100%); opacity: 0.8; }
+                                        50% { filter: grayscale(0%); opacity: 1; }
+                                    }
+                                `}</style>
+                                
+                                {/* Scanner Effect Effect only when loading */}
+                                {loadingAi && (
+                                    <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-10 rounded-full">
+                                        <div className="w-full h-[2px] bg-green-400 shadow-[0_0_10px_#4ade80] absolute top-0 animate-[scan_1.5s_ease-in-out_infinite]"></div>
+                                        <div className="absolute inset-0 bg-green-500/10 animate-pulse"></div>
+                                        <style>{`
+                                            @keyframes scan {
+                                                0% { top: 0%; opacity: 0; }
+                                                10% { opacity: 1; }
+                                                90% { opacity: 1; }
+                                                100% { top: 100%; opacity: 0; }
+                                            }
+                                        `}</style>
+                                    </div>
+                                )}
+                             </div>
+
+                             {/* Status Badge */}
+                             <div className="absolute -bottom-2 -right-2 z-20">
+                                {loadingAi ? (
+                                    <div className="bg-slate-900 rounded-full p-2 border border-indigo-500 shadow-lg animate-spin">
+                                        <Loader2 size={20} className="text-indigo-400" />
+                                    </div>
+                                ) : aiAnalysis ? (
+                                    <div className="bg-green-600 rounded-full p-2 border-2 border-slate-900 shadow-lg animate-in zoom-in">
+                                        <Zap size={20} className="text-white fill-white" />
+                                    </div>
+                                ) : null}
+                             </div>
                         </div>
-                    ) : aiAnalysis ? (
-                        parseAiResponse(aiAnalysis)
-                    ) : (
-                        <div className="flex flex-col items-center justify-center h-full py-8 text-center space-y-4">
-                           <p className="text-indigo-200/60 text-sm italic max-w-md">
-                               "Pepe puede analizar tus datos filtrados y darte un veredicto brutalmente honesto."
-                           </p>
-                           <button 
-                            onClick={handleAskPepe} 
-                            className="px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20"
-                        >
-                            <Brain size={16} /> Obtener Veredicto
-                        </button>
+
+                        {/* CONTENT / BUTTON AREA */}
+                        <div className="flex-1 w-full flex flex-col items-center lg:items-start text-center lg:text-left transition-all duration-500">
+                             {loadingAi ? (
+                                <div className="flex flex-col gap-2 items-center lg:items-start w-full animate-pulse">
+                                    <div className="h-4 w-3/4 bg-indigo-500/20 rounded"></div>
+                                    <div className="h-4 w-1/2 bg-indigo-500/20 rounded"></div>
+                                    <div className="h-10 w-full bg-indigo-500/10 rounded-xl mt-4 border border-indigo-500/20 flex items-center justify-center text-indigo-300 text-xs font-mono uppercase tracking-widest">
+                                        PROCESANDO PECADOS...
+                                    </div>
+                                </div>
+                             ) : aiAnalysis ? (
+                                parseAiResponse(aiAnalysis)
+                             ) : (
+                                <div className="flex flex-col gap-4 items-center lg:items-start max-w-md">
+                                     <h4 className="text-indigo-200 font-bold text-lg leading-tight">
+                                        ¿Listo para la sentencia?
+                                     </h4>
+                                     <p className="text-indigo-200/50 text-xs leading-relaxed">
+                                        Pepe analizará tus patrones, tus días malos y tus victorias para generar un veredicto cósmico único.
+                                     </p>
+                                     <button 
+                                        onClick={handleAskPepe} 
+                                        className="mt-2 group relative px-8 py-3 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-3 shadow-[0_10px_20px_-5px_rgba(79,70,229,0.4)] overflow-hidden"
+                                    >
+                                        <span className="relative z-10 flex items-center gap-2">
+                                            <Brain size={16} /> SOLICITAR VEREDICTO
+                                        </span>
+                                        {/* Sparkle effect inside button */}
+                                        <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 skew-y-12 transition-transform duration-500"></div>
+                                    </button>
+                                </div>
+                             )}
+                             {errorAi && <p className="text-red-400 text-[10px] mt-4 font-bold bg-red-900/20 px-3 py-1 rounded-lg animate-in fade-in">{errorAi}</p>}
                         </div>
-                    )}
-                    {errorAi && <p className="text-red-400 text-[10px] mt-4 font-bold text-center">{errorAi}</p>}
-                  </div>
+
+                    </div>
                 </div>
               </div>
 
