@@ -2,7 +2,7 @@ import React, { useEffect, useRef, memo } from 'react';
 
 const Particles: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const mouseRef = useRef({ x: 0, y: 0 });
+  const mouseRef = useRef({ x: -1000, y: -1000 }); // Inicializar lejos para evitar glitch inicial
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -16,108 +16,112 @@ const Particles: React.FC = () => {
     
     // Configuración según dispositivo
     const isMobile = window.innerWidth < 768;
-    const particleCount = isMobile ? 35 : 75;
+    const particleCount = isMobile ? 40 : 80; // Cantidad equilibrada para no saturar
 
-    // Paleta de colores "Pepe Magic Swamp"
+    // Paleta de colores "Pepe Magic Swamp" (Verdes tóxicos y mágicos)
     const colors = [
       '74, 222, 128', // Green-400 (Neon)
       '34, 197, 94',  // Green-500 (Classic Pepe)
       '132, 204, 22', // Lime-500 (Toxic)
       '16, 185, 129', // Emerald-500 (Deep)
-      '250, 204, 21'  // Yellow-400 (Firefly glow - sutil)
+      '167, 139, 250' // Violet (Magic accent - muy sutil)
     ];
 
     class Particle {
       x: number;
       y: number;
-      baseX: number;
       size: number;
-      speedY: number;
-      speedX: number;
-      opacity: number;
+      baseX: number;
+      baseY: number;
+      density: number;
       color: string;
       angle: number;
-      spinSpeed: number;
-      life: number;
-      maxLife: number;
+      velocity: number;
+      opacity: number;
+      opacitySpeed: number;
+      directionX: number;
+      directionY: number;
 
       constructor() {
         this.x = Math.random() * canvas!.width;
         this.y = Math.random() * canvas!.height;
         this.baseX = this.x;
-        this.size = Math.random() * (isMobile ? 2 : 3) + 0.5;
-        this.speedY = Math.random() * 0.3 + 0.1; // Subida lenta
-        this.speedX = Math.random() * 0.2 - 0.1; // Deriva lateral
-        this.opacity = 0;
+        this.baseY = this.y;
+        this.size = Math.random() * (isMobile ? 1.5 : 2.5) + 0.5; // Tamaños variados pero sutiles
+        this.density = (Math.random() * 10) + 2;
         this.color = colors[Math.floor(Math.random() * colors.length)];
-        this.angle = Math.random() * 6.2; // Para movimiento senoidal
-        this.spinSpeed = Math.random() * 0.02 + 0.005;
-        this.life = 0;
-        this.maxLife = Math.random() * 200 + 100; // Ciclo de vida para fade in/out
-      }
-
-      reset() {
-        this.x = Math.random() * canvas!.width;
-        this.y = canvas!.height + 10;
-        this.baseX = this.x;
-        this.life = 0;
-        this.opacity = 0;
+        
+        // Movimiento orgánico (Drift)
+        // Velocidad muy baja para que sea relajante
+        this.directionX = (Math.random() * 0.4) - 0.2; 
+        this.directionY = (Math.random() * 0.4) - 0.2;
+        
+        // Oscilación
+        this.angle = Math.random() * 360;
+        this.velocity = Math.random() * 0.02 + 0.005;
+        
+        // Ciclo de vida de opacidad (Pulsación)
+        this.opacity = Math.random() * 0.5; 
+        this.opacitySpeed = Math.random() * 0.005 + 0.002;
       }
 
       update(mouseX: number, mouseY: number) {
-        // Ciclo de vida (Fade In / Fade Out)
-        this.life++;
-        if (this.life < 50) {
-            this.opacity += 0.01; // Fade in
-        } else if (this.life > this.maxLife - 50) {
-            this.opacity -= 0.01; // Fade out
-        }
-        
-        // Reiniciar si muere o sale de pantalla
-        if (this.life >= this.maxLife || this.y < -10 || this.opacity <= 0) {
-             if (this.life > 50) this.reset(); // Solo resetear si ya vivió un poco
+        // 1. Movimiento Ambiental (Wrap Around - Efecto Pacman en bordes)
+        this.x += this.directionX;
+        this.y += this.directionY;
+
+        // Si sale por un lado, entra por el otro (mantiene la densidad constante)
+        if (this.x > canvas!.width + 20) this.x = -20;
+        if (this.x < -20) this.x = canvas!.width + 20;
+        if (this.y > canvas!.height + 20) this.y = -20;
+        if (this.y < -20) this.y = canvas!.height + 20;
+
+        // 2. Oscilación suave (Flotación)
+        this.angle += this.velocity;
+        this.x += Math.cos(this.angle) * 0.2;
+        this.y += Math.sin(this.angle) * 0.2;
+
+        // 3. Pulsación de Opacidad (Respiración)
+        this.opacity += this.opacitySpeed;
+        if (this.opacity >= 0.6 || this.opacity <= 0.1) {
+            this.opacitySpeed = -this.opacitySpeed;
         }
 
-        // Movimiento orgánico (Seno)
-        this.angle += this.spinSpeed;
-        this.x = this.baseX + Math.sin(this.angle) * (isMobile ? 10 : 20);
-        this.y -= this.speedY;
-
-        // Interacción sutil con el mouse (las partículas huyen un poco)
+        // 4. Interacción con Mouse (Repulsión Suave)
         const dx = mouseX - this.x;
         const dy = mouseY - this.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
-        const forceRadius = 100;
+        const forceDistance = isMobile ? 80 : 150;
 
-        if (distance < forceRadius) {
+        if (distance < forceDistance) {
             const forceDirectionX = dx / distance;
             const forceDirectionY = dy / distance;
-            const force = (forceRadius - distance) / forceRadius;
-            const directionX = forceDirectionX * force * 1; // Fuerza suave
-            const directionY = forceDirectionY * force * 1;
+            const maxDistance = forceDistance;
+            const force = (maxDistance - distance) / maxDistance;
+            const directionX = forceDirectionX * force * this.density;
+            const directionY = forceDirectionY * force * this.density;
 
             this.x -= directionX;
             this.y -= directionY;
         }
-
-        // Limitar opacidad máxima
-        if (this.opacity > 0.6) this.opacity = 0.6;
-        if (this.opacity < 0) this.opacity = 0;
       }
 
       draw() {
         if (!ctx) return;
         ctx.beginPath();
+        // Dibujamos un círculo suave
         ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${this.color}, ${this.opacity})`;
+        
+        // El color tiene la opacidad calculada
+        ctx.fillStyle = `rgba(${this.color}, ${Math.abs(this.opacity)})`;
         ctx.fill();
         
-        // Glow effect (costoso, usar con moderación o solo en desktop)
-        if (!isMobile) {
-            ctx.shadowBlur = 8;
-            ctx.shadowColor = `rgba(${this.color}, 0.5)`;
+        // Brillo sutil solo si la partícula es "grande" y tiene buena opacidad (ahorra recursos)
+        if (!isMobile && this.opacity > 0.3 && this.size > 2) {
+            ctx.shadowBlur = 4;
+            ctx.shadowColor = `rgba(${this.color}, 0.3)`;
         } else {
-             ctx.shadowBlur = 0;
+            ctx.shadowBlur = 0;
         }
       }
     }
@@ -132,14 +136,8 @@ const Particles: React.FC = () => {
     };
 
     const animate = () => {
-      // Trail effect suave (limpiar con opacidad baja crea estelas)
-      // ctx.fillStyle = 'rgba(2, 6, 23, 0.2)'; // Color de fondo dark slate
-      // ctx.fillRect(0, 0, canvas.width, canvas.height); 
-      // Nota: fillRect con opacidad baja es costoso para rendimiento en móviles baratos.
-      // Usaremos clearRect para rendimiento óptimo "liviano".
-      
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-
+      
       particles.forEach((p) => {
         p.update(mouseRef.current.x, mouseRef.current.y);
         p.draw();
@@ -159,7 +157,6 @@ const Particles: React.FC = () => {
         mouseRef.current.y = e.y;
     };
     
-    // Soporte táctil básico
     const handleTouchMove = (e: TouchEvent) => {
         if(e.touches.length > 0) {
             mouseRef.current.x = e.touches[0].clientX;
@@ -167,22 +164,31 @@ const Particles: React.FC = () => {
         }
     };
 
+    // Resetear posición del mouse cuando sale para que las partículas vuelvan a su sitio
+    const handleMouseLeave = () => {
+        mouseRef.current.x = -1000;
+        mouseRef.current.y = -1000;
+    }
+
     window.addEventListener('resize', handleResize);
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('touchmove', handleTouchMove);
+    document.addEventListener('mouseleave', handleMouseLeave); // Detectar salida del documento
 
     return () => {
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('mouseleave', handleMouseLeave);
     };
   }, []);
 
   return (
     <canvas
       ref={canvasRef}
-      className="fixed inset-0 pointer-events-none z-[-1]"
+      className="fixed inset-0 pointer-events-none z-0" 
+      style={{ mixBlendMode: 'screen' }} // Ayuda a que los colores brillen sobre el fondo oscuro
     />
   );
 };

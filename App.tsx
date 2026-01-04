@@ -191,24 +191,41 @@ const App: React.FC = () => {
           </div>
         )}
 
-        <div className="w-full max-w-[12rem] md:max-w-[16rem] px-4 mb-6 drop-shadow-[0_15px_40px_rgba(34,197,94,0.35)] pepe-float">
-          <div className="relative bg-slate-900/60 backdrop-blur-sm rounded-[3rem] overflow-hidden border-2 border-slate-800/50 shadow-2xl aspect-square flex items-center justify-center group">
-            {!bannerError ? (
-              <img 
-                src={PEPE_BANNER} 
-                alt="Pepe" 
-                className="block max-w-full max-h-full object-contain p-0 transition-transform duration-1000 scale-[0.8] group-hover:scale-110"
-                onError={() => setBannerError(true)}
-              />
-            ) : (
-              <span className="text-6xl">🐸</span>
-            )}
-          </div>
+        {/* LOGO PRINCIPAL: PEPE PORTAL EFFECT */}
+        <div className="relative group mb-8 mt-4">
+            {/* Efectos de Fondo (Anillos y Glow) */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[180%] h-[180%] pointer-events-none opacity-80">
+                 {/* Anillo Exterior Lento */}
+                 <div className="absolute inset-0 border-2 border-green-500/30 rounded-full border-dashed animate-[spin_20s_linear_infinite]"></div>
+                 {/* Anillo Medio Reverso */}
+                 <div className="absolute inset-8 border-2 border-emerald-400/40 rounded-full border-dotted animate-[spin_15s_linear_infinite_reverse]"></div>
+                 {/* Glow Central */}
+                 <div className="absolute inset-4 bg-green-500/20 blur-[50px] rounded-full animate-pulse"></div>
+            </div>
+
+            {/* Contenedor Flotante de la Imagen */}
+            <div className="relative w-48 h-48 md:w-64 md:h-64 bg-gradient-to-b from-slate-800/80 to-slate-900/90 backdrop-blur-xl rounded-[3rem] border border-slate-700/50 shadow-[0_25px_60px_-15px_rgba(34,197,94,0.3)] flex items-center justify-center overflow-hidden pepe-float z-10 transition-all duration-500 hover:scale-105 group-hover:shadow-[0_30px_70px_-10px_rgba(34,197,94,0.4)]">
+                
+                {/* Brillo interno especular */}
+                <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none z-20"></div>
+
+                {!bannerError ? (
+                <img 
+                    src={PEPE_BANNER} 
+                    alt="Pepe" 
+                    className="w-[85%] h-[85%] object-contain drop-shadow-2xl transition-transform duration-700 group-hover:scale-105 group-hover:rotate-2 relative z-10"
+                    onError={() => setBannerError(true)}
+                />
+                ) : (
+                <span className="text-6xl animate-bounce">🐸</span>
+                )}
+            </div>
         </div>
-        <h1 className="text-4xl md:text-6xl font-black bg-gradient-to-r from-green-400 via-emerald-300 to-green-600 bg-clip-text text-transparent py-2 px-6 leading-tight animate-shimmer tracking-tighter uppercase text-center">
+        
+        <h1 className="text-4xl md:text-6xl font-black bg-gradient-to-r from-green-400 via-emerald-300 to-green-600 bg-clip-text text-transparent py-2 px-6 leading-tight animate-shimmer tracking-tighter uppercase text-center drop-shadow-lg">
           {selectedTitle}
         </h1>
-        <p className="text-slate-400 font-bold tracking-[0.2em] text-[10px] md:text-sm mt-1 italic opacity-90 uppercase text-center">
+        <p className="text-slate-400 font-bold tracking-[0.2em] text-[10px] md:text-sm mt-1 italic opacity-90 uppercase text-center max-w-lg mx-auto">
           {dynamicSubtitle}
         </p>
       </header>
