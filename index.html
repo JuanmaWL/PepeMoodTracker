@@ -154,7 +154,14 @@
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('./sw.js')
         .then(req => console.log('Service Worker Registered'))
-        .catch(err => console.log('Service Worker Failed', err));
+        .catch(err => {
+            // Manejo silencioso de errores de entorno preview (Cross-Origin)
+            if (err.message && (err.message.includes('origin') || err.message.includes('scriptURL'))) {
+                console.warn('Service Worker: Omitido debido a restricciones del entorno de desarrollo (Preview/Cross-Origin). Funcionará en producción.');
+            } else {
+                console.log('Service Worker Failed', err);
+            }
+        });
     });
   }
 </script>

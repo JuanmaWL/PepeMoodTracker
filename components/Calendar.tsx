@@ -1,6 +1,6 @@
 
-import React, { memo, useState, useRef, useCallback } from 'react';
-import { YearData, MoodLevel, DayData } from '../types';
+import React, { memo, useRef, useCallback } from 'react';
+import { YearData, MoodLevel } from '../types';
 import { MONTHS, MOODS } from '../constants';
 import { ChevronDown, ChevronUp, MapPin, CalendarRange } from 'lucide-react';
 
@@ -14,43 +14,58 @@ interface CalendarProps {
 
 const WEEK_DAYS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 
-// Subcomponente Memorizado: Solo se re-renderiza si sus props cambian.
+// --- SUBCOMPONENTE DAYCELL OPTIMIZADO ---
+// Recibe primitivos en lugar de objetos complejos para facilitar la comparación de React.memo
 interface DayCellProps {
   day: number;
-  monthIndex: number;
+  monthIndex: number; // 0-11
   currentYear: number;
-  entry: DayData | undefined;
+  level: MoodLevel; // Primitivo: Número
+  hasNote: boolean; // Primitivo: Booleano
+  isHighlighted: boolean;
   onClick: (dateStr: string) => void;
   onLongPress: (dateStr: string, x: number, y: number) => void;
-  isHighlighted: boolean;
 }
 
-const DayCell = memo(({ day, monthIndex, currentYear, entry, onClick, onLongPress, isHighlighted }: DayCellProps) => {
-  const dateStr = `${currentYear}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-  const moodLevel = entry?.level || MoodLevel.None;
-  const config = MOODS[moodLevel];
-  const hasNote = entry?.note && entry.note.trim().length > 0;
+const DayCell = memo(({ 
+  day, 
+  monthIndex, 
+  currentYear, 
+  level, 
+  hasNote, 
+  isHighlighted, 
+  onClick, 
+  onLongPress 
+}: DayCellProps) => {
   
-  // Refs para gestión de Long Press
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const isLongPressTriggered = useRef(false);
-  const startCoord = useRef({ x: 0, y: 0 });
-
+  // Reconstruimos dateStr solo cuando hace falta, o podríamos pasarlo como prop si queremos micro-optimizar más,
+  // pero esto es muy rápido.
+  const dateStr = `${currentYear}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  
+  const config = MOODS[level];
+  const isFilled = level !== MoodLevel.None;
+  
   // Calcular si es HOY
+  // Usamos new Date() dentro, pero como el componente está memoizado, no se recalcula constantemente.
   const today = new Date();
   const isToday = 
     today.getDate() === day && 
     today.getMonth() === monthIndex && 
     today.getFullYear() === currentYear;
 
-  // Clases dinámicas
-  const isFilled = moodLevel !== MoodLevel.None;
+  // Refs para gestión de gestos
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const isLongPressTriggered = useRef(false);
+  const startCoord = useRef({ x: 0, y: 0 });
 
-  // Handlers unificados para Touch y Mouse
+  // --- GESTIÓN DE EVENTOS TÁCTILES UNIFICADA ---
+  
   const handleStart = useCallback((e: React.TouchEvent | React.MouseEvent) => {
+    // Si es click derecho, ignorar
+    if ('button' in e && (e as React.MouseEvent).button !== 0) return;
+
     isLongPressTriggered.current = false;
     
-    // Obtener coordenadas
     let clientX, clientY;
     if ('touches' in e) {
         clientX = e.touches[0].clientX;
@@ -62,55 +77,65 @@ const DayCell = memo(({ day, monthIndex, currentYear, entry, onClick, onLongPres
     
     startCoord.current = { x: clientX, y: clientY };
 
-    // Iniciar temporizador (500ms para Long Press)
+    // Iniciamos el timer para Long Press (500ms)
     timerRef.current = setTimeout(() => {
         isLongPressTriggered.current = true;
-        // Trigger vibration if available (handled in App, but we can do simple one here too contextually)
+        // Feedback háptico nativo si es posible
         if (navigator.vibrate) navigator.vibrate(50);
         onLongPress(dateStr, startCoord.current.x, startCoord.current.y);
     }, 500);
   }, [dateStr, onLongPress]);
 
-  const handleEnd = useCallback((e: React.TouchEvent | React.MouseEvent) => {
-    if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-    }
-    
-    // Si NO fue long press, es un click normal
-    if (!isLongPressTriggered.current) {
-        // Pequeño hack para evitar doble disparo en híbridos, aunque React suele manejarlo
-        // Aquí dejamos que el onClick nativo del botón maneje la acción si no prevenimos default
-    } else {
-        // Si fue long press, prevenimos el click normal (especialmente el evento click sintético que sigue al touch)
-        if (e.cancelable) e.preventDefault();
-    }
-  }, []);
-
   const handleMove = useCallback((e: React.TouchEvent | React.MouseEvent) => {
-    // Si nos movemos demasiado antes de que se active el timer, cancelamos el long press (es un scroll)
-    if (timerRef.current && !isLongPressTriggered.current) {
-        let clientX, clientY;
-        if ('touches' in e) {
-            clientX = e.touches[0].clientX;
-            clientY = e.touches[0].clientY;
-        } else {
-            clientX = (e as React.MouseEvent).clientX;
-            clientY = (e as React.MouseEvent).clientY;
-        }
+    // Si ya se disparó o no hay timer, no hacemos nada
+    if (!timerRef.current || isLongPressTriggered.current) return;
 
-        const moveX = Math.abs(clientX - startCoord.current.x);
-        const moveY = Math.abs(clientY - startCoord.current.y);
+    let clientX, clientY;
+    if ('touches' in e) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+    } else {
+        clientX = (e as React.MouseEvent).clientX;
+        clientY = (e as React.MouseEvent).clientY;
+    }
 
-        if (moveX > 10 || moveY > 10) {
+    const moveX = Math.abs(clientX - startCoord.current.x);
+    const moveY = Math.abs(clientY - startCoord.current.y);
+
+    // CRÍTICO: Si el usuario mueve el dedo más de 15px, asumimos que quiere hacer SCROLL.
+    // Cancelamos el long press inmediatamente.
+    if (moveX > 15 || moveY > 15) {
+        if (timerRef.current) {
             clearTimeout(timerRef.current);
             timerRef.current = null;
         }
     }
   }, []);
 
-  const handleClick = (e: React.MouseEvent) => {
-      // Solo disparamos el click normal si no se ha marcado como long press
+  const handleEnd = useCallback((e: React.TouchEvent | React.MouseEvent) => {
+    // Limpiar timer siempre al soltar o cancelar (scroll)
+    if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+    }
+
+    // Si NO fue un long press (fue un tap corto)
+    if (!isLongPressTriggered.current) {
+        // Ejecutamos el click normal
+        // IMPORTANTE: Evitamos el preventDefault aquí para que los clicks nativos funcionen bien,
+        // pero gestionamos la lógica.
+        // Solo ejecutamos lógica adicional si es un evento de terminación válido y no una cancelación
+        if (e.type === 'mouseup' || e.type === 'touchend') {
+           // Delegamos en onClick nativo del botón o llamada directa:
+        }
+    } else {
+        // Si FUE long press, prevenimos que el navegador lance un evento 'click' tardío
+        if (e.cancelable && e.type !== 'touchcancel') e.preventDefault();
+    }
+  }, []);
+
+  const handleActualClick = (e: React.MouseEvent) => {
+      // Esta función se ejecuta con el evento 'click' nativo de React/HTML
       if (!isLongPressTriggered.current) {
           onClick(dateStr);
       }
@@ -118,16 +143,24 @@ const DayCell = memo(({ day, monthIndex, currentYear, entry, onClick, onLongPres
 
   return (
     <button
+      // Eventos Táctiles
       onTouchStart={handleStart}
-      onTouchEnd={handleEnd}
       onTouchMove={handleMove}
+      onTouchEnd={handleEnd}
+      onTouchCancel={handleEnd} // CRUCIAL: Manejar interrupción por scroll nativo
+      // Eventos Ratón
       onMouseDown={handleStart}
-      onMouseUp={handleEnd}
       onMouseMove={handleMove}
-      onClick={handleClick}
-      onContextMenu={(e) => e.preventDefault()} // Prevenir menú contextual nativo
+      onMouseUp={handleEnd}
+      onMouseLeave={handleEnd} // Si saca el ratón, cancelamos
+      // Click final
+      onClick={handleActualClick}
+      onContextMenu={(e) => e.preventDefault()}
+      
+      // CRÍTICO: 'touch-action: pan-y' permite al navegador hacer scroll vertical 
+      // aunque el dedo empiece sobre este botón. 'touch-none' bloqueaba el scroll.
       className={`
-        aspect-square rounded-md relative group flex items-center justify-center outline-none overflow-hidden select-none touch-none
+        aspect-square rounded-md relative group flex items-center justify-center outline-none overflow-hidden select-none
         
         transition-[transform,background-color,border-color,box-shadow,opacity] duration-300
         
@@ -135,7 +168,7 @@ const DayCell = memo(({ day, monthIndex, currentYear, entry, onClick, onLongPres
         
         ${!isFilled ? 'bg-slate-700/30 hover:bg-slate-600/50' : ''}
         
-        ${moodLevel === MoodLevel.Legendary ? 'animate-pulse hover:animate-none shadow-[0_0_12px_rgba(34,197,94,0.4)]' : ''}
+        ${level === MoodLevel.Legendary ? 'animate-pulse hover:animate-none shadow-[0_0_12px_rgba(34,197,94,0.4)]' : ''}
         
         ${isHighlighted ? 'ring-2 ring-fuchsia-500 shadow-[0_0_15px_#d946ef] z-20 scale-110 !bg-fuchsia-900/30' : ''}
 
@@ -147,15 +180,15 @@ const DayCell = memo(({ day, monthIndex, currentYear, entry, onClick, onLongPres
       `}
       style={{ 
           backgroundColor: isFilled && !isHighlighted ? config.color : undefined,
+          // Optimizaciones CSS para móviles - FORZAR PAN-Y AQUÍ
+          touchAction: 'pan-y', 
           WebkitTapHighlightColor: 'transparent',
           WebkitUserSelect: 'none',
           userSelect: 'none'
       }}
-      title={`${dateStr}${entry?.note ? ': ' + entry.note : ''}`}
       aria-label={`Día ${day}, Estado: ${isFilled ? config.label : 'Sin registro'}`}
     >
-      {/* Long Press Progress Indicator */}
-      {/* Esto crea una burbuja que crece durante 500ms al mantener pulsado */}
+      {/* Indicador Visual Long Press (Círculo que se expande) */}
       <div className="absolute inset-0 bg-indigo-500/30 scale-0 transition-transform duration-500 ease-out origin-center group-active:scale-125 rounded-full pointer-events-none z-0" />
 
       <span className={`
@@ -173,7 +206,7 @@ const DayCell = memo(({ day, monthIndex, currentYear, entry, onClick, onLongPres
         </div>
       )}
 
-      {/* Tooltip Hover (Solo Desktop) - Ocultar durante touch interaction */}
+      {/* Tooltip Hover (Solo Desktop) */}
       <div className="hidden md:block opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-slate-900 text-white text-[10px] py-1 px-2 rounded pointer-events-none whitespace-nowrap z-30 border border-slate-700 shadow-2xl transition-opacity">
         {isToday ? "¡HOY!" : `Día ${day}`}
       </div>
@@ -192,19 +225,24 @@ const DayCell = memo(({ day, monthIndex, currentYear, entry, onClick, onLongPres
     </button>
   );
 }, (prev, next) => {
-  const prevEntry = prev.entry;
-  const nextEntry = next.entry;
-  
-  const isSameData = 
-    prevEntry?.level === nextEntry?.level && 
-    prevEntry?.note === nextEntry?.note &&
-    prev.isHighlighted === next.isHighlighted;
-
-  return isSameData;
+  // Función de comparación personalizada y estricta para React.memo
+  // Solo re-renderizar si cambian los datos visuales esenciales
+  return (
+    prev.level === next.level &&
+    prev.hasNote === next.hasNote &&
+    prev.isHighlighted === next.isHighlighted &&
+    prev.currentYear === next.currentYear &&
+    prev.monthIndex === next.monthIndex && 
+    prev.day === next.day
+    // Nota: No comparamos las funciones onClick/onLongPress porque asumimos que son estables 
+    // o que no queremos re-renderizar solo porque la función se recreó en el padre.
+  );
 });
 
-const Calendar: React.FC<CalendarProps> = ({ yearData, onDayClick, onDayLongPress, currentYear, highlightedDates }) => {
-  const [isNavOpen, setIsNavOpen] = useState(false);
+// --- COMPONENTE PRINCIPAL CALENDAR ---
+// Memoizado completamente para que los re-renders de App (por el menú radial) no le afecten
+const Calendar: React.FC<CalendarProps> = memo(({ yearData, onDayClick, onDayLongPress, currentYear, highlightedDates }) => {
+  const [isNavOpen, setIsNavOpen] = React.useState(false);
   
   const scrollToMonth = (index: number) => {
     const el = document.getElementById(`month-${index}`);
@@ -301,16 +339,24 @@ const Calendar: React.FC<CalendarProps> = ({ yearData, onDayClick, onDayLongPres
 
                 {days.map(d => {
                   const dateStr = `${currentYear}-${String(mIndex + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                  const entry = yearData[dateStr];
+                  // EXTRAEMOS LOS DATOS AQUÍ
+                  // Pasamos primitivos al hijo para que la comparación de props sea trivial y rapidísima.
+                  const level = entry?.level || MoodLevel.None;
+                  const hasNote = !!(entry?.note && entry.note.trim().length > 0);
+                  const isHighlighted = highlightedDates.includes(dateStr);
+
                   return (
                     <DayCell 
                         key={d}
                         day={d}
                         monthIndex={mIndex}
                         currentYear={currentYear}
-                        entry={yearData[dateStr]}
+                        level={level}
+                        hasNote={hasNote}
+                        isHighlighted={isHighlighted}
                         onClick={onDayClick}
                         onLongPress={onDayLongPress}
-                        isHighlighted={highlightedDates.includes(dateStr)}
                     />
                   );
                 })}
@@ -321,6 +367,6 @@ const Calendar: React.FC<CalendarProps> = ({ yearData, onDayClick, onDayLongPres
       </div>
     </div>
   );
-};
+});
 
 export default Calendar;

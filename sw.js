@@ -16,8 +16,13 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  // CRITICAL FIX: Ignore non-GET requests (like POST to Gemini API)
+  // Service Workers cannot cache POST requests and will throw an error if attempted.
+  if (event.request.method !== 'GET') {
+    return;
+  }
+
   // Network first, fall back to cache strategy for mostly dynamic content
-  // ideally better strategy for assets, but this is safe default
   event.respondWith(
     fetch(event.request)
       .then((response) => {
@@ -32,7 +37,11 @@ self.addEventListener('fetch', (event) => {
         caches.open(CACHE_NAME).then((cache) => {
           // Don't cache API calls or external resources blindly if not needed
           if(event.request.url.startsWith('http')) {
-             cache.put(event.request, responseToCache);
+             try {
+                cache.put(event.request, responseToCache);
+             } catch (e) {
+                // Ignore cache errors
+             }
           }
         });
 
