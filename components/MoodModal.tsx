@@ -363,8 +363,8 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
                             borderColor: config.color
                         }}
                         >
-                            {/* Inner Background for image (darker to pop) */}
-                            <div className="absolute inset-0 bg-slate-950/50"></div>
+                            {/* Inner Background for image (Changed to white for clean transparent images) */}
+                            <div className="absolute inset-0 bg-white"></div>
                             <img 
                                 src={config.image} 
                                 alt={config.label} 

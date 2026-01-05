@@ -1,4 +1,5 @@
-import React, { memo, useState } from 'react';
+
+import React, { memo, useState, useRef, useCallback } from 'react';
 import { YearData, MoodLevel, DayData } from '../types';
 import { MONTHS, MOODS } from '../constants';
 import { ChevronDown, ChevronUp, MapPin, CalendarRange } from 'lucide-react';
@@ -6,6 +7,7 @@ import { ChevronDown, ChevronUp, MapPin, CalendarRange } from 'lucide-react';
 interface CalendarProps {
   yearData: YearData;
   onDayClick: (dateStr: string) => void;
+  onDayLongPress: (dateStr: string, x: number, y: number) => void;
   currentYear: number;
   highlightedDates: string[];
 }
@@ -19,15 +21,21 @@ interface DayCellProps {
   currentYear: number;
   entry: DayData | undefined;
   onClick: (dateStr: string) => void;
+  onLongPress: (dateStr: string, x: number, y: number) => void;
   isHighlighted: boolean;
 }
 
-const DayCell = memo(({ day, monthIndex, currentYear, entry, onClick, isHighlighted }: DayCellProps) => {
+const DayCell = memo(({ day, monthIndex, currentYear, entry, onClick, onLongPress, isHighlighted }: DayCellProps) => {
   const dateStr = `${currentYear}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
   const moodLevel = entry?.level || MoodLevel.None;
   const config = MOODS[moodLevel];
   const hasNote = entry?.note && entry.note.trim().length > 0;
   
+  // Refs para gestión de Long Press
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const isLongPressTriggered = useRef(false);
+  const startCoord = useRef({ x: 0, y: 0 });
+
   // Calcular si es HOY
   const today = new Date();
   const isToday = 
@@ -38,38 +46,118 @@ const DayCell = memo(({ day, monthIndex, currentYear, entry, onClick, isHighligh
   // Clases dinámicas
   const isFilled = moodLevel !== MoodLevel.None;
 
+  // Handlers unificados para Touch y Mouse
+  const handleStart = useCallback((e: React.TouchEvent | React.MouseEvent) => {
+    isLongPressTriggered.current = false;
+    
+    // Obtener coordenadas
+    let clientX, clientY;
+    if ('touches' in e) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+    } else {
+        clientX = (e as React.MouseEvent).clientX;
+        clientY = (e as React.MouseEvent).clientY;
+    }
+    
+    startCoord.current = { x: clientX, y: clientY };
+
+    // Iniciar temporizador (500ms para Long Press)
+    timerRef.current = setTimeout(() => {
+        isLongPressTriggered.current = true;
+        // Trigger vibration if available (handled in App, but we can do simple one here too contextually)
+        if (navigator.vibrate) navigator.vibrate(50);
+        onLongPress(dateStr, startCoord.current.x, startCoord.current.y);
+    }, 500);
+  }, [dateStr, onLongPress]);
+
+  const handleEnd = useCallback((e: React.TouchEvent | React.MouseEvent) => {
+    if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+    }
+    
+    // Si NO fue long press, es un click normal
+    if (!isLongPressTriggered.current) {
+        // Pequeño hack para evitar doble disparo en híbridos, aunque React suele manejarlo
+        // Aquí dejamos que el onClick nativo del botón maneje la acción si no prevenimos default
+    } else {
+        // Si fue long press, prevenimos el click normal (especialmente el evento click sintético que sigue al touch)
+        if (e.cancelable) e.preventDefault();
+    }
+  }, []);
+
+  const handleMove = useCallback((e: React.TouchEvent | React.MouseEvent) => {
+    // Si nos movemos demasiado antes de que se active el timer, cancelamos el long press (es un scroll)
+    if (timerRef.current && !isLongPressTriggered.current) {
+        let clientX, clientY;
+        if ('touches' in e) {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+        } else {
+            clientX = (e as React.MouseEvent).clientX;
+            clientY = (e as React.MouseEvent).clientY;
+        }
+
+        const moveX = Math.abs(clientX - startCoord.current.x);
+        const moveY = Math.abs(clientY - startCoord.current.y);
+
+        if (moveX > 10 || moveY > 10) {
+            clearTimeout(timerRef.current);
+            timerRef.current = null;
+        }
+    }
+  }, []);
+
+  const handleClick = (e: React.MouseEvent) => {
+      // Solo disparamos el click normal si no se ha marcado como long press
+      if (!isLongPressTriggered.current) {
+          onClick(dateStr);
+      }
+  };
+
   return (
     <button
-      onClick={() => onClick(dateStr)}
+      onTouchStart={handleStart}
+      onTouchEnd={handleEnd}
+      onTouchMove={handleMove}
+      onMouseDown={handleStart}
+      onMouseUp={handleEnd}
+      onMouseMove={handleMove}
+      onClick={handleClick}
+      onContextMenu={(e) => e.preventDefault()} // Prevenir menú contextual nativo
       className={`
-        aspect-square rounded-md relative group flex items-center justify-center outline-none overflow-hidden
+        aspect-square rounded-md relative group flex items-center justify-center outline-none overflow-hidden select-none touch-none
         
-        ${/* OPTIMIZACIÓN CRÍTICA: Usamos transición específica en lugar de transition-all para evitar parpadeos negros al redimensionar */ ''}
         transition-[transform,background-color,border-color,box-shadow,opacity] duration-300
         
         focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 focus-visible:ring-indigo-500
         
-        ${/* ESTILO BASE */ ''}
         ${!isFilled ? 'bg-slate-700/30 hover:bg-slate-600/50' : ''}
         
-        ${/* ESTILO LEGENDARIO */ ''}
         ${moodLevel === MoodLevel.Legendary ? 'animate-pulse hover:animate-none shadow-[0_0_12px_rgba(34,197,94,0.4)]' : ''}
         
-        ${/* ESTILO HIGHLIGHT (BÚSQUEDA) - Prioridad Alta */ ''}
         ${isHighlighted ? 'ring-2 ring-fuchsia-500 shadow-[0_0_15px_#d946ef] z-20 scale-110 !bg-fuchsia-900/30' : ''}
 
-        ${/* ESTILO HOY (Sin registro) - Pulsante "Lléname" */ ''}
         ${isToday && !isFilled && !isHighlighted ? 'border-2 border-dashed border-cyan-400/70 shadow-[0_0_15px_rgba(34,211,238,0.3)] bg-cyan-900/20 animate-pulse' : ''}
         
-        ${/* ESTILO HOY (Con registro) - Solo borde sutil */ ''}
         ${isToday && isFilled && !isHighlighted ? 'ring-1 ring-white/80 ring-offset-1 ring-offset-slate-900' : ''}
+        
+        active:scale-95
       `}
       style={{ 
           backgroundColor: isFilled && !isHighlighted ? config.color : undefined,
+          WebkitTapHighlightColor: 'transparent',
+          WebkitUserSelect: 'none',
+          userSelect: 'none'
       }}
       title={`${dateStr}${entry?.note ? ': ' + entry.note : ''}`}
       aria-label={`Día ${day}, Estado: ${isFilled ? config.label : 'Sin registro'}`}
     >
+      {/* Long Press Progress Indicator */}
+      {/* Esto crea una burbuja que crece durante 500ms al mantener pulsado */}
+      <div className="absolute inset-0 bg-indigo-500/30 scale-0 transition-transform duration-500 ease-out origin-center group-active:scale-125 rounded-full pointer-events-none z-0" />
+
       <span className={`
         text-[10px] md:text-sm font-black transition-colors duration-300 pointer-events-none select-none relative z-10
         ${!isFilled ? 'text-slate-500' : 'text-slate-950/80'}
@@ -79,19 +167,17 @@ const DayCell = memo(({ day, monthIndex, currentYear, entry, onClick, isHighligh
         {day}
       </span>
 
-      {/* Partículas para HOY (si está vacío) */}
       {isToday && !isFilled && (
         <div className="absolute inset-0 pointer-events-none opacity-50">
              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-cyan-400/10 blur-sm"></div>
         </div>
       )}
 
-      {/* Tooltip Hover (Solo Desktop) */}
+      {/* Tooltip Hover (Solo Desktop) - Ocultar durante touch interaction */}
       <div className="hidden md:block opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-slate-900 text-white text-[10px] py-1 px-2 rounded pointer-events-none whitespace-nowrap z-30 border border-slate-700 shadow-2xl transition-opacity">
         {isToday ? "¡HOY!" : `Día ${day}`}
       </div>
 
-      {/* Indicador de Nota (Estilo Esquina High Contrast) */}
       {hasNote && (
         <div className={`
             absolute top-0 right-0
@@ -109,7 +195,6 @@ const DayCell = memo(({ day, monthIndex, currentYear, entry, onClick, isHighligh
   const prevEntry = prev.entry;
   const nextEntry = next.entry;
   
-  // Comparación optimizada: Incluimos isHighlighted para re-renderizar cuando cambia la búsqueda
   const isSameData = 
     prevEntry?.level === nextEntry?.level && 
     prevEntry?.note === nextEntry?.note &&
@@ -118,14 +203,13 @@ const DayCell = memo(({ day, monthIndex, currentYear, entry, onClick, isHighligh
   return isSameData;
 });
 
-const Calendar: React.FC<CalendarProps> = ({ yearData, onDayClick, currentYear, highlightedDates }) => {
+const Calendar: React.FC<CalendarProps> = ({ yearData, onDayClick, onDayLongPress, currentYear, highlightedDates }) => {
   const [isNavOpen, setIsNavOpen] = useState(false);
   
   const scrollToMonth = (index: number) => {
     const el = document.getElementById(`month-${index}`);
     if (el) {
-        setIsNavOpen(false); // Cerrar automáticamente al seleccionar
-        // Ajuste de offset para el header sticky
+        setIsNavOpen(false); 
         const y = el.getBoundingClientRect().top + window.pageYOffset - 100; 
         window.scrollTo({ top: y, behavior: 'smooth' });
     }
@@ -134,11 +218,9 @@ const Calendar: React.FC<CalendarProps> = ({ yearData, onDayClick, currentYear, 
   return (
     <div className="w-full relative">
       
-      {/* MOBILE STICKY MONTH NAV (EXPANDABLE HUD) */}
+      {/* MOBILE STICKY MONTH NAV */}
       <div className="md:hidden sticky top-0 z-40 w-full max-w-6xl mx-auto mb-6 px-4">
           <div className="relative w-full rounded-2xl overflow-hidden bg-slate-900/80 backdrop-blur-xl border border-slate-700/50 shadow-2xl transition-all duration-300">
-             
-             {/* Header / Trigger Button */}
              <button 
                 onClick={() => setIsNavOpen(!isNavOpen)}
                 className="w-full flex items-center justify-between px-5 py-3 text-slate-300 hover:bg-white/5 transition-colors active:bg-white/10"
@@ -156,7 +238,6 @@ const Calendar: React.FC<CalendarProps> = ({ yearData, onDayClick, currentYear, 
                 </div>
              </button>
 
-             {/* Expandable Grid */}
              <div className={`
                 overflow-hidden transition-[max-height,opacity] duration-300 ease-in-out
                 ${isNavOpen ? 'max-h-[400px] opacity-100 border-t border-slate-800' : 'max-h-0 opacity-0'}
@@ -187,8 +268,7 @@ const Calendar: React.FC<CalendarProps> = ({ yearData, onDayClick, currentYear, 
           </div>
       </div>
 
-      {/* Main Grid - Updated for bigger cells on Desktop */}
-      {/* max-w aumented to 1600px, and grid-cols limited to 3 on XL to ensure big cells */}
+      {/* Main Grid */}
       <div className="w-full max-w-[1600px] mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 p-4 pb-32">
         {MONTHS.map((monthName, mIndex) => {
           const daysInMonth = new Date(currentYear, mIndex + 1, 0).getDate();
@@ -215,12 +295,10 @@ const Calendar: React.FC<CalendarProps> = ({ yearData, onDayClick, currentYear, 
               </div>
 
               <div className="grid grid-cols-7 gap-2">
-                {/* Slots vacíos */}
                 {Array.from({ length: adjustedFirstDay }).map((_, i) => (
                   <div key={`empty-${i}`} className="aspect-square" />
                 ))}
 
-                {/* Días Renderizados con Memo */}
                 {days.map(d => {
                   const dateStr = `${currentYear}-${String(mIndex + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
                   return (
@@ -231,6 +309,7 @@ const Calendar: React.FC<CalendarProps> = ({ yearData, onDayClick, currentYear, 
                         currentYear={currentYear}
                         entry={yearData[dateStr]}
                         onClick={onDayClick}
+                        onLongPress={onDayLongPress}
                         isHighlighted={highlightedDates.includes(dateStr)}
                     />
                   );

@@ -1,21 +1,21 @@
-import React, { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
+
+import React, { useState, useEffect, useMemo, useCallback, Suspense, useRef } from 'react';
 import Calendar from './components/Calendar';
 import FloatingMenu from './components/FloatingMenu';
 import PepeOracle from './components/PepeOracle';
 import Particles from './components/Particles';
+import QuickLogMenu from './components/QuickLogMenu'; // Nueva importación
 import { YearData, DayData, MoodLevel } from './types';
 import { STORAGE_KEY, PEPE_BANNER } from './constants';
 import { Plus, Flame, Trash2, AlertTriangle, Settings, Sliders, Loader2 } from 'lucide-react';
 import SoundManager from './utils/sounds';
 
-// Lazy Loading para optimización de rendimiento (Code Splitting)
-// Estos componentes son pesados (Recharts, Gemini SDK) y no se necesitan en el primer render
+// Lazy Loading para optimización de rendimiento
 const MoodModal = React.lazy(() => import('./components/MoodModal'));
 const StatsModal = React.lazy(() => import('./components/StatsModal'));
 const SearchModal = React.lazy(() => import('./components/SearchModal'));
 const CloudModal = React.lazy(() => import('./components/CloudModal'));
 
-// Loading Fallback Component
 const ModalLoader = () => (
   <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm">
       <div className="flex flex-col items-center gap-3">
@@ -50,45 +50,31 @@ const App: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
-  // Estado para los highlights de búsqueda en el calendario
-  const [highlightedDates, setHighlightedDates] = useState<string[]>([]);
+  // States for Quick Log Radial Menu
+  const [quickLogState, setQuickLogState] = useState<{
+    isActive: boolean;
+    dateStr: string | null;
+    startPos: { x: number; y: number } | null;
+    currentPos: { x: number; y: number } | null;
+  }>({
+    isActive: false,
+    dateStr: null,
+    startPos: null,
+    currentPos: null
+  });
+  
+  // Ref para tener el estado fresco dentro de los event listeners globales
+  const quickLogStateRef = useRef(quickLogState);
+  
+  // Sincronizar ref
+  useEffect(() => {
+    quickLogStateRef.current = quickLogState;
+  }, [quickLogState]);
 
-  // Initial particle count based on device width
+  const [highlightedDates, setHighlightedDates] = useState<string[]>([]);
   const [particleCount, setParticleCount] = useState(() => window.innerWidth < 768 ? 40 : 150);
 
-  // KEYBOARD SHORTCUTS & GLOBAL LISTENERS
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-        // ESCAPE to close any modal
-        if (e.key === 'Escape') {
-            if (isMoodModalOpen) setIsMoodModalOpen(false);
-            if (isStatsModalOpen) setIsStatsModalOpen(false);
-            if (isSearchModalOpen) setIsSearchModalOpen(false);
-            if (isCloudModalOpen) setIsCloudModalOpen(false);
-            if (isSettingsOpen) setIsSettingsOpen(false);
-            if (showResetConfirm) setShowResetConfirm(false);
-        }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isMoodModalOpen, isStatsModalOpen, isSearchModalOpen, isCloudModalOpen, isSettingsOpen, showResetConfirm]);
-
-  // SCROLL LOCK EFFECT
-  useEffect(() => {
-    const isAnyModalOpen = isMoodModalOpen || isStatsModalOpen || isSearchModalOpen || isCloudModalOpen || isSettingsOpen || showResetConfirm;
-    
-    if (isAnyModalOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isMoodModalOpen, isStatsModalOpen, isSearchModalOpen, isCloudModalOpen, isSettingsOpen, showResetConfirm]);
-
-  // Lógica de Vibración Háptica para móviles
+  // Lógica de Vibración Háptica
   const triggerHaptic = useCallback((type: 'light' | 'medium' | 'heavy' = 'light') => {
     if ('vibrate' in navigator) {
       const patterns = {
@@ -100,12 +86,171 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // Preload sounds on mount
+  // Preload sounds
   useEffect(() => {
     SoundManager.preload();
   }, []);
 
-  // Lógica de Racha (Streak) - Memoizada
+  // --- LOGIC FOR QUICK LOG DRAG TRACKING ---
+
+  const handleGlobalMove = useCallback((e: TouchEvent | MouseEvent) => {
+    if (!quickLogStateRef.current.isActive) return;
+
+    // Prevent scrolling while dragging for quick log
+    if (e.cancelable) e.preventDefault();
+
+    let clientX, clientY;
+    if ('touches' in e) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+    } else {
+        clientX = (e as MouseEvent).clientX;
+        clientY = (e as MouseEvent).clientY;
+    }
+
+    setQuickLogState(prev => ({
+        ...prev,
+        currentPos: { x: clientX, y: clientY }
+    }));
+  }, []);
+
+  const handleGlobalEnd = useCallback((e: TouchEvent | MouseEvent) => {
+    if (!quickLogStateRef.current.isActive) return;
+    
+    // Al soltar, verificamos si hay selección
+    const state = quickLogStateRef.current;
+    
+    if (state.startPos && state.currentPos && state.dateStr) {
+        // --- LOGIC SYNC: CLAMPING ---
+        // Debemos usar la misma lógica de coordenadas que QuickLogMenu.tsx
+        // Si el menú se dibujó desplazado, la lógica de distancia debe ser relativa a ese desplazamiento.
+        const SAFE_MARGIN = 110;
+        const clampedX = Math.max(SAFE_MARGIN, Math.min(state.startPos.x, window.innerWidth - SAFE_MARGIN));
+        const menuCenter = { x: clampedX, y: state.startPos.y };
+
+        const dx = state.currentPos.x - menuCenter.x;
+        const dy = state.currentPos.y - menuCenter.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        if (dist >= 15) { // Deadzone check
+            
+            // 1. CHEQUEO DE BORRADO (Arrastre hacia abajo)
+            if (dy > 30) {
+                 SoundManager.play('trash');
+                 triggerHaptic('heavy');
+                 // Borrar día
+                 setYearData(prev => {
+                    const { [state.dateStr!]: _, ...rest } = prev;
+                    return rest;
+                 });
+            } else {
+                // 2. CHEQUEO DE MOODS (Arco Superior)
+                // Mismo mapeo que el componente visual
+                const orderedMoods = [MoodLevel.Fatal, MoodLevel.Regular, MoodLevel.Normal, MoodLevel.MoiBiens, MoodLevel.Legendary];
+                let closestMood: MoodLevel | null = null;
+                let minDist = Number.MAX_VALUE;
+                const RADIUS = 75; // Debe coincidir con QuickLogMenu
+                
+                orderedMoods.forEach((mood, index) => {
+                     const angleDeg = 180 - (index * 45);
+                     const rad = angleDeg * (Math.PI / 180);
+                     const ix = Math.cos(rad) * RADIUS;
+                     const iy = -Math.sin(rad) * RADIUS;
+                     const distToIcon = Math.sqrt(Math.pow(dx - ix, 2) + Math.pow(dy - iy, 2));
+                     
+                     if (distToIcon < minDist) {
+                         minDist = distToIcon;
+                         closestMood = mood;
+                     }
+                });
+    
+                if (closestMood && minDist < 50) {
+                    // SELECCIÓN EXITOSA
+                    SoundManager.play('success');
+                    triggerHaptic('medium');
+                    
+                    // Guardar
+                    setYearData(prev => ({
+                        ...prev,
+                        [state.dateStr!]: {
+                            level: closestMood as MoodLevel,
+                            note: prev[state.dateStr!]?.note || '' // Mantener nota si existe
+                        }
+                    }));
+                }
+            }
+        }
+    }
+
+    // Resetear estado
+    setQuickLogState({
+        isActive: false,
+        dateStr: null,
+        startPos: null,
+        currentPos: null
+    });
+
+  }, [triggerHaptic]);
+
+  // Attach/Detach global listeners for drag
+  useEffect(() => {
+    if (quickLogState.isActive) {
+        window.addEventListener('touchmove', handleGlobalMove, { passive: false });
+        window.addEventListener('touchend', handleGlobalEnd);
+        window.addEventListener('mousemove', handleGlobalMove);
+        window.addEventListener('mouseup', handleGlobalEnd);
+    } else {
+        window.removeEventListener('touchmove', handleGlobalMove);
+        window.removeEventListener('touchend', handleGlobalEnd);
+        window.removeEventListener('mousemove', handleGlobalMove);
+        window.removeEventListener('mouseup', handleGlobalEnd);
+    }
+    return () => {
+        window.removeEventListener('touchmove', handleGlobalMove);
+        window.removeEventListener('touchend', handleGlobalEnd);
+        window.removeEventListener('mousemove', handleGlobalMove);
+        window.removeEventListener('mouseup', handleGlobalEnd);
+    };
+  }, [quickLogState.isActive, handleGlobalMove, handleGlobalEnd]);
+
+  const handleDayLongPress = useCallback((dateStr: string, x: number, y: number) => {
+      // Iniciar Quick Log
+      SoundManager.play('pop'); 
+      setQuickLogState({
+          isActive: true,
+          dateStr: dateStr,
+          startPos: { x, y },
+          currentPos: { x, y } // Start current at same pos
+      });
+  }, []);
+
+
+  // --- REST OF APP LOGIC ---
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+            if (isMoodModalOpen) setIsMoodModalOpen(false);
+            if (isStatsModalOpen) setIsStatsModalOpen(false);
+            if (isSearchModalOpen) setIsSearchModalOpen(false);
+            if (isCloudModalOpen) setIsCloudModalOpen(false);
+            if (isSettingsOpen) setIsSettingsOpen(false);
+            if (showResetConfirm) setShowResetConfirm(false);
+        }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isMoodModalOpen, isStatsModalOpen, isSearchModalOpen, isCloudModalOpen, isSettingsOpen, showResetConfirm]);
+
+  useEffect(() => {
+    const isAnyModalOpen = isMoodModalOpen || isStatsModalOpen || isSearchModalOpen || isCloudModalOpen || isSettingsOpen || showResetConfirm || quickLogState.isActive;
+    if (isAnyModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+  }, [isMoodModalOpen, isStatsModalOpen, isSearchModalOpen, isCloudModalOpen, isSettingsOpen, showResetConfirm, quickLogState.isActive]);
+
   const streak = useMemo(() => {
     const entries = (Object.entries(yearData) as [string, DayData][])
       .filter(([_, d]) => d.level > 0)
@@ -120,11 +265,9 @@ const App: React.FC = () => {
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = yesterday.toISOString().split('T')[0];
 
-    // Si no hay registro hoy ni ayer, la racha es 0
     if (!yearData[todayStr] && !yearData[yesterdayStr]) return 0;
 
     let currentDate = yearData[todayStr] ? today : yesterday;
-    
     while (true) {
       const dateStr = currentDate.toISOString().split('T')[0];
       if (yearData[dateStr] && yearData[dateStr].level > 0) {
@@ -137,10 +280,7 @@ const App: React.FC = () => {
     return count;
   }, [yearData]);
 
-  const selectedTitle = useMemo(() => {
-    return APP_TITLES[Math.floor(Math.random() * APP_TITLES.length)];
-  }, []);
-
+  const selectedTitle = useMemo(() => APP_TITLES[Math.floor(Math.random() * APP_TITLES.length)], []);
   const dynamicSubtitle = useMemo(() => {
     const phrases = [
       `Pepe está tomando notas de tu ${currentYear}`,
@@ -212,7 +352,6 @@ const App: React.FC = () => {
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
@@ -235,6 +374,13 @@ const App: React.FC = () => {
     <div className="flex flex-col items-center min-h-screen pb-24 overflow-x-hidden text-slate-100 relative">
       <Particles count={particleCount} />
       
+      {/* QUICK LOG RADIAL MENU */}
+      <QuickLogMenu 
+        isOpen={quickLogState.isActive}
+        startPos={quickLogState.startPos}
+        currentPos={quickLogState.currentPos}
+      />
+      
       <header className="mt-8 mb-6 text-center flex flex-col items-center relative w-full px-4">
         {streak > 0 && (
           <div className="mb-4 lg:absolute lg:top-0 lg:right-12 flex items-center gap-2 bg-slate-900/60 backdrop-blur-md border border-orange-500/40 px-5 py-2.5 rounded-full shadow-[0_0_20px_rgba(249,115,22,0.2)] animate-in fade-in slide-in-from-top duration-700 z-30">
@@ -243,24 +389,15 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {/* LOGO PRINCIPAL: PEPE PORTAL EFFECT */}
         <div className="relative group mb-8 mt-4">
-            {/* Efectos de Fondo (Anillos y Glow) */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[180%] h-[180%] pointer-events-none opacity-80">
-                 {/* Anillo Exterior Lento */}
                  <div className="absolute inset-0 border-2 border-green-500/30 rounded-full border-dashed animate-[spin_20s_linear_infinite]"></div>
-                 {/* Anillo Medio Reverso */}
                  <div className="absolute inset-8 border-2 border-emerald-400/40 rounded-full border-dotted animate-[spin_15s_linear_infinite_reverse]"></div>
-                 {/* Glow Central */}
                  <div className="absolute inset-4 bg-green-500/20 blur-[50px] rounded-full animate-pulse"></div>
             </div>
 
-            {/* Contenedor Flotante de la Imagen */}
             <div className="relative w-48 h-48 md:w-64 md:h-64 bg-gradient-to-b from-slate-800/80 to-slate-900/90 backdrop-blur-xl rounded-[3rem] border border-slate-700/50 shadow-[0_25px_60px_-15px_rgba(34,197,94,0.3)] flex items-center justify-center overflow-hidden pepe-float z-10 transition-all duration-500 hover:scale-105 group-hover:shadow-[0_30px_70px_-10px_rgba(34,197,94,0.4)]">
-                
-                {/* Brillo interno especular */}
                 <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none z-20"></div>
-
                 {!bannerError ? (
                 <img 
                     src={PEPE_BANNER} 
@@ -292,10 +429,10 @@ const App: React.FC = () => {
         REGISTRAR HOY
       </button>
 
-      {/* CALENDARIO CON HIGHLIGHTS */}
       <Calendar 
         yearData={yearData} 
         onDayClick={handleDayClick} 
+        onDayLongPress={handleDayLongPress} // Pasar prop
         currentYear={currentYear} 
         highlightedDates={highlightedDates}
       />
@@ -314,7 +451,6 @@ const App: React.FC = () => {
         onSettings={() => { triggerHaptic('light'); setIsSettingsOpen(true); }}
       />
 
-      {/* RENDERIZADO ASÍNCRONO DE MODALES PESADOS (Suspense + Lazy) */}
       <Suspense fallback={<ModalLoader />}>
         {isMoodModalOpen && (
             <MoodModal
@@ -326,38 +462,11 @@ const App: React.FC = () => {
             initialData={selectedDate ? yearData[selectedDate] || { level: MoodLevel.None, note: '' } : { level: MoodLevel.None, note: '' }}
             />
         )}
-
-        {isStatsModalOpen && (
-            <StatsModal
-            isOpen={isStatsModalOpen}
-            onClose={() => setIsStatsModalOpen(false)}
-            data={yearData}
-            />
-        )}
-
-        {isSearchModalOpen && (
-            <SearchModal
-            isOpen={isSearchModalOpen}
-            onClose={() => setIsSearchModalOpen(false)}
-            data={yearData}
-            onJumpToDate={(date) => {
-                setSelectedDate(date);
-                setIsMoodModalOpen(true);
-            }}
-            onHighlightResults={(dates) => setHighlightedDates(dates)}
-            />
-        )}
-
-        {isCloudModalOpen && (
-            <CloudModal
-            isOpen={isCloudModalOpen}
-            onClose={() => setIsCloudModalOpen(false)}
-            data={yearData}
-            />
-        )}
+        {isStatsModalOpen && <StatsModal isOpen={isStatsModalOpen} onClose={() => setIsStatsModalOpen(false)} data={yearData} />}
+        {isSearchModalOpen && <SearchModal isOpen={isSearchModalOpen} onClose={() => setIsSearchModalOpen(false)} data={yearData} onJumpToDate={(date) => { setSelectedDate(date); setIsMoodModalOpen(true); }} onHighlightResults={(dates) => setHighlightedDates(dates)} />}
+        {isCloudModalOpen && <CloudModal isOpen={isCloudModalOpen} onClose={() => setIsCloudModalOpen(false)} data={yearData} />}
       </Suspense>
 
-      {/* Modales ligeros se mantienen sin Lazy Loading */}
       {isSettingsOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300" onClick={() => setIsSettingsOpen(false)}>
            <div 

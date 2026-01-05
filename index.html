@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -21,6 +22,9 @@
         margin: 0;
         overflow-x: hidden;
         touch-action: manipulation; /* Optimiza clicks en móviles */
+        user-select: none; /* Previene selección de texto al hacer long press */
+        -webkit-user-select: none;
+        -webkit-touch-callout: none; /* Previene menú contextual en iOS */
       }
       /* Custom scrollbar */
       ::-webkit-scrollbar {
