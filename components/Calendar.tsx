@@ -95,7 +95,7 @@ const DayCell = memo(({ day, monthIndex, currentYear, entry, onClick, isHighligh
       {hasNote && (
         <div className={`
             absolute top-0 right-0
-            w-3 h-3 md:w-4 md:h-4
+            w-3 h-3 md:w-3 md:h-3
             bg-white
             border-l-2 border-b-2 border-slate-950
             rounded-bl-md
