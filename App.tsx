@@ -40,6 +40,26 @@ const App: React.FC = () => {
   // Initial particle count based on device width
   const [particleCount, setParticleCount] = useState(() => window.innerWidth < 768 ? 40 : 150);
 
+  // SCROLL LOCK EFFECT
+  // Bloquea el scroll del body cuando cualquier modal está abierto
+  useEffect(() => {
+    const isAnyModalOpen = isMoodModalOpen || isStatsModalOpen || isSearchModalOpen || isCloudModalOpen || isSettingsOpen || showResetConfirm;
+    
+    if (isAnyModalOpen) {
+      document.body.style.overflow = 'hidden';
+      // Opcional: Añadir padding-right para evitar saltos si hay scrollbar visible en desktop
+      // document.body.style.paddingRight = 'var(--scrollbar-width)'; 
+    } else {
+      document.body.style.overflow = '';
+      // document.body.style.paddingRight = '';
+    }
+
+    // Cleanup seguro
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMoodModalOpen, isStatsModalOpen, isSearchModalOpen, isCloudModalOpen, isSettingsOpen, showResetConfirm]);
+
   // Lógica de Vibración Háptica para móviles
   const triggerHaptic = useCallback((type: 'light' | 'medium' | 'heavy' = 'light') => {
     if ('vibrate' in navigator) {
