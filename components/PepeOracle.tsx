@@ -11,19 +11,30 @@ interface PepeOracleProps {
 
 const ORACLE_FALLBACKS = [
   "Necesito más lore para juzgarte, lince. Registra un par de días más.",
-  "Poco lore veo aquí, compañero. Vuelve cuando hayas vivido algo épico.",
+  "Poco lore veo aquí, amigo. Vuelve cuando hayas vivido algo épico.",
   "¿Solo esto? Mi sabiduría requiere al menos dos fragmentos de tu historia.",
-  "El archivo está vacío, compañero. Dale chicha al diario para que Pepe hable.",
+  "El archivo está vacío, tú. Dale chicha al diario para que Pepe hable.",
   "Falta contexto. Registra más días o el Oráculo seguirá AFK.",
-  "No puedo leer tu destino con tan poco material, compañero. Escribe más.",
+  "No puedo leer tu destino con tan poco material, ¿sabes?. Escribe más.",
   "Tu vida es un servidor vacío ahora mismo. Necesito datos.",
-  "Compañero, el Oráculo no hace milagros sin días de registro."
+  "Oye, el Oráculo no hace milagros sin días de registro."
+];
+
+const INITIAL_PHRASES = [
+  "¿Ansías conocer tu destino? El Oráculo Supremo de Pepe escudriña tu lore para dictar sentencia divina.",
+  "Los astros de la memética se alinean. Pepe sintoniza con tu frecuencia vital para revelarte la verdad.",
+  "¿Buscas iluminación, pequeño renacuajo? El Ojo que Todo lo Ve de Pepe está analizando tus vibes.",
+  "El destino es caprichoso, pero Pepe es absoluto. Deja que el Oráculo procese tu existencia.",
+  "Silencio en la sala. El Oráculo Supremo está descargando los paquetes de tu futuro.",
+  "No hay secreto que escape a la mirada de Pepe. Tu lore está siendo auditado en este preciso instante.",
+  "¿Preparado para la verdad? El algoritmo místico de Pepe está listo para juzgar tu camino."
 ];
 
 const PepeOracle: React.FC<PepeOracleProps> = ({ data }) => {
   const [advice, setAdvice] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [isMagicActive, setIsMagicActive] = useState(false);
+  const [initialPhrase] = useState(() => INITIAL_PHRASES[Math.floor(Math.random() * INITIAL_PHRASES.length)]);
 
   const getRecentLore = () => {
     const sortedDates = Object.keys(data).sort().reverse();
@@ -74,9 +85,9 @@ const PepeOracle: React.FC<PepeOracleProps> = ({ data }) => {
       
       const prompt = `
         ACTÚA COMO: Pepe el Oráculo Millennial.
-        PERSONALIDAD: Eres un sabio de Internet, nostálgico, irónico y un poco cansado de la "vida moderna".
+        PERSONALIDAD: Eres un sabio de Internet, milleniall, nostálgico, irónico y un poco cansado de la "vida moderna".
         
-        CONTEXTO: Vas a dar un "Veredicto de Vida", un oráculo futuro basado en los últimos días del usuario.
+        CONTEXTO: Vas a dar un "Veredicto de Vida", un oráculo futuro basado en los últimos días del usuario, como algo premonitorio.
         LORE RECIENTE: ${JSON.stringify(recent)}
         
         REGLAS DE ORO:
@@ -118,19 +129,43 @@ const PepeOracle: React.FC<PepeOracleProps> = ({ data }) => {
         <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-indigo-600/10 blur-[120px] rounded-full animate-pulse" style={{ animationDelay: '3s' }}></div>
 
         <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20 relative z-10">
-          <div className="shrink-0 relative">
-            <div className="absolute inset-0 z-0">
-               <div className="absolute -top-4 left-1/4 w-3 h-3 bg-purple-500 rounded-full blur-[2px] animate-bounce opacity-60"></div>
-               <div className="absolute top-1/2 -right-6 w-2 h-2 bg-violet-400 rounded-full blur-[1px] animate-pulse opacity-80" style={{ animationDelay: '1s' }}></div>
-               <div className="absolute -bottom-2 left-1/2 w-4 h-4 bg-fuchsia-600 rounded-full blur-[3px] animate-ping opacity-30"></div>
-               <div className="absolute top-1/4 -left-8 w-2 h-2 bg-purple-300 rounded-full blur-[1px] animate-bounce opacity-70" style={{ animationDelay: '0.5s' }}></div>
-               <div className="absolute bottom-1/4 right-0 w-3 h-3 bg-violet-600 rounded-full blur-[4px] animate-pulse"></div>
+          
+          {/* SECCIÓN DE IMAGEN / PORTAL */}
+          <div className="shrink-0 relative flex items-center justify-center">
+            
+            {/* ANILLO 1: Portal Rúnico Exterior (Discontinuo, Lento) */}
+            <div className={`
+                absolute -inset-[22px] rounded-full border-2 border-dashed border-violet-500/30 
+                animate-spin-slow transition-all duration-1000 z-0
+                ${isMagicActive ? 'border-violet-400/60 scale-110' : ''}
+            `}></div>
+
+            {/* ANILLO 2: Energía Interior (Inverso, Rápido) */}
+            <div className={`
+                absolute -inset-[10px] rounded-full border border-indigo-400/40 
+                animate-spin-reverse-slow transition-all duration-1000 z-0
+                ${isMagicActive ? 'border-fuchsia-400/50 scale-105' : ''}
+            `}></div>
+
+            {/* PARTÍCULAS ORBITALES (Divs animados con CSS puro) */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+                {/* Partícula 1 (Orbita CW) */}
+                <div className="absolute w-2 h-2 bg-cyan-400 rounded-full shadow-[0_0_10px_#22d3ee] animate-[orbit-cw_4s_linear_infinite]"></div>
+                {/* Partícula 2 (Orbita CCW) */}
+                <div className="absolute w-1.5 h-1.5 bg-fuchsia-500 rounded-full shadow-[0_0_8px_#d946ef] animate-[orbit-ccw_5s_linear_infinite]"></div>
+                {/* Partícula 3 (Orbita Lenta) */}
+                 <div className="absolute w-1 h-1 bg-yellow-300 rounded-full shadow-[0_0_5px_#fde047] animate-[orbit-cw_7s_linear_infinite]"></div>
             </div>
 
+            {/* GLOW DE FONDO DETRÁS DE LA IMAGEN */}
             <div className={`absolute -inset-6 bg-gradient-to-br from-violet-600/30 via-purple-500/20 to-indigo-600/30 rounded-full blur-2xl transition-opacity duration-1000 ${isMagicActive ? 'opacity-100 scale-125' : 'opacity-60 group-hover:opacity-80'}`}></div>
             
-            <div className={`w-40 h-40 md:w-56 md:h-56 rounded-full overflow-hidden border-8 border-purple-500/20 shadow-[0_0_50px_rgba(139,92,246,0.3)] transition-all duration-1000 relative z-10
-              ${isMagicActive ? 'scale-110 rotate-12 ring-[12px] ring-purple-400/40' : 'hover:scale-105 group-hover:-rotate-6'}
+            {/* CONTENEDOR DE IMAGEN PRINCIPAL */}
+            <div className={`
+              w-40 h-40 md:w-56 md:h-56 rounded-full overflow-hidden 
+              border-4 border-slate-900/50 shadow-[0_0_50px_rgba(139,92,246,0.3)] 
+              transition-all duration-1000 relative z-10 bg-slate-900
+              ${isMagicActive ? 'scale-105 rotate-3 ring-2 ring-purple-400/40' : 'hover:scale-105 group-hover:-rotate-2'}
             `}>
               <img 
                 src="https://assets.foundation.app/0xa797Df356675F459e5Bb81bB2062646A0853e83C/2/nft.jpg" 
@@ -144,14 +179,24 @@ const PepeOracle: React.FC<PepeOracleProps> = ({ data }) => {
               )}
             </div>
             
-            <div className="absolute -bottom-4 -right-2 bg-gradient-to-br from-violet-600 to-indigo-700 p-4 rounded-3xl shadow-2xl border-2 border-purple-400/50 z-20 animate-bounce">
+            {/* ICONO SPARKLE FLOTANTE */}
+            <div className="absolute -bottom-4 -right-2 bg-gradient-to-br from-violet-600 to-indigo-700 p-4 rounded-3xl shadow-2xl border-2 border-purple-400/50 z-30 animate-bounce">
               <Sparkles size={24} className="text-white" />
             </div>
           </div>
           
           <div className="flex-1 text-center lg:text-left space-y-8">
             <div className="space-y-4">
-              <h3 className="text-5xl md:text-7xl font-black uppercase tracking-tighter leading-[1.2] pt-6 bg-gradient-to-r from-violet-300 via-indigo-200 to-purple-100 bg-clip-text text-transparent drop-shadow-2xl transition-all duration-1000 group-hover:tracking-normal">
+              {/* TITULO CON ANIMACIÓN MÍSTICA REFORZADA */}
+              <h3 className="
+                text-5xl md:text-6xl lg:text-7xl font-black uppercase tracking-tighter leading-[1.2] pt-6 
+                bg-gradient-to-r from-indigo-300 via-fuchsia-300 to-cyan-300
+                bg-clip-text text-transparent 
+                animate-text-flow
+                drop-shadow-[0_0_15px_rgba(139,92,246,0.3)]
+                transition-all duration-300 ease-out origin-center
+                hover:scale-[1.03] hover:drop-shadow-[0_0_25px_rgba(192,132,252,0.6)] cursor-default
+              ">
                 Oráculo Supremo
               </h3>
               <div className="flex items-center justify-center lg:justify-start gap-4 text-purple-400/70 font-black text-sm uppercase tracking-[0.5em]">
@@ -168,8 +213,8 @@ const PepeOracle: React.FC<PepeOracleProps> = ({ data }) => {
                   </p>
                 </div>
               ) : (
-                <p className="text-slate-400 text-lg md:text-xl font-medium opacity-70 max-w-lg leading-relaxed">
-                  ¿Ansías conocer tu destino? El Oráculo Supremo de Pepe escudriña tu lore para dictar sentencia divina.
+                <p className="text-slate-400 text-lg md:text-xl font-medium opacity-70 max-w-lg mx-auto lg:mx-0 leading-relaxed">
+                  {initialPhrase}
                 </p>
               )}
             </div>

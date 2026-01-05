@@ -1,16 +1,29 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
 import Calendar from './components/Calendar';
-import MoodModal from './components/MoodModal';
-import StatsModal from './components/StatsModal';
-import SearchModal from './components/SearchModal';
-import CloudModal from './components/CloudModal';
 import FloatingMenu from './components/FloatingMenu';
 import PepeOracle from './components/PepeOracle';
 import Particles from './components/Particles';
 import { YearData, DayData, MoodLevel } from './types';
 import { STORAGE_KEY, PEPE_BANNER } from './constants';
-import { Plus, Flame, Trash2, AlertTriangle, Settings, Sliders } from 'lucide-react';
+import { Plus, Flame, Trash2, AlertTriangle, Settings, Sliders, Loader2 } from 'lucide-react';
 import SoundManager from './utils/sounds';
+
+// Lazy Loading para optimización de rendimiento (Code Splitting)
+// Estos componentes son pesados (Recharts, Gemini SDK) y no se necesitan en el primer render
+const MoodModal = React.lazy(() => import('./components/MoodModal'));
+const StatsModal = React.lazy(() => import('./components/StatsModal'));
+const SearchModal = React.lazy(() => import('./components/SearchModal'));
+const CloudModal = React.lazy(() => import('./components/CloudModal'));
+
+// Loading Fallback Component
+const ModalLoader = () => (
+  <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm">
+      <div className="flex flex-col items-center gap-3">
+          <Loader2 size={40} className="text-green-500 animate-spin" />
+          <span className="text-xs font-bold text-slate-400 uppercase tracking-widest animate-pulse">Cargando módulo...</span>
+      </div>
+  </div>
+);
 
 const APP_TITLES = [
   "Pepe Tracker 2026",
@@ -40,21 +53,33 @@ const App: React.FC = () => {
   // Initial particle count based on device width
   const [particleCount, setParticleCount] = useState(() => window.innerWidth < 768 ? 40 : 150);
 
+  // KEYBOARD SHORTCUTS & GLOBAL LISTENERS
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+        // ESCAPE to close any modal
+        if (e.key === 'Escape') {
+            if (isMoodModalOpen) setIsMoodModalOpen(false);
+            if (isStatsModalOpen) setIsStatsModalOpen(false);
+            if (isSearchModalOpen) setIsSearchModalOpen(false);
+            if (isCloudModalOpen) setIsCloudModalOpen(false);
+            if (isSettingsOpen) setIsSettingsOpen(false);
+            if (showResetConfirm) setShowResetConfirm(false);
+        }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isMoodModalOpen, isStatsModalOpen, isSearchModalOpen, isCloudModalOpen, isSettingsOpen, showResetConfirm]);
+
   // SCROLL LOCK EFFECT
-  // Bloquea el scroll del body cuando cualquier modal está abierto
   useEffect(() => {
     const isAnyModalOpen = isMoodModalOpen || isStatsModalOpen || isSearchModalOpen || isCloudModalOpen || isSettingsOpen || showResetConfirm;
     
     if (isAnyModalOpen) {
       document.body.style.overflow = 'hidden';
-      // Opcional: Añadir padding-right para evitar saltos si hay scrollbar visible en desktop
-      // document.body.style.paddingRight = 'var(--scrollbar-width)'; 
     } else {
       document.body.style.overflow = '';
-      // document.body.style.paddingRight = '';
     }
-
-    // Cleanup seguro
     return () => {
       document.body.style.overflow = '';
     };
@@ -280,47 +305,49 @@ const App: React.FC = () => {
         onSettings={() => { triggerHaptic('light'); setIsSettingsOpen(true); }}
       />
 
-      {/* OPTIMIZACIÓN DE MEMORIA: Renderizado Condicional (Unmount on Close) */}
-      
-      {isMoodModalOpen && (
-        <MoodModal
-          isOpen={isMoodModalOpen}
-          onClose={() => setIsMoodModalOpen(false)}
-          onSave={handleSaveDay}
-          onDelete={handleDeleteDay}
-          dateStr={selectedDate || ''}
-          initialData={selectedDate ? yearData[selectedDate] || { level: MoodLevel.None, note: '' } : { level: MoodLevel.None, note: '' }}
-        />
-      )}
+      {/* RENDERIZADO ASÍNCRONO DE MODALES PESADOS (Suspense + Lazy) */}
+      <Suspense fallback={<ModalLoader />}>
+        {isMoodModalOpen && (
+            <MoodModal
+            isOpen={isMoodModalOpen}
+            onClose={() => setIsMoodModalOpen(false)}
+            onSave={handleSaveDay}
+            onDelete={handleDeleteDay}
+            dateStr={selectedDate || ''}
+            initialData={selectedDate ? yearData[selectedDate] || { level: MoodLevel.None, note: '' } : { level: MoodLevel.None, note: '' }}
+            />
+        )}
 
-      {isStatsModalOpen && (
-        <StatsModal
-          isOpen={isStatsModalOpen}
-          onClose={() => setIsStatsModalOpen(false)}
-          data={yearData}
-        />
-      )}
+        {isStatsModalOpen && (
+            <StatsModal
+            isOpen={isStatsModalOpen}
+            onClose={() => setIsStatsModalOpen(false)}
+            data={yearData}
+            />
+        )}
 
-      {isSearchModalOpen && (
-        <SearchModal
-          isOpen={isSearchModalOpen}
-          onClose={() => setIsSearchModalOpen(false)}
-          data={yearData}
-          onJumpToDate={(date) => {
-            setSelectedDate(date);
-            setIsMoodModalOpen(true);
-          }}
-        />
-      )}
+        {isSearchModalOpen && (
+            <SearchModal
+            isOpen={isSearchModalOpen}
+            onClose={() => setIsSearchModalOpen(false)}
+            data={yearData}
+            onJumpToDate={(date) => {
+                setSelectedDate(date);
+                setIsMoodModalOpen(true);
+            }}
+            />
+        )}
 
-      {isCloudModalOpen && (
-        <CloudModal
-          isOpen={isCloudModalOpen}
-          onClose={() => setIsCloudModalOpen(false)}
-          data={yearData}
-        />
-      )}
+        {isCloudModalOpen && (
+            <CloudModal
+            isOpen={isCloudModalOpen}
+            onClose={() => setIsCloudModalOpen(false)}
+            data={yearData}
+            />
+        )}
+      </Suspense>
 
+      {/* Modales ligeros se mantienen sin Lazy Loading */}
       {isSettingsOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300" onClick={() => setIsSettingsOpen(false)}>
            <div 

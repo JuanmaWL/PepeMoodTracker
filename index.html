@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Pepe Mood Year - Tu Diario</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐸</text></svg>">
+    <link rel="manifest" href="./manifest.json">
+    <link rel="icon" href="https://i.imgur.com/3OaT1ef.png" type="image/png">
+    <link rel="apple-touch-icon" href="https://i.imgur.com/3OaT1ef.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;900&display=swap" rel="stylesheet">
@@ -85,6 +87,43 @@
         25% { transform: scale(1.01) rotate(0.2deg); filter: brightness(1.2); }
         75% { transform: scale(0.99) rotate(-0.2deg); filter: brightness(1.1); }
       }
+      
+      /* Animación de Texto Líquido para el Oráculo */
+      @keyframes text-flow {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+      }
+      .animate-text-flow {
+        background-size: 200% auto;
+        animation: text-flow 4s linear infinite;
+      }
+
+      /* Animaciones de Portal y Partículas */
+      @keyframes spin-slow {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      @keyframes spin-reverse-slow {
+        from { transform: rotate(360deg); }
+        to { transform: rotate(0deg); }
+      }
+      @keyframes orbit-cw {
+        0% { transform: rotate(0deg) translateX(60px) rotate(0deg); }
+        100% { transform: rotate(360deg) translateX(60px) rotate(-360deg); }
+      }
+      @keyframes orbit-ccw {
+        0% { transform: rotate(360deg) translateX(70px) rotate(-360deg); }
+        100% { transform: rotate(0deg) translateX(70px) rotate(0deg); }
+      }
+      
+      /* Clases de utilidad para animaciones */
+      .animate-spin-slow {
+        animation: spin-slow 12s linear infinite;
+      }
+      .animate-spin-reverse-slow {
+        animation: spin-reverse-slow 15s linear infinite;
+      }
 
       /* Optimización de rendimiento para filtros costosos */
       @media (max-width: 768px) {
@@ -105,6 +144,15 @@
     "recharts": "https://esm.sh/recharts@^3.6.0"
   }
 }
+</script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .then(req => console.log('Service Worker Registered'))
+        .catch(err => console.log('Service Worker Failed', err));
+    });
+  }
 </script>
 </head>
 <body class="text-slate-100 min-h-screen">
