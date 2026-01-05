@@ -1,5 +1,6 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
-import { X, Sparkles, Music, Trophy, Brain, Quote, Loader2, TrendingUp, PieChart as PieChartIcon, BarChart3, Hexagon, Waves, CalendarRange, Filter, RefreshCw, Zap, Gavel } from 'lucide-react';
+import { X, Music, Trophy, Brain, Quote, Loader2, TrendingUp, PieChart as PieChartIcon, BarChart3, Hexagon, Waves, CalendarRange, Filter, RefreshCw, Zap, Gavel } from 'lucide-react';
 import { YearData, MoodLevel, DayData } from '../types';
 import { MOODS, MONTHS } from '../constants';
 import Heatmap from './Heatmap';
@@ -146,55 +147,78 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
     return { totalDays, average, pieData, lineData, radarData: shiftedRadarData, filteredEntries };
   }, [data, timeRange]);
 
-  const parseAiResponse = (text: string) => {
-    if (!text) return null;
+  const parseAiResponse = (rawText: string) => {
+    if (!rawText) return null;
     
-    const diagMatch = text.match(/\[DIAGNÓSTICO\](.*?)(\[|$)/s);
-    const soundMatch = text.match(/\[SOUNDTRACK\](.*?)(\[|$)/s);
-    const achievementMatch = text.match(/\[LOGRO\](.*?)(\[|$)/s);
-
+    // 1. LIMPIEZA INICIAL ROBUSTA
+    // Eliminamos markdown de negrita (**) que suele romper los regex simples
+    let text = rawText.replace(/\*\*/g, ''); 
+    
     const cleanStr = (s: string) => s.trim().replace(/^[:\s-]+/, '');
 
-    const diagnosis = diagMatch ? cleanStr(diagMatch[1]) : cleanStr(text);
+    // 2. REGEX MEJORADOS (Case Insensitive, tolerante a espacios y corchetes opcionales)
+    // Buscamos [DIAGNOSTICO] o DIAGNOSTICO: 
+    const diagMatch = text.match(/\[?DIAGNÓSTICO\]?:?(.*?)(\[|$)/is);
+    const soundMatch = text.match(/\[?SOUNDTRACK\]?:?(.*?)(\[|$)/is);
+    const achievementMatch = text.match(/\[?LOGRO\]?:?(.*?)(\[|$)/is);
+
+    // 3. FALLBACK INTELIGENTE
+    // Si no encuentra los tags específicos, asume que todo el texto es el diagnóstico 
+    // para evitar mostrar texto plano feo.
+    const diagnosis = diagMatch ? cleanStr(diagMatch[1]) : (soundMatch || achievementMatch) ? "" : cleanStr(text);
     const soundtrackFull = soundMatch ? cleanStr(soundMatch[1]) : "";
     const achievement = achievementMatch ? cleanStr(achievementMatch[1]) : "";
 
     const formatBold = (str: string) => {
-      const parts = str.split(/(\*\*[^*]+\*\*)/g);
-      return parts.map((part, index) => {
-        if (part.startsWith('**') && part.endsWith('**')) {
-          return <strong key={index} className="text-white font-black">{part.slice(2, -2)}</strong>;
-        }
-        return part;
-      });
+      // Como ya quitamos los **, aquí solo procesamos texto plano. 
+      // Si quisiéramos preservar negritas específicas, tendríamos que cambiar la estrategia de limpieza,
+      // pero para este caso es mejor asegurar la estructura limpia.
+      return str;
     };
 
     const renderSoundtrackContent = (fullText: string) => {
         // Detectar separador para dividir Canción / Por qué
-        const separatorRegex = /Por qué:|Why:/i;
+        const separatorRegex = /Por qué:|Why:|Because:/i;
         const splitIndex = fullText.search(separatorRegex);
 
-        if (splitIndex !== -1) {
-            const songPart = fullText.substring(0, splitIndex).replace(/[.-]+$/, '').trim();
-            const reasonPart = fullText.substring(splitIndex).trim();
+        let songPart = fullText;
+        let reasonPart = "";
 
-            return (
-                <div className="text-pink-100 text-sm leading-relaxed text-justify md:text-left">
-                    <strong className="block font-bold text-pink-200 border-b border-pink-500/20 pb-1 mb-1">{songPart}</strong>
-                    <span className="opacity-90 block pt-1">{reasonPart}</span>
-                </div>
-            );
+        if (splitIndex !== -1) {
+            songPart = fullText.substring(0, splitIndex).replace(/[.-]+$/, '').trim();
+            reasonPart = fullText.substring(splitIndex).replace(/Por qué:|Why:|Because:/i, '').trim();
         }
-        return <span className="text-pink-100 text-sm text-justify md:text-left block">{fullText}</span>;
+
+        // REDISEÑO MOBILE-FRIENDLY DEL SOUNDTRACK
+        return (
+            <div className="flex flex-col gap-3 mt-1 w-full">
+                {/* Caja de la Canción (Visualmente distinta) */}
+                <div className="flex items-start gap-3 bg-pink-500/10 p-3 rounded-xl border border-pink-500/20 w-full">
+                    <div className="shrink-0 p-2 bg-pink-500/20 rounded-lg text-pink-300">
+                        <Music size={16} className="animate-[spin_4s_linear_infinite]" />
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                         <span className="text-[9px] font-black uppercase text-pink-400/70 tracking-widest mb-0.5">Now Playing</span>
+                         <span className="text-pink-100 font-bold text-sm leading-tight break-words">{songPart}</span>
+                    </div>
+                </div>
+
+                {/* Explicación (Si existe) */}
+                {reasonPart && (
+                    <div className="text-pink-200/80 text-xs italic leading-relaxed pl-2 border-l-2 border-pink-500/30">
+                        "{reasonPart}"
+                    </div>
+                )}
+            </div>
+        );
     };
 
     // Diseño unificado de Tarjetas usando FLOAT para permitir wrap de texto
-    // Corrección Fix #2: Usamos 'group/card' para aislar el hover
     return (
       <div className="space-y-4 animate-in fade-in slide-in-from-right duration-700 w-full relative">
         
         {/* CARD DIAGNÓSTICO */}
-        {/* Usamos 'flow-root' o 'clearfix' implícito para contener el float */}
+        {diagnosis && (
         <div className="group/card relative p-4 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 hover:bg-indigo-500/10 hover:border-indigo-500/30 transition-all duration-300 cursor-default flow-root">
            
            {/* Icono con FLOAT LEFT */}
@@ -214,23 +238,12 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
               {formatBold(diagnosis)}
            </p>
         </div>
+        )}
 
         {/* CARD SOUNDTRACK */}
         {soundtrackFull && (
-          <div className="group/card relative p-4 rounded-2xl bg-pink-500/5 border border-pink-500/10 hover:bg-pink-500/10 hover:border-pink-500/30 transition-all duration-300 cursor-default flow-root">
-             
-             {/* Icono con FLOAT LEFT */}
-             <div className="float-left mr-4 mb-1 relative">
-                <div className="absolute inset-0 bg-pink-500 rounded-full blur-md opacity-0 group-hover/card:opacity-30 transition-opacity duration-300"></div>
-                <div className="relative p-2 rounded-xl bg-pink-500/10 text-pink-400 group-hover/card:scale-110 group-hover/card:-rotate-3 transition-transform duration-300">
-                    <Music size={18} />
-                </div>
-             </div>
-
-             {/* Contenido */}
-             <div className="text-[10px] font-black text-pink-400/60 uppercase tracking-widest mb-1 group-hover/card:text-pink-400 transition-colors">
-                Soundtrack
-             </div>
+          <div className="group/card relative p-4 rounded-2xl bg-pink-500/5 border border-pink-500/10 hover:bg-pink-500/10 hover:border-pink-500/30 transition-all duration-300 cursor-default">
+             {/* Eliminado float para Soundtrack para mejor control de layout en títulos largos */}
              {renderSoundtrackContent(soundtrackFull)}
           </div>
         )}
@@ -249,7 +262,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
 
              {/* Contenido */}
              <div className="text-[10px] font-black text-amber-400/60 uppercase tracking-widest mb-1 group-hover/card:text-amber-400 transition-colors">
-                Logro
+                Logro Desbloqueado
              </div>
              <p className="text-amber-100 text-sm font-bold leading-snug text-justify md:text-left">
                 {achievement}
@@ -329,7 +342,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
 
             REGLAS:
             - Texto natural, sarcástico pero nostálgico.
-            - SIN Markdown ni asteriscos.
+            - SIN Markdown ni asteriscos (IMPORTANTE: No uses negritas).
             - Máximo 100 palabras total.
         `;
         const response = await ai.models.generateContent({

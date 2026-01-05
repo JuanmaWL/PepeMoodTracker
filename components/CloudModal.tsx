@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { X, CloudFog, BrainCircuit } from 'lucide-react';
+import { X, BrainCircuit } from 'lucide-react';
 import { YearData, DayData } from '../types';
 import SoundManager from '../utils/sounds';
 

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { X, Search, Calendar as CalendarIcon, BookOpen, FileQuestion } from 'lucide-react';
-import { YearData, MoodLevel, DayData } from '../types';
+import { YearData, DayData } from '../types';
 import { MOODS } from '../constants';
 
 interface SearchModalProps {

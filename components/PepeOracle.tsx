@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Sparkles, BrainCircuit, Quote, Zap, Loader2 } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
-import { YearData, MoodLevel } from '../types';
+import { YearData } from '../types';
 import { MOODS } from '../constants';
 import SoundManager from '../utils/sounds';
 
