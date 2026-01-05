@@ -7,6 +7,7 @@ interface CalendarProps {
   yearData: YearData;
   onDayClick: (dateStr: string) => void;
   currentYear: number;
+  highlightedDates: string[];
 }
 
 const WEEK_DAYS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
@@ -18,44 +19,89 @@ interface DayCellProps {
   currentYear: number;
   entry: DayData | undefined;
   onClick: (dateStr: string) => void;
+  isHighlighted: boolean;
 }
 
-const DayCell = memo(({ day, monthIndex, currentYear, entry, onClick }: DayCellProps) => {
+const DayCell = memo(({ day, monthIndex, currentYear, entry, onClick, isHighlighted }: DayCellProps) => {
   const dateStr = `${currentYear}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
   const moodLevel = entry?.level || MoodLevel.None;
   const config = MOODS[moodLevel];
   const hasNote = entry?.note && entry.note.trim().length > 0;
+  
+  // Calcular si es HOY
+  const today = new Date();
+  const isToday = 
+    today.getDate() === day && 
+    today.getMonth() === monthIndex && 
+    today.getFullYear() === currentYear;
+
+  // Clases dinámicas
+  const isFilled = moodLevel !== MoodLevel.None;
 
   return (
     <button
       onClick={() => onClick(dateStr)}
       className={`
-        aspect-square rounded-md relative group transition-all duration-300 flex items-center justify-center outline-none
+        aspect-square rounded-md relative group flex items-center justify-center outline-none overflow-hidden
+        
+        ${/* OPTIMIZACIÓN CRÍTICA: Usamos transición específica en lugar de transition-all para evitar parpadeos negros al redimensionar */ ''}
+        transition-[transform,background-color,border-color,box-shadow,opacity] duration-300
+        
         focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 focus-visible:ring-indigo-500
-        ${moodLevel === MoodLevel.None ? 'bg-slate-700/30 hover:bg-slate-600/50' : ''}
+        
+        ${/* ESTILO BASE */ ''}
+        ${!isFilled ? 'bg-slate-700/30 hover:bg-slate-600/50' : ''}
+        
+        ${/* ESTILO LEGENDARIO */ ''}
         ${moodLevel === MoodLevel.Legendary ? 'animate-pulse hover:animate-none shadow-[0_0_12px_rgba(34,197,94,0.4)]' : ''}
+        
+        ${/* ESTILO HIGHLIGHT (BÚSQUEDA) - Prioridad Alta */ ''}
+        ${isHighlighted ? 'ring-2 ring-fuchsia-500 shadow-[0_0_15px_#d946ef] z-20 scale-110 !bg-fuchsia-900/30' : ''}
+
+        ${/* ESTILO HOY (Sin registro) - Pulsante "Lléname" */ ''}
+        ${isToday && !isFilled && !isHighlighted ? 'border-2 border-dashed border-cyan-400/70 shadow-[0_0_15px_rgba(34,211,238,0.3)] bg-cyan-900/20 animate-pulse' : ''}
+        
+        ${/* ESTILO HOY (Con registro) - Solo borde sutil */ ''}
+        ${isToday && isFilled && !isHighlighted ? 'ring-1 ring-white/80 ring-offset-1 ring-offset-slate-900' : ''}
       `}
       style={{ 
-          backgroundColor: moodLevel !== MoodLevel.None ? config.color : undefined,
+          backgroundColor: isFilled && !isHighlighted ? config.color : undefined,
       }}
       title={`${dateStr}${entry?.note ? ': ' + entry.note : ''}`}
-      aria-label={`Día ${day}, Estado: ${moodLevel !== MoodLevel.None ? config.label : 'Sin registro'}`}
+      aria-label={`Día ${day}, Estado: ${isFilled ? config.label : 'Sin registro'}`}
     >
       <span className={`
-        text-[10px] md:text-xs font-black transition-colors duration-300 pointer-events-none select-none
-        ${moodLevel === MoodLevel.None ? 'text-slate-500' : 'text-slate-950/80'}
+        text-[10px] md:text-sm font-black transition-colors duration-300 pointer-events-none select-none relative z-10
+        ${!isFilled ? 'text-slate-500' : 'text-slate-950/80'}
+        ${isToday && !isFilled ? 'text-cyan-200' : ''}
+        ${isHighlighted ? '!text-white' : ''}
       `}>
         {day}
       </span>
 
+      {/* Partículas para HOY (si está vacío) */}
+      {isToday && !isFilled && (
+        <div className="absolute inset-0 pointer-events-none opacity-50">
+             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-cyan-400/10 blur-sm"></div>
+        </div>
+      )}
+
       {/* Tooltip Hover (Solo Desktop) */}
-      <div className="hidden md:block opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-slate-900 text-white text-[10px] py-1 px-2 rounded pointer-events-none whitespace-nowrap z-10 border border-slate-700 shadow-2xl transition-opacity">
-        Día {day}
+      <div className="hidden md:block opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-slate-900 text-white text-[10px] py-1 px-2 rounded pointer-events-none whitespace-nowrap z-30 border border-slate-700 shadow-2xl transition-opacity">
+        {isToday ? "¡HOY!" : `Día ${day}`}
       </div>
 
-      {/* Indicador de Nota */}
+      {/* Indicador de Nota (Estilo Esquina High Contrast) */}
       {hasNote && (
-        <div className={`absolute -top-1 -right-1 w-2.5 h-2.5 md:w-3 md:h-3 bg-yellow-300 rounded-full border-2 border-slate-900 shadow-[0_0_10px_rgba(253,224,71,0.5)] z-20 transition-all group-hover:scale-125`} />
+        <div className={`
+            absolute top-0 right-0
+            w-3 h-3 md:w-4 md:h-4
+            bg-white
+            border-l-2 border-b-2 border-slate-950
+            rounded-bl-md
+            z-20 
+            pointer-events-none
+        `} />
       )}
     </button>
   );
@@ -63,14 +109,16 @@ const DayCell = memo(({ day, monthIndex, currentYear, entry, onClick }: DayCellP
   const prevEntry = prev.entry;
   const nextEntry = next.entry;
   
+  // Comparación optimizada: Incluimos isHighlighted para re-renderizar cuando cambia la búsqueda
   const isSameData = 
     prevEntry?.level === nextEntry?.level && 
-    prevEntry?.note === nextEntry?.note;
+    prevEntry?.note === nextEntry?.note &&
+    prev.isHighlighted === next.isHighlighted;
 
   return isSameData;
 });
 
-const Calendar: React.FC<CalendarProps> = ({ yearData, onDayClick, currentYear }) => {
+const Calendar: React.FC<CalendarProps> = ({ yearData, onDayClick, currentYear, highlightedDates }) => {
   const [isNavOpen, setIsNavOpen] = useState(false);
   
   const scrollToMonth = (index: number) => {
@@ -139,8 +187,9 @@ const Calendar: React.FC<CalendarProps> = ({ yearData, onDayClick, currentYear }
           </div>
       </div>
 
-      {/* Main Grid */}
-      <div className="w-full max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 p-4 pb-32">
+      {/* Main Grid - Updated for bigger cells on Desktop */}
+      {/* max-w aumented to 1600px, and grid-cols limited to 3 on XL to ensure big cells */}
+      <div className="w-full max-w-[1600px] mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 p-4 pb-32">
         {MONTHS.map((monthName, mIndex) => {
           const daysInMonth = new Date(currentYear, mIndex + 1, 0).getDate();
           const firstDayOfMonth = new Date(currentYear, mIndex, 1).getDay();
@@ -182,6 +231,7 @@ const Calendar: React.FC<CalendarProps> = ({ yearData, onDayClick, currentYear }
                         currentYear={currentYear}
                         entry={yearData[dateStr]}
                         onClick={onDayClick}
+                        isHighlighted={highlightedDates.includes(dateStr)}
                     />
                   );
                 })}

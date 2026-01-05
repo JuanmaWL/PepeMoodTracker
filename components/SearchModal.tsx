@@ -8,17 +8,11 @@ interface SearchModalProps {
   onClose: () => void;
   data: YearData;
   onJumpToDate: (dateStr: string) => void;
+  onHighlightResults: (dates: string[]) => void;
 }
 
-const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, data, onJumpToDate }) => {
+const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, data, onJumpToDate, onHighlightResults }) => {
   const [query, setQuery] = useState('');
-
-  // Resetear la búsqueda cuando se abre el modal
-  useEffect(() => {
-    if (isOpen) {
-      setQuery('');
-    }
-  }, [isOpen]);
 
   // Fixed the type error by explicitly casting Object.entries(data) to [string, DayData][]
   const results = useMemo(() => {
@@ -27,6 +21,12 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, data, onJump
       .filter(([_, entry]) => entry.note.toLowerCase().includes(query.toLowerCase()))
       .sort((a, b) => b[0].localeCompare(a[0]));
   }, [data, query]);
+
+  // Efecto para actualizar los highlights en el calendario principal en tiempo real
+  useEffect(() => {
+      const dates = results.map(([date]) => date);
+      onHighlightResults(dates);
+  }, [results, onHighlightResults]);
 
   if (!isOpen) return null;
 

@@ -50,6 +50,9 @@ const App: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
+  // Estado para los highlights de búsqueda en el calendario
+  const [highlightedDates, setHighlightedDates] = useState<string[]>([]);
+
   // Initial particle count based on device width
   const [particleCount, setParticleCount] = useState(() => window.innerWidth < 768 ? 40 : 150);
 
@@ -289,7 +292,13 @@ const App: React.FC = () => {
         REGISTRAR HOY
       </button>
 
-      <Calendar yearData={yearData} onDayClick={handleDayClick} currentYear={currentYear} />
+      {/* CALENDARIO CON HIGHLIGHTS */}
+      <Calendar 
+        yearData={yearData} 
+        onDayClick={handleDayClick} 
+        currentYear={currentYear} 
+        highlightedDates={highlightedDates}
+      />
 
       <footer className="mt-auto py-10 opacity-30">
         <p className="text-[10px] font-black tracking-[0.3em] uppercase">developed by <span className="text-green-500">Juasmio</span></p>
@@ -335,6 +344,7 @@ const App: React.FC = () => {
                 setSelectedDate(date);
                 setIsMoodModalOpen(true);
             }}
+            onHighlightResults={(dates) => setHighlightedDates(dates)}
             />
         )}
 
