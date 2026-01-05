@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Save, MessageSquareText, Trash2, Download, Loader2, Image as ImageIcon, Sparkles, RefreshCw, ChevronRight, Info, Star } from 'lucide-react';
 import { MOODS } from '../constants';
@@ -20,10 +21,8 @@ const SAVE_PHRASES = [
   "SUBIR AL ARCHIVO", "SINCRONIZAR VIVENCIA", "PUBLICAR LORE", "ESTABLECER CANON"
 ];
 
-// URL directa a un Pepe "Base" (Sad/Neutral) que permita CORS para poder editarlo
-// Usamos una versión fiable alojada para evitar errores de lienzo sucio (tainted canvas)
-const PEPE_BASE_SOURCE = "https://i.imgur.com/KJSjEue.png"; // Pepe clásico neutro para mejor edición
-const PEPE_FAIL_SOURCE = "https://media.tenor.com/_hOeFNfH_58AAAAj/pepe-clown-clown-pepe.gif"; // Pepe Clown para cuando falla la IA
+const PEPE_BASE_SOURCE = "https://i.imgur.com/KJSjEue.png"; 
+const PEPE_FAIL_SOURCE = "https://media.tenor.com/_hOeFNfH_58AAAAj/pepe-clown-clown-pepe.gif";
 
 const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete, initialData, dateStr }) => {
   const [level, setLevel] = useState<MoodLevel>(MoodLevel.None);
@@ -55,7 +54,6 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
     }
   }, [isOpen, initialData]);
 
-  // AUTO-GENERACIÓN al abrir el modo meme
   useEffect(() => {
     if (isMemeMode && !memeUrl && !generatingMeme) {
         generateAutoEdit();
@@ -106,8 +104,6 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
     return lower.charAt(0).toUpperCase() + lower.slice(1);
   };
 
-  // --- NANO BANANA / PEPE MAGIC IMAGE EDITING LOGIC ---
-
   const getBase64FromUrl = async (url: string): Promise<string> => {
     return new Promise((resolve, reject) => {
         const img = new Image();
@@ -144,8 +140,6 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
 
         const ai = new GoogleGenAI({ apiKey: apiKey });
 
-        // 1. Obtener la imagen base como Base64
-        // Usamos una imagen interna/fallback si la carga falla
         let base64Image = "";
         try {
              base64Image = await getBase64FromUrl(PEPE_BASE_SOURCE);
@@ -156,7 +150,6 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
 
         const cleanBase64 = base64Image.split(',')[1];
         
-        // 2. Construir el prompt automático basado en la nota
         const moodLabel = MOODS[level].label;
         const contextPrompt = note.trim() 
             ? `Edita esta imagen de Pepe para que visualmente represente esta historia: "${note}". Mantén el estilo de Pepe.` 
@@ -164,7 +157,6 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
 
         const finalPrompt = `${contextPrompt} IMPORTANTE: Mantén al personaje de la rana Pepe, pero cambia su expresión, ropa o fondo según el contexto. Hazlo divertido y estilo meme.`;
 
-        // 3. Llamada a Gemini 2.5 Flash Image
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash-image',
             contents: {
@@ -180,7 +172,6 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
             }
         });
 
-        // 4. Extraer resultado
         let generatedImageBase64 = null;
         if (response.candidates && response.candidates[0].content && response.candidates[0].content.parts) {
             for (const part of response.candidates[0].content.parts) {
@@ -199,7 +190,6 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
 
     } catch (e) {
         console.error("Error editando imagen", e);
-        // Fallback gracioso cuando falla la API
         setMemeUrl(PEPE_FAIL_SOURCE); 
         setMagicExcuse("La IA está durmiendo la siesta o te falta API Key. Toma este payaso de consolación.");
     } finally {
@@ -219,10 +209,10 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
 
   // --- RENDER ---
 
-  // Invertimos el orden para que en desktop vaya de peor (izq) a mejor (der) o viceversa según preferencia.
-  // En este diseño: Izquierda (Fatal) -> Derecha (Legendario) es una progresión lógica
+  // Nueva escala de 6 niveles
   const moodLevels = [
-    MoodLevel.Fatal,
+    MoodLevel.Rage,
+    MoodLevel.Sadge,
     MoodLevel.Regular,
     MoodLevel.Normal,
     MoodLevel.MoiBiens,
@@ -230,14 +220,11 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
   ];
 
   const hasExistingData = initialData.level !== MoodLevel.None || (initialData.note && initialData.note.trim() !== "");
-
-  // Color de fondo dinámico según la selección actual
   const activeColor = level !== MoodLevel.None ? MOODS[level].color : 'transparent';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/95 backdrop-blur-md animate-in fade-in duration-300">
       
-      {/* Fondo ambiental dinámico */}
       <div 
         className="absolute inset-0 z-0 transition-colors duration-1000 ease-in-out opacity-20 pointer-events-none"
         style={{ background: `radial-gradient(circle at 50% 30%, ${activeColor}, transparent 70%)` }}
@@ -279,16 +266,10 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
         {/* Info / Legend Panel */}
         {showInfo && (
             <div className="bg-slate-950/80 border-b border-slate-800 p-4 animate-in slide-in-from-top-2 duration-300">
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
                     {moodLevels.map((lvl) => (
                         <div key={lvl} className="flex flex-col items-center bg-slate-900 rounded-xl p-2 border border-slate-800/50">
                             <span className="text-[10px] font-bold mb-1" style={{ color: MOODS[lvl].color }}>{MOODS[lvl].label}</span>
-                            <div className="flex gap-0.5">
-                                {[...Array(5)].map((_, i) => (
-                                    <Star key={i} size={8} className={i < lvl ? "fill-current" : "opacity-20"} style={{ color: MOODS[lvl].color }} />
-                                ))}
-                            </div>
-                            <span className="text-[9px] text-slate-500 mt-1">{lvl}/5 Puntos</span>
                         </div>
                     ))}
                 </div>
@@ -298,7 +279,6 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
         {/* Content */}
         <div className="p-4 md:p-8 space-y-8 overflow-y-auto custom-scrollbar bg-gradient-to-b from-slate-900 to-slate-950">
           
-          {/* Mood Selection - Diseño "Holographic Cards" */}
           {!isMemeMode && (
           <div className="animate-in fade-in slide-in-from-left-4 duration-500">
             <div className="flex items-center gap-3 mb-6 px-1">
@@ -306,7 +286,8 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
               <div className="h-px flex-1 bg-gradient-to-r from-slate-800 to-transparent"></div>
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 md:gap-4">
+            {/* GRID ACTUALIZADA: 2 Columnas móvil, 3 Tablet, 6 Desktop */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
               {moodLevels.map((moodLvl) => {
                 const config = MOODS[moodLvl as MoodLevel];
                 const isSelected = level === moodLvl;
@@ -317,8 +298,8 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
                     disabled={isConfirmingDelete}
                     onClick={() => handleMoodSelect(moodLvl as MoodLevel)}
                     className={`
-                      group relative overflow-visible rounded-2xl transition-all duration-300 w-full flex md:flex-col items-center
-                      border-2
+                      group relative overflow-visible rounded-2xl transition-all duration-300 w-full flex flex-col items-center justify-between
+                      border-2 py-4
                       ${isSelected 
                         ? 'scale-[1.02] z-10 shadow-[0_0_20px_rgba(0,0,0,0.5)]' 
                         : 'hover:scale-[1.01] hover:bg-slate-800/50 border-slate-800 opacity-60 hover:opacity-100'
@@ -327,32 +308,26 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
                     `}
                     style={{ 
                       borderColor: isSelected ? config.color : undefined,
-                      backgroundColor: isSelected ? `${config.color}15` : 'transparent', // 15 = low opacity hex
+                      backgroundColor: isSelected ? `${config.color}15` : 'transparent',
                       boxShadow: isSelected ? `0 0 20px ${config.color}20` : undefined
                     }}
                   >
-                    {/* Background Gradient Effect on Hover/Active */}
                     <div 
                         className={`absolute inset-0 bg-gradient-to-br from-white/5 to-transparent transition-opacity duration-300 rounded-2xl ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} 
                         style={{ background: isSelected ? `linear-gradient(135deg, ${config.color}30 0%, transparent 100%)` : undefined }}
                     />
 
                     {/* Image Container */}
-                    <div className="p-3 md:p-4 shrink-0 relative">
-                        {/* EFECTO GLOW/PARTÍCULAS TRASERO (Solo seleccionado) */}
+                    <div className="p-2 shrink-0 relative mb-2">
                         {isSelected && (
                             <>
-                                {/* Aura pulsante (Respiración) */}
                                 <div className="absolute inset-0 bg-current rounded-full blur-xl opacity-40 animate-pulse"
                                      style={{ color: config.color }}></div>
-                                {/* Anillo de energía que se expande (Onda de choque) */}
-                                <div className="absolute inset-0 rounded-full border-2 opacity-0 animate-[ping_2.5s_cubic-bezier(0,0,0.2,1)_infinite]"
-                                     style={{ borderColor: config.color }}></div>
                             </>
                         )}
 
                         <div className={`
-                            w-16 h-16 md:w-24 md:h-24 rounded-full overflow-hidden transition-all duration-500 relative
+                            w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden transition-all duration-500 relative
                             ${isSelected 
                                 ? 'scale-110 shadow-2xl ring-2 ring-offset-2 ring-offset-slate-900 animate-[pulse_3s_ease-in-out_infinite]' 
                                 : 'group-hover:scale-105 grayscale-[0.5] group-hover:grayscale-0'
@@ -363,7 +338,6 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
                             borderColor: config.color
                         }}
                         >
-                            {/* Inner Background for image (Changed to white for clean transparent images) */}
                             <div className="absolute inset-0 bg-white"></div>
                             <img 
                                 src={config.image} 
@@ -374,48 +348,20 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
                     </div>
 
                     {/* Text Container */}
-                    <div className="flex-1 md:w-full flex flex-col justify-center md:items-center p-3 md:pt-0 md:pb-5 text-left md:text-center relative z-10">
+                    <div className="flex-1 w-full flex flex-col justify-end items-center text-center relative z-10">
                       <div 
-                        className="font-black text-sm md:text-lg uppercase tracking-tight leading-none mb-1 transition-colors" 
-                        style={{ color: isSelected ? config.color : '#94a3b8' }} // slate-400 if not selected
+                        className="font-black text-xs sm:text-sm uppercase tracking-tight leading-none mb-1 transition-colors px-1" 
+                        style={{ color: isSelected ? config.color : '#94a3b8' }}
                       >
                         {config.label}
                       </div>
-                      <div className={`text-[10px] font-bold uppercase tracking-wider transition-colors ${isSelected ? 'text-slate-300' : 'text-slate-600'}`}>
+                      <div className={`text-[9px] font-bold uppercase tracking-wider transition-colors ${isSelected ? 'text-slate-300' : 'text-slate-600'}`}>
                         {config.subLabel}
-                      </div>
-
-                      {/* STAR RATING VISUALIZER */}
-                      {/* Fixed: w-full to span, justify-start for mobile stability, h-3 for fixed height */}
-                      <div className="w-full flex gap-1 mt-2 justify-start md:justify-center items-center h-3">
-                          {[...Array(5)].map((_, i) => (
-                             <Star 
-                                key={i} 
-                                size={10} 
-                                className={`${i < moodLvl ? "fill-current" : "opacity-20"} transition-all duration-300`}
-                                style={{ 
-                                    color: isSelected || i < moodLvl ? config.color : 'currentColor',
-                                    // Efecto Glow para las estrellas activas cuando el mood está seleccionado
-                                    filter: (isSelected && i < moodLvl) ? `drop-shadow(0 0 4px ${config.color})` : 'none',
-                                    // Scale con transformOrigin center para evitar desplazamiento
-                                    transform: isSelected && i < moodLvl ? 'scale(1.3)' : 'scale(1)',
-                                    transformOrigin: 'center'
-                                }}
-                             />
-                          ))}
                       </div>
                     </div>
 
-                    {/* Mobile: Arrow indicator */}
                     {isSelected && (
-                        <div className="md:hidden pr-4 text-white animate-pulse">
-                            <ChevronRight size={20} style={{ color: config.color }} />
-                        </div>
-                    )}
-                    
-                    {/* Desktop: Active Bottom Bar */}
-                    {isSelected && (
-                        <div className="absolute bottom-0 left-0 right-0 h-1 hidden md:block" style={{ backgroundColor: config.color }}></div>
+                        <div className="absolute bottom-0 left-0 right-0 h-1" style={{ backgroundColor: config.color }}></div>
                     )}
                   </button>
                 );
@@ -427,7 +373,6 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
           {/* Note Input */}
           <div className={`animate-in slide-in-from-bottom duration-500 delay-150 ${isConfirmingDelete ? 'opacity-30 pointer-events-none' : ''}`}>
              
-             {/* Header de la sección de texto + Botón Magic */}
              <div className="flex justify-between items-center mb-4 px-1">
               <div className="flex items-center gap-2">
                 <MessageSquareText size={18} className="text-slate-500" />
@@ -465,7 +410,6 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
                         <button onClick={handleCloseMemeMode} className="text-slate-500 hover:text-white text-[10px] font-bold uppercase">Cerrar</button>
                     </div>
                     
-                    {/* Visualizador de Imagen */}
                     <div className="relative aspect-square w-full max-w-[350px] mx-auto bg-slate-900 rounded-xl overflow-hidden border border-slate-800 flex items-center justify-center mb-4">
                         <canvas ref={canvasRef} className="hidden" />
                         
@@ -484,7 +428,6 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
                              </div>
                         )}
                         
-                        {/* Fondo base visible mientras carga para dar feedback visual */}
                         {generatingMeme && (
                              <img 
                                 src={PEPE_BASE_SOURCE} 
@@ -494,7 +437,6 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
                         )}
                     </div>
                     
-                    {/* Mensaje de Excusa si falló */}
                     {magicExcuse && (
                         <div className="mb-4 px-4 py-2 bg-red-500/10 border border-red-500/20 rounded-xl">
                             <p className="text-[10px] text-red-300 font-bold italic">
@@ -503,7 +445,6 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
                         </div>
                     )}
 
-                    {/* Área de Control */}
                     <div className="space-y-3">
                         {memeUrl && !generatingMeme && (
                             <div className="flex gap-2 justify-center">

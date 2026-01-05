@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { YearData, MoodLevel } from '../types';
 import { MOODS } from '../constants';
@@ -122,6 +123,15 @@ const Heatmap: React.FC<HeatmapProps> = ({ data, year }) => {
     </div>
   );
 
+  const moodOrder = [
+      MoodLevel.Rage, 
+      MoodLevel.Sadge, 
+      MoodLevel.Regular, 
+      MoodLevel.Normal, 
+      MoodLevel.MoiBiens, 
+      MoodLevel.Legendary
+  ];
+
   return (
     <div className="w-full flex flex-col items-center">
       <div className="w-full bg-slate-950/30 p-2 md:p-6 rounded-3xl border border-slate-800/50 transition-all duration-500">
@@ -134,7 +144,7 @@ const Heatmap: React.FC<HeatmapProps> = ({ data, year }) => {
       </div>
       
       <div className="flex flex-wrap justify-center gap-2 md:gap-4 mt-4 opacity-70 px-2">
-        {[MoodLevel.Fatal, MoodLevel.Regular, MoodLevel.Normal, MoodLevel.MoiBiens, MoodLevel.Legendary].map(lvl => (
+        {moodOrder.map(lvl => (
             <div key={lvl} className="flex items-center gap-1.5 md:gap-2">
                 <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full" style={{ backgroundColor: MOODS[lvl as MoodLevel].color }} />
                 <span className="text-[8px] md:text-[9px] font-bold uppercase text-slate-400">{MOODS[lvl as MoodLevel].label}</span>

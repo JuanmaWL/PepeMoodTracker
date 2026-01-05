@@ -1,11 +1,12 @@
 
 export enum MoodLevel {
   None = 0,
-  Fatal = 1,
-  Regular = 2,
-  Normal = 3,
-  MoiBiens = 4,
-  Legendary = 5,
+  Rage = 1,     // Enfadado (Alta energía negativa)
+  Sadge = 2,    // Triste (Baja energía negativa)
+  Regular = 3,  // Poker/Meh (Neutro bajo)
+  Normal = 4,   // Ok (Neutro alto)
+  MoiBiens = 5, // Good (Positivo)
+  Legendary = 6 // God tier (Muy positivo)
 }
 
 export interface DayData {

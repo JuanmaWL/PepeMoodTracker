@@ -25,8 +25,8 @@ type Tab = 'stats' | 'achievements';
 
 const PEPE_LOADING_GIF = "https://media.tenor.com/ZXGXXDLOt00AAAAj/pepe-noting.gif";
 const PEPE_STATIC_JUDGES = [
-  "https://i.imgur.com/b9Q4BeW.png", // Tuxedo
-  "https://i.imgur.com/X8dsbBP.png"  // Smart
+  "https://i.imgur.com/b9Q4BeW.png", 
+  "https://i.imgur.com/X8dsbBP.png" 
 ];
 
 const LOADING_PHRASES = [
@@ -98,17 +98,21 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
     if (filteredEntries.length === 0) return null;
 
     const totalDays = filteredEntries.length;
+    // Ajustar el cálculo de promedio para que tenga sentido con la nueva escala
+    // Aunque ahora es menos lineal (Rage=1 vs Sadge=2), sigue sirviendo como métrica de "Bienestar general"
     const totalScore = filteredEntries.reduce((acc, [_, d]) => acc + d.level, 0);
     const average = totalScore / totalDays;
 
-    const distribution = [0, 0, 0, 0, 0, 0]; 
+    // Distribution array size = 7 (0 to 6)
+    const distribution = [0, 0, 0, 0, 0, 0, 0]; 
     filteredEntries.forEach(([_, d]) => distribution[d.level]++);
 
     const pieData = [
-        { name: 'Fatal', value: distribution[MoodLevel.Fatal], color: MOODS[MoodLevel.Fatal].color },
-        { name: 'Regular', value: distribution[MoodLevel.Regular], color: MOODS[MoodLevel.Regular].color },
+        { name: 'Rage', value: distribution[MoodLevel.Rage], color: MOODS[MoodLevel.Rage].color },
+        { name: 'Sadge', value: distribution[MoodLevel.Sadge], color: MOODS[MoodLevel.Sadge].color },
+        { name: 'Poker', value: distribution[MoodLevel.Regular], color: MOODS[MoodLevel.Regular].color },
         { name: 'Normal', value: distribution[MoodLevel.Normal], color: MOODS[MoodLevel.Normal].color },
-        { name: 'Moi biens', value: distribution[MoodLevel.MoiBiens], color: MOODS[MoodLevel.MoiBiens].color },
+        { name: 'Moi Biens', value: distribution[MoodLevel.MoiBiens], color: MOODS[MoodLevel.MoiBiens].color },
         { name: 'Legendario', value: distribution[MoodLevel.Legendary], color: MOODS[MoodLevel.Legendary].color },
     ].filter(d => d.value > 0);
 
@@ -135,7 +139,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
     const radarData = weekLabels.map((label, i) => ({
         subject: label,
         A: weekStats[i].count > 0 ? parseFloat((weekStats[i].sum / weekStats[i].count).toFixed(2)) : 0,
-        fullMark: 5
+        fullMark: 6
     }));
     const shiftedRadarData = [...radarData.slice(1), radarData[0]];
 
@@ -301,13 +305,15 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
     const chartMargins = { top: 10, right: 30, left: 0, bottom: 5 };
     const gradients = (
         <defs>
+            {/* Gradiente Vertical para el Área: De Turquesa (High) a Rojo (Low) */}
             <linearGradient id="moodGradientArea" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#22c55e" stopOpacity={0.4}/>
+                <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.4}/>
                 <stop offset="95%" stopColor="#ef4444" stopOpacity={0.0}/>
             </linearGradient>
+            {/* Gradiente para la Línea: Igual, Turquesa -> Lima -> Rojo */}
             <linearGradient id="moodGradientLine" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#22c55e" stopOpacity={1}/>
-                <stop offset="50%" stopColor="#facc15" stopOpacity={1}/>
+                <stop offset="0%" stopColor="#06b6d4" stopOpacity={1}/>
+                <stop offset="50%" stopColor="#84cc16" stopOpacity={1}/>
                 <stop offset="100%" stopColor="#ef4444" stopOpacity={1}/>
             </linearGradient>
         </defs>
@@ -316,7 +322,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
         <>
             <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
             <XAxis dataKey="date" stroke="#475569" tick={{fontSize: 10, fill: '#64748b'}} tickMargin={10} minTickGap={30} />
-            <YAxis domain={[0, 6]} ticks={[1, 2, 3, 4, 5]} tick={{fontSize: 11, fill: '#94a3b8', fontWeight: 'bold'}} width={30} tickFormatter={(val) => val} />
+            <YAxis domain={[0, 7]} ticks={[1, 2, 3, 4, 5, 6]} tick={{fontSize: 11, fill: '#94a3b8', fontWeight: 'bold'}} width={30} tickFormatter={(val) => val} />
             <Tooltip 
                 cursor={{ fill: '#334155', opacity: 0.2 }}
                 contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)' }}
@@ -350,8 +356,8 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
             <RadarChart cx="50%" cy="50%" outerRadius="75%" data={stats.radarData}>
                 <PolarGrid stroke="#334155" />
                 <PolarAngleAxis dataKey="subject" tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 'bold' }} />
-                <PolarRadiusAxis angle={30} domain={[0, 5]} tick={false} axisLine={false} />
-                <Radar name="Mood Medio" dataKey="A" stroke="#22c55e" strokeWidth={3} fill="#22c55e" fillOpacity={0.4} />
+                <PolarRadiusAxis angle={30} domain={[0, 6]} tick={false} axisLine={false} />
+                <Radar name="Mood Medio" dataKey="A" stroke="#06b6d4" strokeWidth={3} fill="#06b6d4" fillOpacity={0.4} />
                 <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '12px' }} itemStyle={{ color: '#fff' }} formatter={(value: number) => [value, "Promedio"]} />
             </RadarChart>
         );
@@ -516,10 +522,10 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                                     <div className="bg-slate-700/50 p-4 rounded-2xl border border-slate-600 flex flex-col justify-center items-center text-center">
                                         <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Media</span>
                                         <div className="flex items-baseline gap-1">
-                                            <span className="text-3xl font-black" style={{ color: stats.average >= 3.5 ? '#22c55e' : stats.average >= 2.5 ? '#facc15' : '#ef4444' }}>
+                                            <span className="text-3xl font-black" style={{ color: stats.average >= 5 ? '#22c55e' : stats.average >= 3 ? '#eab308' : '#ef4444' }}>
                                                 {stats.average.toFixed(1)}
                                             </span>
-                                            <span className="text-xs text-slate-500 font-bold">/ 5</span>
+                                            <span className="text-xs text-slate-500 font-bold">/ 6</span>
                                         </div>
                                     </div>
                                 </div>

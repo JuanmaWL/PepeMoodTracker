@@ -65,7 +65,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: Skull,
     color: '#ef4444', // Red
     condition: (data: YearData) => {
-        return Object.values(data).filter(d => d.level === MoodLevel.Fatal).length >= 5;
+        return Object.values(data).filter(d => d.level === MoodLevel.Rage).length >= 5;
     }
   },
   {

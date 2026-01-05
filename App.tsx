@@ -139,13 +139,22 @@ const App: React.FC = () => {
                     return rest;
                  });
             } else {
-                const orderedMoods = [MoodLevel.Fatal, MoodLevel.Regular, MoodLevel.Normal, MoodLevel.MoiBiens, MoodLevel.Legendary];
+                const orderedMoods = [
+                    MoodLevel.Rage,
+                    MoodLevel.Sadge,
+                    MoodLevel.Regular,
+                    MoodLevel.Normal,
+                    MoodLevel.MoiBiens,
+                    MoodLevel.Legendary
+                ];
                 let closestMood: MoodLevel | null = null;
                 let minDist = Number.MAX_VALUE;
-                const RADIUS = 75; 
+                const RADIUS = 85; 
+                const totalSpan = 180;
+                const step = totalSpan / (orderedMoods.length - 1);
                 
                 orderedMoods.forEach((mood, index) => {
-                     const angleDeg = 180 - (index * 45);
+                     const angleDeg = 180 - (index * step);
                      const rad = angleDeg * (Math.PI / 180);
                      const ix = Math.cos(rad) * RADIUS;
                      const iy = -Math.sin(rad) * RADIUS;
