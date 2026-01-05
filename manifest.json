@@ -1,6 +1,6 @@
 {
-  "name": "Pepe Mood Year",
-  "short_name": "PepeMood",
+  "name": "Pepe's Feels Tracker",
+  "short_name": "PepeLore",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#020617",
