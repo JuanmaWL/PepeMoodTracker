@@ -9,7 +9,7 @@ import PepeOracle from './components/PepeOracle';
 import Particles from './components/Particles';
 import { YearData, DayData, MoodLevel } from './types';
 import { STORAGE_KEY, PEPE_BANNER } from './constants';
-import { Plus, Flame, Trash2, AlertTriangle } from 'lucide-react';
+import { Plus, Flame, Trash2, AlertTriangle, Settings, Sliders } from 'lucide-react';
 import SoundManager from './utils/sounds';
 
 const APP_TITLES = [
@@ -34,7 +34,11 @@ const App: React.FC = () => {
   const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [isCloudModalOpen, setIsCloudModalOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+
+  // Initial particle count based on device width
+  const [particleCount, setParticleCount] = useState(() => window.innerWidth < 768 ? 40 : 150);
 
   // Lógica de Vibración Háptica para móviles
   const triggerHaptic = useCallback((type: 'light' | 'medium' | 'heavy' = 'light') => {
@@ -181,7 +185,7 @@ const App: React.FC = () => {
 
   return (
     <div className="flex flex-col items-center min-h-screen pb-24 overflow-x-hidden text-slate-100 relative">
-      <Particles />
+      <Particles count={particleCount} />
       
       <header className="mt-8 mb-6 text-center flex flex-col items-center relative w-full px-4">
         {streak > 0 && (
@@ -253,38 +257,99 @@ const App: React.FC = () => {
         onReset={() => { triggerHaptic('medium'); setShowResetConfirm(true); }}
         onSearch={() => { triggerHaptic('light'); setIsSearchModalOpen(true); }}
         onCloud={() => { triggerHaptic('light'); setIsCloudModalOpen(true); }}
+        onSettings={() => { triggerHaptic('light'); setIsSettingsOpen(true); }}
       />
 
-      <MoodModal
-        isOpen={isMoodModalOpen}
-        onClose={() => setIsMoodModalOpen(false)}
-        onSave={handleSaveDay}
-        onDelete={handleDeleteDay}
-        dateStr={selectedDate || ''}
-        initialData={selectedDate ? yearData[selectedDate] || { level: MoodLevel.None, note: '' } : { level: MoodLevel.None, note: '' }}
-      />
+      {/* OPTIMIZACIÓN DE MEMORIA: Renderizado Condicional (Unmount on Close) */}
+      
+      {isMoodModalOpen && (
+        <MoodModal
+          isOpen={isMoodModalOpen}
+          onClose={() => setIsMoodModalOpen(false)}
+          onSave={handleSaveDay}
+          onDelete={handleDeleteDay}
+          dateStr={selectedDate || ''}
+          initialData={selectedDate ? yearData[selectedDate] || { level: MoodLevel.None, note: '' } : { level: MoodLevel.None, note: '' }}
+        />
+      )}
 
-      <StatsModal
-        isOpen={isStatsModalOpen}
-        onClose={() => setIsStatsModalOpen(false)}
-        data={yearData}
-      />
+      {isStatsModalOpen && (
+        <StatsModal
+          isOpen={isStatsModalOpen}
+          onClose={() => setIsStatsModalOpen(false)}
+          data={yearData}
+        />
+      )}
 
-      <SearchModal
-        isOpen={isSearchModalOpen}
-        onClose={() => setIsSearchModalOpen(false)}
-        data={yearData}
-        onJumpToDate={(date) => {
-          setSelectedDate(date);
-          setIsMoodModalOpen(true);
-        }}
-      />
+      {isSearchModalOpen && (
+        <SearchModal
+          isOpen={isSearchModalOpen}
+          onClose={() => setIsSearchModalOpen(false)}
+          data={yearData}
+          onJumpToDate={(date) => {
+            setSelectedDate(date);
+            setIsMoodModalOpen(true);
+          }}
+        />
+      )}
 
-      <CloudModal
-        isOpen={isCloudModalOpen}
-        onClose={() => setIsCloudModalOpen(false)}
-        data={yearData}
-      />
+      {isCloudModalOpen && (
+        <CloudModal
+          isOpen={isCloudModalOpen}
+          onClose={() => setIsCloudModalOpen(false)}
+          data={yearData}
+        />
+      )}
+
+      {isSettingsOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300" onClick={() => setIsSettingsOpen(false)}>
+           <div 
+            className="bg-slate-900 border border-slate-700 w-full max-w-sm rounded-[2rem] shadow-2xl overflow-hidden p-6 relative" 
+            onClick={(e) => e.stopPropagation()}
+           >
+              <div className="flex items-center gap-3 mb-6">
+                 <div className="p-3 bg-slate-800 rounded-xl text-slate-300">
+                    <Sliders size={20} />
+                 </div>
+                 <div>
+                    <h3 className="text-lg font-black text-white uppercase tracking-tight">Configuración</h3>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Ajustes visuales</p>
+                 </div>
+              </div>
+
+              <div className="space-y-6">
+                  <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                          <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Intensidad del Pantano</label>
+                          <span className="text-xs font-mono text-green-400 bg-green-400/10 px-2 py-0.5 rounded">{particleCount}</span>
+                      </div>
+                      
+                      <div className="relative h-6 flex items-center">
+                          <input 
+                            type="range" 
+                            min="0" 
+                            max="800" 
+                            step="10" 
+                            value={particleCount} 
+                            onChange={(e) => setParticleCount(Number(e.target.value))}
+                            className="w-full h-2 bg-slate-800 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-green-500 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:hover:scale-125 [&::-webkit-slider-thumb]:transition-all"
+                          />
+                      </div>
+                      <p className="text-[10px] text-slate-500 italic">
+                         Controla la cantidad de partículas. Cuidado: valores altos pueden ralentizar móviles antiguos.
+                      </p>
+                  </div>
+
+                  <button 
+                    onClick={() => setIsSettingsOpen(false)}
+                    className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white font-black uppercase text-xs rounded-xl transition-colors"
+                  >
+                    Listo
+                  </button>
+              </div>
+           </div>
+        </div>
+      )}
 
       {showResetConfirm && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-xl animate-in fade-in duration-300">

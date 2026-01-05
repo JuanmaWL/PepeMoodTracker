@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Download, Upload, BarChart2, RotateCcw, Search, Cloud } from 'lucide-react';
+import { Download, Upload, BarChart2, RotateCcw, Search, Cloud, Settings } from 'lucide-react';
 import SoundManager from '../utils/sounds';
 
 interface FloatingMenuProps {
@@ -9,9 +9,10 @@ interface FloatingMenuProps {
   onReset: () => void;
   onSearch: () => void;
   onCloud: () => void;
+  onSettings: () => void;
 }
 
-const FloatingMenu: React.FC<FloatingMenuProps> = ({ onExport, onImport, onStats, onReset, onSearch, onCloud }) => {
+const FloatingMenu: React.FC<FloatingMenuProps> = ({ onExport, onImport, onStats, onReset, onSearch, onCloud, onSettings }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImportClick = () => {
@@ -88,21 +89,13 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({ onExport, onImport, onStats
         animate-in slide-in-from-bottom-10 fade-in duration-500
       ">
         
+        {/* GRUPO 1: ANÁLISIS & LECTURA */}
         <MenuButton 
-          icon={Download} 
-          label="Exportar" 
-          onClick={() => handleClick(onExport)} 
-          colorClass="hover:text-green-400"
+          icon={BarChart2} 
+          label="Stats" 
+          onClick={() => handleClick(onStats)} 
+          colorClass="hover:text-blue-400"
         />
-
-        <MenuButton 
-          icon={Upload} 
-          label="Importar" 
-          onClick={handleImportClick} 
-          colorClass="hover:text-indigo-400"
-        />
-
-        <Separator />
 
         <MenuButton 
           icon={Search} 
@@ -120,11 +113,19 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({ onExport, onImport, onStats
 
         <Separator />
 
+        {/* GRUPO 2: GESTIÓN DE DATOS */}
         <MenuButton 
-          icon={BarChart2} 
-          label="Stats" 
-          onClick={() => handleClick(onStats)} 
-          colorClass="hover:text-blue-400"
+          icon={Download} 
+          label="Exportar" 
+          onClick={() => handleClick(onExport)} 
+          colorClass="hover:text-green-400"
+        />
+
+        <MenuButton 
+          icon={Upload} 
+          label="Importar" 
+          onClick={handleImportClick} 
+          colorClass="hover:text-indigo-400"
         />
 
         <MenuButton 
@@ -132,6 +133,16 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({ onExport, onImport, onStats
           label="Reset" 
           onClick={() => handleClick(onReset)} 
           colorClass="hover:text-red-500"
+        />
+
+        <Separator />
+
+        {/* GRUPO 3: CONFIGURACIÓN */}
+        <MenuButton 
+          icon={Settings} 
+          label="Config" 
+          onClick={() => handleClick(onSettings)} 
+          colorClass="hover:text-slate-200"
           rotateIcon={true}
         />
 

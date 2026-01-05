@@ -1,6 +1,10 @@
 import React, { useEffect, useRef, memo } from 'react';
 
-const Particles: React.FC = () => {
+interface ParticlesProps {
+  count: number;
+}
+
+const Particles: React.FC<ParticlesProps> = ({ count }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mouseRef = useRef({ x: -1000, y: -1000 }); // Inicializar lejos para evitar glitch inicial
 
@@ -14,10 +18,9 @@ const Particles: React.FC = () => {
     let animationFrameId: number;
     let particles: Particle[] = [];
     
-    // Configuración según dispositivo
+    // Configuración optimizada
     const isMobile = window.innerWidth < 768;
-    const particleCount = isMobile ? 40 : 80; // Cantidad equilibrada para no saturar
-
+    
     // Paleta de colores "Pepe Magic Swamp" (Verdes tóxicos y mágicos)
     const colors = [
       '74, 222, 128', // Green-400 (Neon)
@@ -130,12 +133,21 @@ const Particles: React.FC = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
       particles = [];
-      for (let i = 0; i < particleCount; i++) {
+      for (let i = 0; i < count; i++) {
         particles.push(new Particle());
       }
     };
 
     const animate = () => {
+      // OPTIMIZACIÓN CRÍTICA: Detener la animación si la pestaña no está visible
+      if (document.hidden) {
+        // Volver a comprobar en un rato pequeño, no dibujar nada
+        setTimeout(() => {
+             animationFrameId = requestAnimationFrame(animate);
+        }, 100);
+        return;
+      }
+
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
       particles.forEach((p) => {
@@ -164,7 +176,6 @@ const Particles: React.FC = () => {
         }
     };
 
-    // Resetear posición del mouse cuando sale para que las partículas vuelvan a su sitio
     const handleMouseLeave = () => {
         mouseRef.current.x = -1000;
         mouseRef.current.y = -1000;
@@ -173,7 +184,7 @@ const Particles: React.FC = () => {
     window.addEventListener('resize', handleResize);
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('touchmove', handleTouchMove);
-    document.addEventListener('mouseleave', handleMouseLeave); // Detectar salida del documento
+    document.addEventListener('mouseleave', handleMouseLeave);
 
     return () => {
       cancelAnimationFrame(animationFrameId);
@@ -182,13 +193,13 @@ const Particles: React.FC = () => {
       window.removeEventListener('touchmove', handleTouchMove);
       document.removeEventListener('mouseleave', handleMouseLeave);
     };
-  }, []);
+  }, [count]);
 
   return (
     <canvas
       ref={canvasRef}
       className="fixed inset-0 pointer-events-none z-0" 
-      style={{ mixBlendMode: 'screen' }} // Ayuda a que los colores brillen sobre el fondo oscuro
+      style={{ mixBlendMode: 'screen' }} 
     />
   );
 };
