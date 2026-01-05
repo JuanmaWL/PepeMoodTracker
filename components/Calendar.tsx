@@ -54,7 +54,7 @@ const DayCell = memo(({
     today.getFullYear() === currentYear;
 
   // Refs para gestión de gestos
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isLongPressTriggered = useRef(false);
   const startCoord = useRef({ x: 0, y: 0 });
 

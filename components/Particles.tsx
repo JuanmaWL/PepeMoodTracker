@@ -1,14 +1,18 @@
+
 import React, { useEffect, useRef, memo } from 'react';
 
 interface ParticlesProps {
   count: number;
+  enabled: boolean;
 }
 
-const Particles: React.FC<ParticlesProps> = ({ count }) => {
+const Particles: React.FC<ParticlesProps> = ({ count, enabled }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const mouseRef = useRef({ x: -1000, y: -1000 }); // Inicializar lejos para evitar glitch inicial
+  const mouseRef = useRef({ x: -1000, y: -1000 }); 
 
   useEffect(() => {
+    if (!enabled) return;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -18,16 +22,14 @@ const Particles: React.FC<ParticlesProps> = ({ count }) => {
     let animationFrameId: number;
     let particles: Particle[] = [];
     
-    // Configuración optimizada
     const isMobile = window.innerWidth < 768;
     
-    // Paleta de colores "Pepe Magic Swamp" (Verdes tóxicos y mágicos)
     const colors = [
-      '74, 222, 128', // Green-400 (Neon)
-      '34, 197, 94',  // Green-500 (Classic Pepe)
-      '132, 204, 22', // Lime-500 (Toxic)
-      '16, 185, 129', // Emerald-500 (Deep)
-      '167, 139, 250' // Violet (Magic accent - muy sutil)
+      '74, 222, 128', 
+      '34, 197, 94',  
+      '132, 204, 22', 
+      '16, 185, 129', 
+      '167, 139, 250' 
     ];
 
     class Particle {
@@ -50,47 +52,38 @@ const Particles: React.FC<ParticlesProps> = ({ count }) => {
         this.y = Math.random() * canvas!.height;
         this.baseX = this.x;
         this.baseY = this.y;
-        this.size = Math.random() * (isMobile ? 1.5 : 2.5) + 0.5; // Tamaños variados pero sutiles
+        this.size = Math.random() * (isMobile ? 1.5 : 2.5) + 0.5;
         this.density = (Math.random() * 10) + 2;
         this.color = colors[Math.floor(Math.random() * colors.length)];
         
-        // Movimiento orgánico (Drift)
-        // Velocidad muy baja para que sea relajante
         this.directionX = (Math.random() * 0.4) - 0.2; 
         this.directionY = (Math.random() * 0.4) - 0.2;
         
-        // Oscilación
         this.angle = Math.random() * 360;
         this.velocity = Math.random() * 0.02 + 0.005;
         
-        // Ciclo de vida de opacidad (Pulsación)
         this.opacity = Math.random() * 0.5; 
         this.opacitySpeed = Math.random() * 0.005 + 0.002;
       }
 
       update(mouseX: number, mouseY: number) {
-        // 1. Movimiento Ambiental (Wrap Around - Efecto Pacman en bordes)
         this.x += this.directionX;
         this.y += this.directionY;
 
-        // Si sale por un lado, entra por el otro (mantiene la densidad constante)
         if (this.x > canvas!.width + 20) this.x = -20;
         if (this.x < -20) this.x = canvas!.width + 20;
         if (this.y > canvas!.height + 20) this.y = -20;
         if (this.y < -20) this.y = canvas!.height + 20;
 
-        // 2. Oscilación suave (Flotación)
         this.angle += this.velocity;
         this.x += Math.cos(this.angle) * 0.2;
         this.y += Math.sin(this.angle) * 0.2;
 
-        // 3. Pulsación de Opacidad (Respiración)
         this.opacity += this.opacitySpeed;
         if (this.opacity >= 0.6 || this.opacity <= 0.1) {
             this.opacitySpeed = -this.opacitySpeed;
         }
 
-        // 4. Interacción con Mouse (Repulsión Suave)
         const dx = mouseX - this.x;
         const dy = mouseY - this.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
@@ -112,14 +105,11 @@ const Particles: React.FC<ParticlesProps> = ({ count }) => {
       draw() {
         if (!ctx) return;
         ctx.beginPath();
-        // Dibujamos un círculo suave
         ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
         
-        // El color tiene la opacidad calculada
         ctx.fillStyle = `rgba(${this.color}, ${Math.abs(this.opacity)})`;
         ctx.fill();
         
-        // Brillo sutil solo si la partícula es "grande" y tiene buena opacidad (ahorra recursos)
         if (!isMobile && this.opacity > 0.3 && this.size > 2) {
             ctx.shadowBlur = 4;
             ctx.shadowColor = `rgba(${this.color}, 0.3)`;
@@ -139,9 +129,7 @@ const Particles: React.FC<ParticlesProps> = ({ count }) => {
     };
 
     const animate = () => {
-      // OPTIMIZACIÓN CRÍTICA: Detener la animación si la pestaña no está visible
       if (document.hidden) {
-        // Volver a comprobar en un rato pequeño, no dibujar nada
         setTimeout(() => {
              animationFrameId = requestAnimationFrame(animate);
         }, 100);
@@ -193,7 +181,9 @@ const Particles: React.FC<ParticlesProps> = ({ count }) => {
       window.removeEventListener('touchmove', handleTouchMove);
       document.removeEventListener('mouseleave', handleMouseLeave);
     };
-  }, [count]);
+  }, [count, enabled]); // Re-run if enabled changes
+
+  if (!enabled) return null;
 
   return (
     <canvas

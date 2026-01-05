@@ -1,3 +1,4 @@
+
 export enum MoodLevel {
   None = 0,
   Fatal = 1,
@@ -23,4 +24,13 @@ export interface MoodConfig {
   color: string;
   twColor: string; // Tailwind class equivalent for background
   image: string; // URL for the Pepe image
+}
+
+export interface Achievement {
+  id: string;
+  title: string;
+  description: string;
+  icon: React.ElementType;
+  condition: (data: YearData) => boolean;
+  color: string;
 }

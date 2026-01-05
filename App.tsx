@@ -4,13 +4,12 @@ import Calendar from './components/Calendar';
 import FloatingMenu from './components/FloatingMenu';
 import PepeOracle from './components/PepeOracle';
 import Particles from './components/Particles';
-import QuickLogMenu from './components/QuickLogMenu'; // Nueva importación
+import QuickLogMenu from './components/QuickLogMenu'; 
 import { YearData, DayData, MoodLevel } from './types';
 import { STORAGE_KEY, PEPE_BANNER } from './constants';
-import { Plus, Flame, Trash2, AlertTriangle, Settings, Sliders, Loader2 } from 'lucide-react';
+import { Plus, Flame, Trash2, AlertTriangle, Settings, Sliders, Loader2, BatteryCharging } from 'lucide-react';
 import SoundManager from './utils/sounds';
 
-// Lazy Loading para optimización de rendimiento
 const MoodModal = React.lazy(() => import('./components/MoodModal'));
 const StatsModal = React.lazy(() => import('./components/StatsModal'));
 const SearchModal = React.lazy(() => import('./components/SearchModal'));
@@ -50,7 +49,10 @@ const App: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
-  // States for Quick Log Radial Menu
+  // Estados de Configuración
+  const [ecoMode, setEcoMode] = useState(false);
+  const [particleCount, setParticleCount] = useState(() => window.innerWidth < 768 ? 40 : 150);
+
   const [quickLogState, setQuickLogState] = useState<{
     isActive: boolean;
     dateStr: string | null;
@@ -63,18 +65,23 @@ const App: React.FC = () => {
     currentPos: null
   });
   
-  // Ref para tener el estado fresco dentro de los event listeners globales
   const quickLogStateRef = useRef(quickLogState);
   
-  // Sincronizar ref
   useEffect(() => {
     quickLogStateRef.current = quickLogState;
   }, [quickLogState]);
 
   const [highlightedDates, setHighlightedDates] = useState<string[]>([]);
-  const [particleCount, setParticleCount] = useState(() => window.innerWidth < 768 ? 40 : 150);
 
-  // Lógica de Vibración Háptica
+  // Efecto para Modo Eco (Body Class)
+  useEffect(() => {
+      if (ecoMode) {
+          document.body.classList.add('eco-mode');
+      } else {
+          document.body.classList.remove('eco-mode');
+      }
+  }, [ecoMode]);
+
   const triggerHaptic = useCallback((type: 'light' | 'medium' | 'heavy' = 'light') => {
     if ('vibrate' in navigator) {
       const patterns = {
@@ -86,17 +93,12 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // Preload sounds
   useEffect(() => {
     SoundManager.preload();
   }, []);
 
-  // --- LOGIC FOR QUICK LOG DRAG TRACKING ---
-
   const handleGlobalMove = useCallback((e: TouchEvent | MouseEvent) => {
     if (!quickLogStateRef.current.isActive) return;
-
-    // Prevent scrolling while dragging for quick log
     if (e.cancelable) e.preventDefault();
 
     let clientX, clientY;
@@ -117,13 +119,9 @@ const App: React.FC = () => {
   const handleGlobalEnd = useCallback((e: TouchEvent | MouseEvent) => {
     if (!quickLogStateRef.current.isActive) return;
     
-    // Al soltar, verificamos si hay selección
     const state = quickLogStateRef.current;
     
     if (state.startPos && state.currentPos && state.dateStr) {
-        // --- LOGIC SYNC: CLAMPING ---
-        // Debemos usar la misma lógica de coordenadas que QuickLogMenu.tsx
-        // Si el menú se dibujó desplazado, la lógica de distancia debe ser relativa a ese desplazamiento.
         const SAFE_MARGIN = 110;
         const clampedX = Math.max(SAFE_MARGIN, Math.min(state.startPos.x, window.innerWidth - SAFE_MARGIN));
         const menuCenter = { x: clampedX, y: state.startPos.y };
@@ -132,24 +130,19 @@ const App: React.FC = () => {
         const dy = state.currentPos.y - menuCenter.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
         
-        if (dist >= 15) { // Deadzone check
-            
-            // 1. CHEQUEO DE BORRADO (Arrastre hacia abajo)
+        if (dist >= 15) { 
             if (dy > 30) {
                  SoundManager.play('trash');
                  triggerHaptic('heavy');
-                 // Borrar día
                  setYearData(prev => {
                     const { [state.dateStr!]: _, ...rest } = prev;
                     return rest;
                  });
             } else {
-                // 2. CHEQUEO DE MOODS (Arco Superior)
-                // Mismo mapeo que el componente visual
                 const orderedMoods = [MoodLevel.Fatal, MoodLevel.Regular, MoodLevel.Normal, MoodLevel.MoiBiens, MoodLevel.Legendary];
                 let closestMood: MoodLevel | null = null;
                 let minDist = Number.MAX_VALUE;
-                const RADIUS = 75; // Debe coincidir con QuickLogMenu
+                const RADIUS = 75; 
                 
                 orderedMoods.forEach((mood, index) => {
                      const angleDeg = 180 - (index * 45);
@@ -165,16 +158,14 @@ const App: React.FC = () => {
                 });
     
                 if (closestMood && minDist < 50) {
-                    // SELECCIÓN EXITOSA
                     SoundManager.play('success');
                     triggerHaptic('medium');
                     
-                    // Guardar
                     setYearData(prev => ({
                         ...prev,
                         [state.dateStr!]: {
                             level: closestMood as MoodLevel,
-                            note: prev[state.dateStr!]?.note || '' // Mantener nota si existe
+                            note: prev[state.dateStr!]?.note || '' 
                         }
                     }));
                 }
@@ -182,7 +173,6 @@ const App: React.FC = () => {
         }
     }
 
-    // Resetear estado
     setQuickLogState({
         isActive: false,
         dateStr: null,
@@ -192,7 +182,6 @@ const App: React.FC = () => {
 
   }, [triggerHaptic]);
 
-  // Attach/Detach global listeners for drag
   useEffect(() => {
     if (quickLogState.isActive) {
         window.addEventListener('touchmove', handleGlobalMove, { passive: false });
@@ -214,18 +203,14 @@ const App: React.FC = () => {
   }, [quickLogState.isActive, handleGlobalMove, handleGlobalEnd]);
 
   const handleDayLongPress = useCallback((dateStr: string, x: number, y: number) => {
-      // Iniciar Quick Log
       SoundManager.play('pop'); 
       setQuickLogState({
           isActive: true,
           dateStr: dateStr,
           startPos: { x, y },
-          currentPos: { x, y } // Start current at same pos
+          currentPos: { x, y }
       });
   }, []);
-
-
-  // --- REST OF APP LOGIC ---
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -299,11 +284,20 @@ const App: React.FC = () => {
     if (stored) {
       try { setYearData(JSON.parse(stored)); } catch (e) { console.error(e); }
     }
+    
+    // Cargar config
+    const storedEco = localStorage.getItem('pepe_eco_mode');
+    if (storedEco) setEcoMode(storedEco === 'true');
   }, []);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(yearData));
   }, [yearData]);
+  
+  // Guardar config al cambiar
+  useEffect(() => {
+      localStorage.setItem('pepe_eco_mode', String(ecoMode));
+  }, [ecoMode]);
 
   const handleDayClick = useCallback((dateStr: string) => {
     triggerHaptic('light');
@@ -372,9 +366,8 @@ const App: React.FC = () => {
 
   return (
     <div className="flex flex-col items-center min-h-screen pb-24 overflow-x-hidden text-slate-100 relative">
-      <Particles count={particleCount} />
+      <Particles count={particleCount} enabled={!ecoMode} />
       
-      {/* QUICK LOG RADIAL MENU */}
       <QuickLogMenu 
         isOpen={quickLogState.isActive}
         startPos={quickLogState.startPos}
@@ -390,7 +383,7 @@ const App: React.FC = () => {
         )}
 
         <div className="relative group mb-8 mt-4">
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[180%] h-[180%] pointer-events-none opacity-80">
+            <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[180%] h-[180%] pointer-events-none opacity-80 ${ecoMode ? 'hidden' : ''}`}>
                  <div className="absolute inset-0 border-2 border-green-500/30 rounded-full border-dashed animate-[spin_20s_linear_infinite]"></div>
                  <div className="absolute inset-8 border-2 border-emerald-400/40 rounded-full border-dotted animate-[spin_15s_linear_infinite_reverse]"></div>
                  <div className="absolute inset-4 bg-green-500/20 blur-[50px] rounded-full animate-pulse"></div>
@@ -432,7 +425,7 @@ const App: React.FC = () => {
       <Calendar 
         yearData={yearData} 
         onDayClick={handleDayClick} 
-        onDayLongPress={handleDayLongPress} // Pasar prop
+        onDayLongPress={handleDayLongPress}
         currentYear={currentYear} 
         highlightedDates={highlightedDates}
       />
@@ -484,7 +477,27 @@ const App: React.FC = () => {
               </div>
 
               <div className="space-y-6">
-                  <div className="space-y-3">
+                  {/* ECO MODE TOGGLE */}
+                  <div className="flex items-center justify-between p-3 bg-slate-800/50 rounded-xl border border-slate-700">
+                      <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-lg ${ecoMode ? 'bg-green-500 text-white' : 'bg-slate-700 text-slate-400'}`}>
+                              <BatteryCharging size={18} />
+                          </div>
+                          <div>
+                              <div className="text-xs font-bold text-slate-200 uppercase tracking-wider">Modo Ahorro</div>
+                              <div className="text-[9px] text-slate-500 font-medium">Desactiva partículas y blur</div>
+                          </div>
+                      </div>
+                      <button 
+                        onClick={() => setEcoMode(!ecoMode)}
+                        className={`w-10 h-6 rounded-full p-1 transition-colors duration-300 ${ecoMode ? 'bg-green-500' : 'bg-slate-700'}`}
+                      >
+                          <div className={`w-4 h-4 bg-white rounded-full transition-transform duration-300 ${ecoMode ? 'translate-x-4' : ''}`}></div>
+                      </button>
+                  </div>
+
+                  {!ecoMode && (
+                  <div className="space-y-3 opacity-100 transition-opacity">
                       <div className="flex justify-between items-center">
                           <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Intensidad del Pantano</label>
                           <span className="text-xs font-mono text-green-400 bg-green-400/10 px-2 py-0.5 rounded">{particleCount}</span>
@@ -501,10 +514,8 @@ const App: React.FC = () => {
                             className="w-full h-2 bg-slate-800 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-green-500 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:hover:scale-125 [&::-webkit-slider-thumb]:transition-all"
                           />
                       </div>
-                      <p className="text-[10px] text-slate-500 italic">
-                         Controla la cantidad de partículas. Cuidado: valores altos pueden ralentizar móviles antiguos.
-                      </p>
                   </div>
+                  )}
 
                   <button 
                     onClick={() => setIsSettingsOpen(false)}
