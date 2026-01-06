@@ -199,15 +199,17 @@ const QuickLogMenu: React.FC<QuickLogMenuProps> = ({ isOpen, startPos, currentPo
 
                     <div 
                         className={`
-                            rounded-full border-2 overflow-hidden bg-white
+                            rounded-full border-2 overflow-hidden bg-slate-900
                             transition-all duration-300
-                            ${isActive ? 'shadow-[0_0_25px_rgba(0,0,0,0.5)]' : 'grayscale opacity-70'}
+                            ${isActive ? 'shadow-[0_0_25px_rgba(0,0,0,0.5)]' : 'opacity-70'}
                         `}
                         style={{
                             width: ITEM_RADIUS * 2,
                             height: ITEM_RADIUS * 2,
                             borderColor: config.color,
-                            boxShadow: isActive ? `0 0 20px ${config.color}60` : 'none'
+                            boxShadow: isActive 
+                                ? `0 0 20px ${config.color}60` 
+                                : `inset 0 0 10px ${config.color}40` // Glow interior sutil en reposo
                         }}
                     >
                         <img src={config.image} alt={config.label} className="w-full h-full object-cover" />

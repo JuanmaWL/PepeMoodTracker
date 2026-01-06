@@ -339,7 +339,13 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
                             borderColor: config.color
                         }}
                         >
-                            <div className="absolute inset-0 bg-white"></div>
+                            {/* Fondo optimizado para GIFs transparentes */}
+                            <div className="absolute inset-0 bg-slate-900"></div>
+                            <div 
+                                className="absolute inset-0 opacity-60"
+                                style={{ background: `radial-gradient(circle at center, ${config.color} 10%, transparent 90%)` }}
+                            ></div>
+                            
                             <img 
                                 src={config.image} 
                                 alt={config.label} 

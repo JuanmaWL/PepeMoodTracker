@@ -25,7 +25,8 @@ type Tab = 'stats' | 'achievements';
 
 const PEPE_STATIC_JUDGES = [
   PEPE_ASSETS.JUDGE_1, 
-  PEPE_ASSETS.JUDGE_2
+  PEPE_ASSETS.JUDGE_2,
+  PEPE_ASSETS.COUNCIL // Agregado el Consejo de Pepes al pool de jueces
 ];
 
 const LOADING_PHRASES = [
