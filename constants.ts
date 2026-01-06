@@ -11,7 +11,6 @@ export const PEPE_ASSETS = {
     ORACLE_BG: `${BLOB_BASE_URL}/oracle_bg.png`,
     JUDGE_1: `${BLOB_BASE_URL}/judge_1.png`,
     JUDGE_2: `${BLOB_BASE_URL}/judge_2.png`,
-    LOADING_GIF: `${BLOB_BASE_URL}/pepe_notes_1.gif`,
     CLOWN_GIF: `${BLOB_BASE_URL}/pepe_clown.gif`,
     CENTER_IMG: `${BLOB_BASE_URL}/pepe_icon.png`,
     ICON: `${BLOB_BASE_URL}/pepe_icon.png`,

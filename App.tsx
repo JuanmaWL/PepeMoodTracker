@@ -297,6 +297,7 @@ const App: React.FC = () => {
     // Cargar config
     const storedEco = localStorage.getItem('pepe_eco_mode');
     if (storedEco) setEcoMode(storedEco === 'true');
+    // Note: particleCount not loaded to avoid complexity, defaults to screen size based
   }, []);
 
   useEffect(() => {
@@ -306,7 +307,8 @@ const App: React.FC = () => {
   // Guardar config al cambiar
   useEffect(() => {
       localStorage.setItem('pepe_eco_mode', String(ecoMode));
-  }, [ecoMode]);
+      localStorage.setItem('pepe_particle_count', String(particleCount));
+  }, [ecoMode, particleCount]);
 
   const handleDayClick = useCallback((dateStr: string) => {
     triggerHaptic('light');

@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { X, Music, Trophy, Brain, Quote, Loader2, TrendingUp, PieChart as PieChartIcon, BarChart3, Hexagon, Waves, CalendarRange, Filter, RefreshCw, Zap, Gavel, Lock } from 'lucide-react';
+import { X, Music, Trophy, Brain, Quote, Loader2, TrendingUp, PieChart as PieChartIcon, BarChart3, Hexagon, Waves, CalendarRange, Filter, RefreshCw, Zap, Lock, Gavel } from 'lucide-react';
 import { YearData, MoodLevel, DayData } from '../types';
 import { MOODS, MONTHS, PEPE_ASSETS } from '../constants';
 import Heatmap from './Heatmap';
@@ -23,10 +23,16 @@ type ChartType = 'area' | 'radar' | 'bar';
 type TimeRange = 'all' | 'last_7' | 'last_30' | string;
 type Tab = 'stats' | 'achievements';
 
-const PEPE_STATIC_JUDGES = [
+const JUDGE_POOL = [
   PEPE_ASSETS.JUDGE_1, 
-  PEPE_ASSETS.JUDGE_2,
-  PEPE_ASSETS.COUNCIL // Agregado el Consejo de Pepes al pool de jueces
+  PEPE_ASSETS.JUDGE_2
+];
+
+const LOADING_POOL = [
+    PEPE_ASSETS.NOTES_1,
+    PEPE_ASSETS.NOTES_2,
+    PEPE_ASSETS.NOTES_3,
+    PEPE_ASSETS.NOTES_4
 ];
 
 const LOADING_PHRASES = [
@@ -46,7 +52,10 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
   const [loadingAi, setLoadingAi] = useState(false);
   const [loadingText, setLoadingText] = useState("PROCESANDO PECADOS...");
   const [errorAi, setErrorAi] = useState("");
-  const [judgeImage, setJudgeImage] = useState(PEPE_STATIC_JUDGES[0]);
+  
+  // Estado para la imagen del Juez y del Loading
+  const [judgeImage, setJudgeImage] = useState(JUDGE_POOL[0]);
+  const [loadingImage, setLoadingImage] = useState(LOADING_POOL[0]);
   
   const [timeRange, setTimeRange] = useState<TimeRange>('0'); 
   const [chartType, setChartType] = useState<ChartType>('bar');
@@ -56,7 +65,8 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
       setAiAnalysis("");
       setErrorAi("");
       setLoadingAi(false);
-      setJudgeImage(PEPE_STATIC_JUDGES[Math.floor(Math.random() * PEPE_STATIC_JUDGES.length)]);
+      // Seleccionar Juez aleatorio al abrir
+      setJudgeImage(JUDGE_POOL[Math.floor(Math.random() * JUDGE_POOL.length)]);
       setActiveTab('stats');
     }
   }, [isOpen]);
@@ -73,7 +83,8 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
     return MONTHS[parseInt(timeRange)];
   };
 
-  const unlockedIds = useMemo(() => getUnlockedAchievements(data), [data]);
+  // Check achievements on mount or data change
+  const unlockedIds = useMemo(() => getUnlockedAchievements(data), [data, isOpen]);
 
   const stats = useMemo(() => {
     const entries = Object.entries(data) as [string, DayData][];
@@ -150,6 +161,10 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
     
     SoundManager.play('magic');
     setLoadingAi(true);
+    
+    // Seleccionar GIF de carga aleatorio para esta sesión
+    setLoadingImage(LOADING_POOL[Math.floor(Math.random() * LOADING_POOL.length)]);
+    
     setErrorAi("");
     setAiAnalysis("");
     
@@ -379,50 +394,97 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
 
   const renderAchievements = () => {
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-8">
              {ACHIEVEMENTS.map((ach) => {
                  const isUnlocked = unlockedIds.includes(ach.id);
+                 
+                 // Generate random positions for particles for each card to look varied
+                 const particles = isUnlocked ? [...Array(4)].map((_, i) => ({
+                    top: Math.random() * 80 + 10 + '%',
+                    left: Math.random() * 80 + 10 + '%',
+                    delay: Math.random() * 2 + 's',
+                    duration: Math.random() * 3 + 2 + 's'
+                 })) : [];
+
                  return (
                      <div 
                         key={ach.id} 
                         className={`
-                            relative p-5 rounded-3xl border transition-all duration-300 flex items-start gap-4 overflow-hidden group
+                            relative p-5 rounded-3xl border transition-all duration-500 flex items-start gap-4 overflow-hidden group
                             ${isUnlocked 
-                                ? 'bg-slate-800/60 border-slate-700 hover:border-indigo-500/50 hover:bg-slate-800' 
-                                : 'bg-slate-900/50 border-slate-800 opacity-60 grayscale'
+                                ? 'bg-slate-800/80 border-slate-700/50 hover:border-slate-500/50 hover:shadow-2xl hover:-translate-y-1' 
+                                : 'bg-slate-900/40 border-slate-800 opacity-50 grayscale hover:opacity-70'
                             }
                         `}
+                        style={{
+                            boxShadow: isUnlocked ? `0 4px 20px -5px ${ach.color}20` : 'none'
+                        }}
                      >
                         {isUnlocked && (
-                            <div 
-                                className="absolute inset-0 opacity-10 pointer-events-none group-hover:opacity-20 transition-opacity"
-                                style={{ background: `radial-gradient(circle at top right, ${ach.color}, transparent 70%)` }}
-                            />
+                            <>
+                                {/* Background Gradient Glow */}
+                                <div 
+                                    className="absolute inset-0 opacity-[0.08] pointer-events-none group-hover:opacity-[0.15] transition-opacity duration-500"
+                                    style={{ background: `radial-gradient(circle at top right, ${ach.color}, transparent 80%)` }}
+                                />
+                                
+                                {/* Floating Particles */}
+                                {particles.map((p, i) => (
+                                    <div 
+                                        key={i}
+                                        className="absolute w-1 h-1 rounded-full animate-pulse opacity-40 pointer-events-none"
+                                        style={{
+                                            backgroundColor: ach.color,
+                                            top: p.top,
+                                            left: p.left,
+                                            animationDuration: p.duration,
+                                            animationDelay: p.delay,
+                                            boxShadow: `0 0 4px ${ach.color}`
+                                        }}
+                                    />
+                                ))}
+
+                                {/* Shine Effect */}
+                                <div className="absolute inset-0 -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none z-10" />
+                            </>
                         )}
 
+                        {/* Icon Container */}
                         <div 
                             className={`
-                                p-3 rounded-2xl shrink-0 transition-transform duration-500 group-hover:scale-110
-                                ${isUnlocked ? 'shadow-lg' : ''}
+                                p-3 rounded-2xl shrink-0 transition-all duration-500 group-hover:scale-110 relative z-20
+                                ${isUnlocked ? 'shadow-inner' : ''}
                             `}
                             style={{ 
-                                backgroundColor: isUnlocked ? `${ach.color}20` : '#1e293b', 
-                                color: isUnlocked ? ach.color : '#64748b'
+                                backgroundColor: isUnlocked ? `${ach.color}15` : '#1e293b', 
+                                color: isUnlocked ? ach.color : '#64748b',
+                                boxShadow: isUnlocked ? `0 0 15px ${ach.color}30` : 'none'
                             }}
                         >
-                            {isUnlocked ? <ach.icon size={24} /> : <Lock size={24} />}
+                            {isUnlocked ? (
+                                <ach.icon size={26} className="drop-shadow-sm filter" />
+                            ) : (
+                                <Lock size={26} />
+                            )}
+                            
+                            {/* Inner Glow for Icon */}
+                            {isUnlocked && (
+                                <div className="absolute inset-0 rounded-2xl opacity-20 blur-md animate-pulse" style={{ backgroundColor: ach.color }}></div>
+                            )}
                         </div>
 
-                        <div className="flex-1">
-                            <h4 className={`text-sm font-black uppercase tracking-wide mb-1 ${isUnlocked ? 'text-slate-200' : 'text-slate-600'}`}>
+                        <div className="flex-1 relative z-20">
+                            <h4 className={`text-sm font-black uppercase tracking-wide mb-1 leading-tight ${isUnlocked ? 'text-slate-100 group-hover:text-white' : 'text-slate-600'}`}>
                                 {ach.title}
                             </h4>
-                            <p className="text-[10px] text-slate-500 font-medium leading-relaxed">
+                            <p className="text-[10px] text-slate-400/80 font-medium leading-relaxed group-hover:text-slate-300 transition-colors">
                                 {ach.description}
                             </p>
+                            
                             {isUnlocked && (
-                                <div className="mt-2 text-[9px] font-bold text-green-500/80 uppercase tracking-widest flex items-center gap-1">
-                                    <Zap size={10} /> Desbloqueado
+                                <div className="mt-3 inline-flex items-center gap-1.5 bg-slate-950/30 px-2 py-1 rounded-lg border border-slate-700/50">
+                                    <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: ach.color }}></div>
+                                    <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: ach.color }}>Desbloqueado</span>
                                 </div>
                             )}
                         </div>
@@ -588,6 +650,10 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
 
                             <div className="lg:col-span-2 flex flex-col relative overflow-hidden rounded-3xl border border-indigo-500/30 bg-slate-900 group">
                                 <div className="absolute inset-0 z-0">
+                                    <div className="absolute inset-0 opacity-[0.07] group-hover:opacity-10 transition-opacity duration-500 pointer-events-none">
+                                         <img src={PEPE_ASSETS.COUNCIL} className="w-full h-full object-cover grayscale" />
+                                    </div>
+
                                     {[...Array(10)].map((_, i) => (
                                         <div key={i} className="absolute rounded-full bg-indigo-500/10 blur-xl animate-pulse" style={{
                                                 top: `${Math.random() * 100}%`,
@@ -604,7 +670,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
 
                                 <div className="relative z-20 flex flex-row justify-between items-center p-6 pb-2">
                                     <span className="text-indigo-300 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
-                                        <Gavel size={14} className="text-yellow-300 animate-[bounce_2s_infinite]" /> 
+                                        <Gavel size={18} className="text-indigo-400" />
                                         <span className="md:hidden">Tribunal de Pepe</span>
                                         <span className="hidden md:inline">Tribunal Supremo de Pepe</span>
                                     </span>
@@ -617,7 +683,11 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                                     <div className={`relative transition-all duration-700 ${loadingAi ? 'w-32 h-32 lg:w-40 lg:h-40' : aiAnalysis ? 'w-24 h-24 lg:w-32 lg:h-32' : 'w-40 h-40 lg:w-48 lg:h-48'}`}>
                                         <div className={`absolute -inset-4 bg-indigo-500/20 rounded-full blur-xl transition-all duration-500 ${loadingAi ? 'animate-pulse scale-110' : 'opacity-50'}`}></div>
                                         <div className={`w-full h-full rounded-full overflow-hidden border-4 shadow-2xl relative transition-all duration-500 ${loadingAi ? 'border-indigo-400 shadow-[0_0_30px_rgba(99,102,241,0.5)] bg-slate-950' : 'border-slate-700 shadow-xl bg-slate-800'} ${!loadingAi && !aiAnalysis ? 'animate-[float_4s_ease-in-out_infinite]' : ''}`}>
-                                            <img src={loadingAi ? PEPE_ASSETS.LOADING_GIF : judgeImage} alt="Pepe Judge" className={`w-full h-full transition-all duration-500 ${loadingAi ? 'object-contain p-1 opacity-90 animate-[color-pulse_2s_ease-in-out_infinite]' : 'object-contain p-2 bg-slate-900'}`} />
+                                            <img 
+                                                src={loadingAi ? loadingImage : judgeImage} 
+                                                alt="Pepe Judge" 
+                                                className={`w-full h-full transition-all duration-500 ${loadingAi ? 'object-contain p-1 opacity-90 animate-[color-pulse_2s_ease-in-out_infinite]' : 'object-contain p-2 bg-slate-900'}`} 
+                                            />
                                             <style>{`@keyframes color-pulse { 0%, 100% { filter: grayscale(100%); opacity: 0.8; } 50% { filter: grayscale(0%); opacity: 1; } }`}</style>
                                             {loadingAi && (
                                                 <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-10 rounded-full">
