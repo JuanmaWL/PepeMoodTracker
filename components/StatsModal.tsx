@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { X, Music, Trophy, Brain, Quote, Loader2, TrendingUp, PieChart as PieChartIcon, BarChart3, Hexagon, Waves, CalendarRange, Filter, RefreshCw, Zap, Gavel, Lock } from 'lucide-react';
 import { YearData, MoodLevel, DayData } from '../types';
-import { MOODS, MONTHS } from '../constants';
+import { MOODS, MONTHS, PEPE_ASSETS } from '../constants';
 import Heatmap from './Heatmap';
 import { 
   XAxis, YAxis, Tooltip, ResponsiveContainer, 
@@ -23,10 +23,9 @@ type ChartType = 'area' | 'radar' | 'bar';
 type TimeRange = 'all' | 'last_7' | 'last_30' | string;
 type Tab = 'stats' | 'achievements';
 
-const PEPE_LOADING_GIF = "https://media.tenor.com/ZXGXXDLOt00AAAAj/pepe-noting.gif";
 const PEPE_STATIC_JUDGES = [
-  "https://i.imgur.com/b9Q4BeW.png", 
-  "https://i.imgur.com/X8dsbBP.png" 
+  PEPE_ASSETS.JUDGE_1, 
+  PEPE_ASSETS.JUDGE_2
 ];
 
 const LOADING_PHRASES = [
@@ -99,7 +98,6 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
 
     const totalDays = filteredEntries.length;
     // Ajustar el cálculo de promedio para que tenga sentido con la nueva escala
-    // Aunque ahora es menos lineal (Rage=1 vs Sadge=2), sigue sirviendo como métrica de "Bienestar general"
     const totalScore = filteredEntries.reduce((acc, [_, d]) => acc + d.level, 0);
     const average = totalScore / totalDays;
 
@@ -145,6 +143,77 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
 
     return { totalDays, average, pieData, lineData, radarData: shiftedRadarData, filteredEntries };
   }, [data, timeRange]);
+
+  const handleAskPepe = async () => {
+    if (loadingAi) return;
+    
+    SoundManager.play('magic');
+    setLoadingAi(true);
+    setErrorAi("");
+    setAiAnalysis("");
+    
+    const textInterval = setInterval(() => {
+        setLoadingText(LOADING_PHRASES[Math.floor(Math.random() * LOADING_PHRASES.length)]);
+    }, 2000);
+
+    try {
+        const apiKey = (import.meta as any).env?.VITE_PEPE_MOOD_KEY || (process as any).env?.NEXT_PUBLIC_PEPE_MOOD_KEY || process.env.API_KEY;
+        
+        if (!apiKey) throw new Error("API Key no configurada");
+
+        if (!stats || stats.totalDays === 0) {
+            throw new Error("No hay datos suficientes para juzgarte.");
+        }
+
+        const ai = new GoogleGenAI({ apiKey: apiKey });
+
+        const contextData = {
+            range: getRangeLabel(),
+            totalDays: stats.totalDays,
+            averageMood: stats.average.toFixed(2),
+            topMoods: stats.pieData.map(d => `${d.name} (${d.value})`).join(', '),
+            days: stats.filteredEntries.map(([date, d]) => ({ 
+                date, 
+                mood: MOODS[d.level as MoodLevel].label, 
+                note: d.note || "Sin nota" 
+            })).slice(0, 15)
+        };
+
+        const prompt = `
+            ACTÚA COMO: Pepe el Juez Supremo de la Vida (Meme Culture).
+            CONTEXTO: Analiza las estadísticas de estado de ánimo del usuario (${contextData.range}).
+            DATOS: ${JSON.stringify(contextData)}
+            
+            TAREA: Genera un veredicto sarcástico, divertido y "basado".
+            FORMATO DE RESPUESTA (Estricto):
+            [DIAGNÓSTICO] (Tu análisis ácido aquí, max 50 palabras)
+            [SOUNDTRACK] (Canción real que defina su racha. Formato: "Artista - Canción. Por qué: [razón breve]")
+            [LOGRO] (Inventa un logro absurdo desbloqueado, ej: "Superviviente del Cringe", max 10 palabras)
+        `;
+
+        const response = await ai.models.generateContent({
+            model: 'gemini-3-flash-preview',
+            contents: prompt,
+        });
+
+        const text = response.text;
+
+        if (text) {
+             setAiAnalysis(text);
+             SoundManager.play('success');
+        } else {
+             throw new Error("Pepe se quedó mudo.");
+        }
+
+    } catch (e) {
+        console.error(e);
+        setErrorAi("Error conectando con el tribunal supremo.");
+        SoundManager.play('trash');
+    } finally {
+        clearInterval(textInterval);
+        setLoadingAi(false);
+    }
+  };
 
   const parseAiResponse = (rawText: string) => {
     if (!rawText) return null;
@@ -241,63 +310,6 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
         </button>
       </div>
     );
-  };
-
-  const handleAskPepe = async () => {
-    const apiKey = (import.meta as any).env?.VITE_PEPE_MOOD_KEY || (process as any).env?.NEXT_PUBLIC_PEPE_MOOD_KEY || process.env.API_KEY;
-    if (!apiKey) {
-        setErrorAi("No hay API Key configurada.");
-        return;
-    }
-    if (!stats) return;
-
-    SoundManager.play('magic');
-    const randomPhrase = LOADING_PHRASES[Math.floor(Math.random() * LOADING_PHRASES.length)];
-    setLoadingText(randomPhrase);
-    setLoadingAi(true);
-    setErrorAi("");
-    setAiAnalysis("");
-
-    try {
-        const ai = new GoogleGenAI({ apiKey: apiKey });
-        const filterText = getRangeLabel();
-        const relevantEntries = stats.filteredEntries;
-        if (relevantEntries.length === 0) {
-          setErrorAi("No hay lore en este periodo para juzgar.");
-          setLoadingAi(false);
-          return;
-        }
-
-        const summaryText = relevantEntries.map(([date, d]) => 
-            `Día: ${date}, Mood: ${MOODS[d.level].label}, Lore: ${d.note || "Sin descripción"}`
-        ).join("\n");
-
-        const prompt = `
-            ACTÚA COMO: Pepe the Frog versión Millennial.
-            CONTEXTO: Analiza el diario del usuario: "${filterText}".
-            DATOS: ${summaryText}
-            Misión (RESPUESTA ESTRUCTURADA OBLIGATORIA):
-            [DIAGNÓSTICO]: Frase lapidaria y sarcástica sobre cómo le ha ido al usuario en este periodo (${filterText}).
-            [SOUNDTRACK]: Elige UNA canción (2000s, Nu Metal, Emo, Pop Punk, Rock Alternativo) que defina este periodo.
-            FORMATO SOUNDTRACK: "Titulo - Artista. Por qué: [Argumento gracioso/ácido]".
-            [LOGRO]: Logro desbloqueado sarcástico (max 8 palabras).
-            REGLAS:
-            - Texto natural, sarcástico pero nostálgico.
-            - SIN Markdown ni asteriscos (IMPORTANTE: No uses negritas).
-            - Máximo 100 palabras total.
-        `;
-        const response = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
-            contents: prompt,
-        });
-
-        setAiAnalysis(response.text || "[DIAGNÓSTICO] Pepe se ha quedado sin palabras.");
-        setJudgeImage(PEPE_STATIC_JUDGES[Math.floor(Math.random() * PEPE_STATIC_JUDGES.length)]);
-    } catch (e) {
-        setErrorAi("Pepe está AFK (Error API).");
-    } finally {
-        setLoadingAi(false);
-    }
   };
 
   const renderEvolutionChart = () => {
@@ -537,7 +549,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                                     <div className="flex-1 min-h-[160px] relative flex items-center justify-center">
                                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
                                             <img 
-                                                src="https://i.imgur.com/3OaT1ef.png" 
+                                                src={PEPE_ASSETS.CENTER_IMG} 
                                                 alt="Pepe Breath"
                                                 className="w-16 h-16 object-contain opacity-90"
                                                 style={{ animation: 'pepe-breath 3s ease-in-out infinite' }}
@@ -604,7 +616,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                                     <div className={`relative transition-all duration-700 ${loadingAi ? 'w-32 h-32 lg:w-40 lg:h-40' : aiAnalysis ? 'w-24 h-24 lg:w-32 lg:h-32' : 'w-40 h-40 lg:w-48 lg:h-48'}`}>
                                         <div className={`absolute -inset-4 bg-indigo-500/20 rounded-full blur-xl transition-all duration-500 ${loadingAi ? 'animate-pulse scale-110' : 'opacity-50'}`}></div>
                                         <div className={`w-full h-full rounded-full overflow-hidden border-4 shadow-2xl relative transition-all duration-500 ${loadingAi ? 'border-indigo-400 shadow-[0_0_30px_rgba(99,102,241,0.5)] bg-slate-950' : 'border-slate-700 shadow-xl bg-slate-800'} ${!loadingAi && !aiAnalysis ? 'animate-[float_4s_ease-in-out_infinite]' : ''}`}>
-                                            <img src={loadingAi ? PEPE_LOADING_GIF : judgeImage} alt="Pepe Judge" className={`w-full h-full transition-all duration-500 ${loadingAi ? 'object-contain p-1 opacity-90 animate-[color-pulse_2s_ease-in-out_infinite]' : 'object-contain p-2 bg-slate-900'}`} />
+                                            <img src={loadingAi ? PEPE_ASSETS.LOADING_GIF : judgeImage} alt="Pepe Judge" className={`w-full h-full transition-all duration-500 ${loadingAi ? 'object-contain p-1 opacity-90 animate-[color-pulse_2s_ease-in-out_infinite]' : 'object-contain p-2 bg-slate-900'}`} />
                                             <style>{`@keyframes color-pulse { 0%, 100% { filter: grayscale(100%); opacity: 0.8; } 50% { filter: grayscale(0%); opacity: 1; } }`}</style>
                                             {loadingAi && (
                                                 <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-10 rounded-full">

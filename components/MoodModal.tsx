@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Save, MessageSquareText, Trash2, Download, Loader2, Image as ImageIcon, Sparkles, RefreshCw, ChevronRight, Info, Star } from 'lucide-react';
-import { MOODS } from '../constants';
+import { MOODS, PEPE_ASSETS } from '../constants';
 import { MoodLevel, DayData } from '../types';
 import SoundManager from '../utils/sounds';
 import { GoogleGenAI } from "@google/genai";
@@ -21,8 +21,9 @@ const SAVE_PHRASES = [
   "SUBIR AL ARCHIVO", "SINCRONIZAR VIVENCIA", "PUBLICAR LORE", "ESTABLECER CANON"
 ];
 
-const PEPE_BASE_SOURCE = "https://i.imgur.com/KJSjEue.png"; 
-const PEPE_FAIL_SOURCE = "https://media.tenor.com/_hOeFNfH_58AAAAj/pepe-clown-clown-pepe.gif";
+// Usar constantes centralizadas de assets locales
+const PEPE_BASE_SOURCE = PEPE_ASSETS.BANNER;
+const PEPE_FAIL_SOURCE = PEPE_ASSETS.CLOWN_GIF;
 
 const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete, initialData, dateStr }) => {
   const [level, setLevel] = useState<MoodLevel>(MoodLevel.None);

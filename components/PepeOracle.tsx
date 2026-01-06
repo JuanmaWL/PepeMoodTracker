@@ -1,8 +1,9 @@
+
 import React, { useState } from 'react';
 import { Sparkles, BrainCircuit, Quote, Zap, Loader2 } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
 import { YearData } from '../types';
-import { MOODS } from '../constants';
+import { MOODS, PEPE_ASSETS } from '../constants';
 import SoundManager from '../utils/sounds';
 
 interface PepeOracleProps {
@@ -119,9 +120,9 @@ const PepeOracle: React.FC<PepeOracleProps> = ({ data }) => {
         {/* Imagen de fondo sutil solicitada */}
         <div className="absolute inset-0 z-0 pointer-events-none opacity-[0.12] mix-blend-overlay">
           <img 
-            src="https://i.imgur.com/0JD4l8Q.png" 
+            src={PEPE_ASSETS.ORACLE_BG} 
             className="w-full h-full object-cover grayscale brightness-150" 
-            alt="" 
+            alt="Oracle Background" 
           />
         </div>
 
@@ -168,7 +169,7 @@ const PepeOracle: React.FC<PepeOracleProps> = ({ data }) => {
               ${isMagicActive ? 'scale-105 rotate-3 ring-2 ring-purple-400/40' : 'hover:scale-105 group-hover:-rotate-2'}
             `}>
               <img 
-                src="https://assets.foundation.app/0xa797Df356675F459e5Bb81bB2062646A0853e83C/2/nft.jpg" 
+                src={PEPE_ASSETS.ORACLE_AVATAR} 
                 alt="Pepe Oráculo" 
                 className="w-full h-full object-cover grayscale-[10%] hover:grayscale-0 transition-all duration-1000"
               />
