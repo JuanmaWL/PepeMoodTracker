@@ -329,9 +329,17 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: Moon,
     color: '#cbd5e1', // Silver / Moonlight (Changed for visibility on dark mode)
     condition: () => {
-        // Hack: Check localStorage directly as settings aren't in YearData
         try {
-            return localStorage.getItem('pepe_eco_mode') === 'true';
+            const isEco = localStorage.getItem('pepe_eco_mode') === 'true';
+            const wasUnlocked = localStorage.getItem('pepe_ach_dark_knight_unlocked') === 'true';
+            
+            // Si está activo ahora y no estaba guardado, lo guardamos para siempre
+            if (isEco && !wasUnlocked) {
+                 localStorage.setItem('pepe_ach_dark_knight_unlocked', 'true');
+            }
+            
+            // Retorna true si está activo AHORA o si ya fue desbloqueado ANTES
+            return isEco || wasUnlocked;
         } catch(e) { return false; }
     }
   },
