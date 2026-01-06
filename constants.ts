@@ -1,17 +1,16 @@
-
 import { MoodConfig, MoodLevel } from './types';
 
 // --- ASSETS LOCALES ---
-// Referencias a archivos en /public/assets/images/
+// Referencias corregidas según tus archivos reales en /public/assets/images/
 export const PEPE_ASSETS = {
     BANNER: "/assets/images/banner.png",
-    ORACLE_AVATAR: "/assets/images/oracle_avatar.jpg",
+    ORACLE_AVATAR: "/assets/images/oracle_face.jpg", // CORREGIDO
     ORACLE_BG: "/assets/images/oracle_bg.png",
     JUDGE_1: "/assets/images/judge_1.png",
     JUDGE_2: "/assets/images/judge_2.png",
-    LOADING_GIF: "/assets/images/pepe_noting.gif",
+    LOADING_GIF: "/assets/images/pepe_notes_1.gif", // CORREGIDO (Usando el 1)
     CLOWN_GIF: "/assets/images/pepe_clown.gif",
-    CENTER_IMG: "/assets/images/pepe_center.png", // Imagen central del PieChart
+    CENTER_IMG: "/assets/images/pepe_icon.png", // CORREGIDO (Usando icon temporalmente)
     ICON: "/assets/images/pepe_icon.png"
 };
 
@@ -20,9 +19,9 @@ export const PEPE_BANNER = PEPE_ASSETS.BANNER;
 // GIFs animados locales para los moods
 export const PEPE_MOOD_IMAGES = {
   LEVEL_6: "/assets/images/mood_legendary.gif",
-  LEVEL_5: "/assets/images/mood_moibiens.gif",
-  LEVEL_4: "/assets/images/mood_normal.gif",
-  LEVEL_3: "/assets/images/mood_regular.gif",
+  LEVEL_5: "/assets/images/mood_legendary.gif", // ⚠️ FALTA IMAGEN: Usando legendary de placeholder
+  LEVEL_4: "/assets/images/mood_meh.gif",       // ⚠️ FALTA IMAGEN: Usando meh de placeholder
+  LEVEL_3: "/assets/images/mood_meh.gif",       // CORREGIDO
   LEVEL_2: "/assets/images/mood_sadge.gif",
   LEVEL_1: "/assets/images/mood_rage.gif",
 };
@@ -32,7 +31,7 @@ export const MOODS: Record<MoodLevel, MoodConfig> = {
     level: MoodLevel.Legendary,
     label: "Legendario",
     subLabel: "HYPE CÓSMICO",
-    color: "#06b6d4", // Cyan-500
+    color: "#06b6d4",
     twColor: "bg-cyan-500",
     image: PEPE_MOOD_IMAGES.LEVEL_6,
   },
@@ -40,7 +39,7 @@ export const MOODS: Record<MoodLevel, MoodConfig> = {
     level: MoodLevel.MoiBiens,
     label: "Moi Biens",
     subLabel: "FeelsGoodMan",
-    color: "#22c55e", // Green-500
+    color: "#22c55e",
     twColor: "bg-green-500",
     image: PEPE_MOOD_IMAGES.LEVEL_5,
   },
@@ -48,7 +47,7 @@ export const MOODS: Record<MoodLevel, MoodConfig> = {
     level: MoodLevel.Normal,
     label: "Normal",
     subLabel: "Not Bad",
-    color: "#84cc16", // Lime-500
+    color: "#84cc16",
     twColor: "bg-lime-500",
     image: PEPE_MOOD_IMAGES.LEVEL_4,
   },
@@ -56,7 +55,7 @@ export const MOODS: Record<MoodLevel, MoodConfig> = {
     level: MoodLevel.Regular,
     label: "Meh / Poker",
     subLabel: "NPC Mode",
-    color: "#eab308", // Yellow-500
+    color: "#eab308",
     twColor: "bg-yellow-500",
     image: PEPE_MOOD_IMAGES.LEVEL_3,
   },
@@ -64,7 +63,7 @@ export const MOODS: Record<MoodLevel, MoodConfig> = {
     level: MoodLevel.Sadge,
     label: "Sadge",
     subLabel: "PepeHands",
-    color: "#f97316", // Orange-500
+    color: "#f97316",
     twColor: "bg-orange-500",
     image: PEPE_MOOD_IMAGES.LEVEL_2,
   },
@@ -72,7 +71,7 @@ export const MOODS: Record<MoodLevel, MoodConfig> = {
     level: MoodLevel.Rage,
     label: "Enfadado",
     subLabel: "REEEEEE",
-    color: "#ef4444", // Red-500
+    color: "#ef4444",
     twColor: "bg-red-500",
     image: PEPE_MOOD_IMAGES.LEVEL_1,
   },
@@ -80,7 +79,7 @@ export const MOODS: Record<MoodLevel, MoodConfig> = {
     level: MoodLevel.None,
     label: "",
     subLabel: "",
-    color: "#1e293b", // Slate-800
+    color: "#1e293b",
     twColor: "bg-slate-800",
     image: "",
   },
