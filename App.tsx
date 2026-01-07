@@ -7,7 +7,7 @@ import Particles from './components/Particles';
 import QuickLogMenu from './components/QuickLogMenu'; 
 import { YearData, DayData, MoodLevel } from './types';
 import { STORAGE_KEY, PEPE_BANNER } from './constants';
-import { Plus, Flame, Trash2, AlertTriangle, Settings, Sliders, Loader2, BatteryCharging, Download, Upload, HardDrive } from 'lucide-react';
+import { Plus, Flame, Trash2, AlertTriangle, Settings, Sliders, Loader2, BatteryCharging, Download, Upload, FileJson, Save } from 'lucide-react';
 import SoundManager from './utils/sounds';
 
 const MoodModal = React.lazy(() => import('./components/MoodModal'));
@@ -355,12 +355,11 @@ const App: React.FC = () => {
     dl.click();
     dl.remove();
   };
-
+  
   const handleImportClick = () => {
-    SoundManager.play('click');
-    if (fileInputRef.current) fileInputRef.current.value = '';
-    fileInputRef.current?.click();
-  };
+     if (fileInputRef.current) fileInputRef.current.value = '';
+     fileInputRef.current?.click();
+  }
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -374,7 +373,7 @@ const App: React.FC = () => {
           triggerHaptic('medium');
           SoundManager.play('success');
           setYearData(importedData);
-          setIsSettingsOpen(false); // Cerrar modal al importar
+          setIsSettingsOpen(false); // Close modal on success
         }
       } catch (err) {
         console.error("Import error:", err);
@@ -388,7 +387,7 @@ const App: React.FC = () => {
     <div className="flex flex-col items-center min-h-screen pb-24 overflow-x-hidden text-slate-100 relative">
       <Particles count={particleCount} enabled={!ecoMode} />
       
-      {/* Input oculto para importación */}
+      {/* Input oculto para importación - se mantiene en el DOM para funcionar */}
       <input 
         type="file" 
         ref={fileInputRef} 
@@ -544,25 +543,31 @@ const App: React.FC = () => {
                   </div>
                   )}
 
-                  {/* DATA MANAGEMENT */}
-                  <div className="pt-4 border-t border-slate-700">
-                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-3 flex items-center gap-2">
-                        <HardDrive size={12} /> Gestión de Datos
-                    </p>
+                  <div className="pt-4 border-t border-slate-700 mt-4">
+                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">Gestión de Datos</h4>
                     <div className="grid grid-cols-2 gap-3">
-                        <button 
+                         {/* EXPORT BUTTON */}
+                         <button 
                             onClick={handleExport}
-                            className="flex flex-col items-center justify-center gap-2 p-3 bg-slate-800 hover:bg-slate-700 rounded-xl border border-slate-700 transition-all text-green-400"
+                            className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500 to-green-600 p-4 shadow-lg shadow-emerald-500/20 transition-all duration-300 hover:scale-[1.02] hover:shadow-emerald-500/40 active:scale-95"
                         >
-                            <Download size={20} />
-                            <span className="text-[9px] font-black uppercase tracking-wider">Exportar</span>
+                            <div className="relative z-10 flex flex-col items-center gap-1">
+                                <Save size={24} className="text-emerald-100 group-hover:scale-110 transition-transform duration-300" />
+                                <span className="text-[10px] font-black uppercase tracking-widest text-white">Exportar</span>
+                            </div>
+                            <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:animate-[shimmer_1.5s_infinite]"></div>
                         </button>
+                        
+                        {/* IMPORT BUTTON */}
                         <button 
                             onClick={handleImportClick}
-                            className="flex flex-col items-center justify-center gap-2 p-3 bg-slate-800 hover:bg-slate-700 rounded-xl border border-slate-700 transition-all text-indigo-400"
+                            className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 p-4 shadow-lg shadow-blue-500/20 transition-all duration-300 hover:scale-[1.02] hover:shadow-blue-500/40 active:scale-95"
                         >
-                            <Upload size={20} />
-                            <span className="text-[9px] font-black uppercase tracking-wider">Importar</span>
+                            <div className="relative z-10 flex flex-col items-center gap-1">
+                                <FileJson size={24} className="text-blue-100 group-hover:scale-110 transition-transform duration-300" />
+                                <span className="text-[10px] font-black uppercase tracking-widest text-white">Importar</span>
+                            </div>
+                            <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:animate-[shimmer_1.5s_infinite]"></div>
                         </button>
                     </div>
                   </div>
@@ -571,7 +576,7 @@ const App: React.FC = () => {
                     onClick={() => setIsSettingsOpen(false)}
                     className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white font-black uppercase text-xs rounded-xl transition-colors"
                   >
-                    Cerrar
+                    Listo
                   </button>
               </div>
            </div>

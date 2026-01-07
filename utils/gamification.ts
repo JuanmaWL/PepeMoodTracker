@@ -1,6 +1,6 @@
 
 import { Achievement, YearData, MoodLevel } from '../types';
-import { Flame, BookOpen, Crown, Umbrella, Skull, CalendarCheck, Zap, TrendingUp, TrendingDown, AlignLeft, Gem, Bomb, Rocket, Ghost, Bot, ArrowUpRight, Cat, Leaf, Activity, CheckCircle2, Library, Mic2, Medal, Palette, Award, Hourglass, Music, Gamepad2, Snowflake, Twitter, Waves, Sun, CloudRain, Shield, Atom, Clock, CloudFog, Dna, Feather, HandMetal, Scroll, Map, Smile, ShieldCheck, Moon, HeartCrack, Swords, Droplets, Sprout } from 'lucide-react';
+import { Flame, BookOpen, Crown, Umbrella, Skull, CalendarCheck, Zap, TrendingUp, TrendingDown, AlignLeft, Gem, Bomb, Rocket, Ghost, Bot, ArrowUpRight, Cat, Leaf, Activity, CheckCircle2, Library, Mic2, Medal, Palette, Award, Hourglass, Music, Gamepad2, Snowflake, Twitter, Waves, Sun, CloudRain, Shield, Atom, Clock, CloudFog, Dna, Feather, HandMetal, Scroll, Map, Smile, ShieldCheck, Moon, HeartCrack, Swords, Droplets, Sprout, Fingerprint } from 'lucide-react';
 
 export const ACHIEVEMENTS: Achievement[] = [
   // --- BASIC ---
@@ -150,34 +150,32 @@ export const ACHIEVEMENTS: Achievement[] = [
     }
   },
   {
-    id: 'diamond_hands',
-    title: 'Frozen Heart',
-    description: '7 días fríos (Normal/Meh). Let it go, let it go. El frío a ti nunca te molestó.',
-    icon: Snowflake,
-    color: '#0ea5e9', // Sky
+    id: 'harrys_code',
+    title: 'The Code',
+    description: '5 días seguidos con el mismo mood exacto. Sigues el código al pie de la letra. Don\'t get caught.',
+    icon: Fingerprint,
+    color: '#0ea5e9', // Cyan/Blue Dexter Style
     condition: (data: YearData) => {
         const dates = Object.keys(data).sort();
-        let holdStreak = 0;
-        let maxHold = 0;
+        if (dates.length < 5) return false;
         
-        for (let i = 0; i < dates.length; i++) {
-            const level = data[dates[i]].level;
-            if (level === MoodLevel.Normal || level === MoodLevel.Regular) {
-                if (i > 0) {
-                     const prev = new Date(dates[i-1]);
-                     const curr = new Date(dates[i]);
-                     const diffDays = Math.ceil(Math.abs(curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
-                     if (diffDays === 1) holdStreak++;
-                     else holdStreak = 1;
-                } else {
-                    holdStreak = 1;
-                }
+        let currentStreak = 1;
+        let maxStreak = 1;
+
+        for (let i = 1; i < dates.length; i++) {
+            const prevDate = new Date(dates[i-1]);
+            const currDate = new Date(dates[i]);
+            const diffDays = Math.ceil(Math.abs(currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
+            
+            // Chequear que sean consecutivos Y que tengan el mismo nivel
+            if (diffDays === 1 && data[dates[i]].level === data[dates[i-1]].level) {
+                currentStreak++;
             } else {
-                holdStreak = 0;
+                currentStreak = 1;
             }
-            maxHold = Math.max(maxHold, holdStreak);
+            maxStreak = Math.max(maxStreak, currentStreak);
         }
-        return maxHold >= 7;
+        return maxStreak >= 5;
     }
   },
   {
@@ -266,26 +264,31 @@ export const ACHIEVEMENTS: Achievement[] = [
   // --- DC UNIVERSE ---
   {
     id: 'why_so_serious',
-    title: 'Why So Serious?',
-    description: 'Registra un cambio radical: De Rage a Legendario (o viceversa) en días consecutivos. El caos es justo.',
+    title: 'Agent of Chaos',
+    description: 'Registra 4 estados de ánimo DIFERENTES en 4 días seguidos. "Introduce a little anarchy".',
     icon: Smile,
     color: '#a855f7', // Joker Purple
     condition: (data: YearData) => {
         const dates = Object.keys(data).sort();
-        if (dates.length < 2) return false;
+        if (dates.length < 4) return false;
         
-        for (let i = 0; i < dates.length - 1; i++) {
-            const current = data[dates[i]].level;
-            const next = data[dates[i+1]].level;
-            const prevDate = new Date(dates[i]);
-            const nextDate = new Date(dates[i+1]);
-            const diffDays = Math.ceil(Math.abs(nextDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
+        for (let i = 0; i < dates.length - 3; i++) {
+            // Tomamos una ventana de 4 días
+            const slice = [dates[i], dates[i+1], dates[i+2], dates[i+3]];
+            
+            // 1. Verificar que los 4 días sean consecutivos entre sí
+            const isConsecutive = slice.every((date, idx) => {
+                if (idx === 0) return true;
+                const prev = new Date(slice[idx-1]);
+                const curr = new Date(date);
+                const diffDays = Math.ceil(Math.abs(curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
+                return diffDays === 1;
+            });
 
-            if (diffDays === 1) {
-                if ((current === MoodLevel.Rage && next === MoodLevel.Legendary) || 
-                    (current === MoodLevel.Legendary && next === MoodLevel.Rage)) {
-                    return true;
-                }
+            if (isConsecutive) {
+                // 2. Verificar que los 4 moods sean únicos (Set size === 4)
+                const moods = new Set(slice.map(d => data[d].level));
+                if (moods.size === 4) return true;
             }
         }
         return false;
@@ -412,11 +415,36 @@ export const ACHIEVEMENTS: Achievement[] = [
   {
     id: 'talk_no_jutsu',
     title: 'Talk no Jutsu',
-    description: 'Escribe una nota bíblica (>300 caracteres). Has evangelizado al enemigo con tu discurso. Dattebayo.',
+    description: 'Escribe tus problemas (>20 chars) en un día malo y mejora al siguiente. Evangelización interna. Dattebayo.',
     icon: Mic2,
     color: '#f97316', // Naruto Orange
     condition: (data: YearData) => {
-        return Object.values(data).some(d => d.note && d.note.length > 300);
+        const dates = Object.keys(data).sort();
+        if (dates.length < 2) return false;
+
+        for (let i = 0; i < dates.length - 1; i++) {
+            const d1 = data[dates[i]];
+            const d2 = data[dates[i+1]];
+            
+            const prev = new Date(dates[i]);
+            const curr = new Date(dates[i+1]);
+            const diffDays = Math.ceil(Math.abs(curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
+
+            // Verificar consecutividad (1 día de diferencia)
+            if (diffDays === 1) {
+                // Día 1: Malo (Rage/Sadge) Y Nota > 20 chars
+                const isBadDay = d1.level === MoodLevel.Rage || d1.level === MoodLevel.Sadge;
+                const hasSignificantNote = d1.note && d1.note.length > 20;
+                
+                // Día 2: Bueno (Normal o mejor)
+                const isGoodNext = d2.level >= MoodLevel.Normal;
+
+                if (isBadDay && hasSignificantNote && isGoodNext) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
   },
   {
@@ -805,7 +833,5 @@ export const ACHIEVEMENTS: Achievement[] = [
 ];
 
 export const getUnlockedAchievements = (data: YearData): string[] => {
-    // PREVIEW MODE ACTIVATED: Show all achievements as unlocked
-    // return ACHIEVEMENTS.map(ach => ach.id);
     return ACHIEVEMENTS.filter(ach => ach.condition(data)).map(ach => ach.id);
 };

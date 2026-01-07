@@ -43,6 +43,7 @@ const DayCell = memo(({
   const isFilled = level !== MoodLevel.None;
   
   // Memoizamos el cálculo de "Hoy" para evitar recrear el objeto Date constantemente
+  // Solo nos importa el día/mes/año actual del sistema, no hace falta recalcularlo en cada render de React si no cambia el día.
   const isToday = useMemo(() => {
       const today = new Date();
       return today.getDate() === day && 

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useRef } from 'react';
 import { BarChart2, RotateCcw, Search, Cloud, Settings } from 'lucide-react';
 import SoundManager from '../utils/sounds';
 
