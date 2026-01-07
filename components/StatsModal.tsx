@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { X, Music, Trophy, Brain, Quote, Loader2, TrendingUp, PieChart as PieChartIcon, BarChart3, Hexagon, Waves, CalendarRange, Filter, RefreshCw, Zap, Lock, Gavel, Microscope, Flame, Scale, Siren, Skull, Heart, Sparkles } from 'lucide-react';
+import { X, Music, Trophy, Brain, Quote, Loader2, TrendingUp, PieChart as PieChartIcon, BarChart3, Hexagon, Waves, CalendarRange, Filter, RefreshCw, Zap, Lock, Gavel, Skull, Heart, Sparkles, Undo2, Flame } from 'lucide-react';
 import { YearData, MoodLevel, DayData } from '../types';
 import { MOODS, MONTHS, PEPE_ASSETS } from '../constants';
 import Heatmap from './Heatmap';
@@ -159,6 +159,12 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
     return { totalDays, average, pieData, lineData, radarData: shiftedRadarData, filteredEntries };
   }, [data, timeRange]);
 
+  const handleResetVerdict = () => {
+    SoundManager.play('click');
+    setAiAnalysis("");
+    setErrorAi("");
+  };
+
   const handleAskPepe = async () => {
     if (loadingAi) return;
     
@@ -187,13 +193,11 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
         const ai = new GoogleGenAI({ apiKey: apiKey });
 
         // LÓGICA DE FILTRADO PARA EL TRIBUNAL
-        // Usamos stats.filteredEntries que ya está filtrado por el filtro global (timeRange)
         let daysToAnalyze = [...stats.filteredEntries];
         let contextLabel = getRangeLabel();
 
         // Sampling para no exceder tokens si son muchos días
         if (daysToAnalyze.length > 20) {
-             // Tomar muestras distribuidas uniformemente
              const step = Math.floor(daysToAnalyze.length / 20);
              daysToAnalyze = daysToAnalyze.filter((_, i) => i % step === 0).slice(0, 20);
         }
@@ -210,10 +214,9 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
             }))
         };
 
-        // VARIABLES DINÁMICAS SEGÚN EL MODO (ROAST VS WHOLESOME)
         const toneInstruction = judgeMood === 'roast' 
             ? 'sarcástico, lapidario y ácido (pero nostálgico)' 
-            : 'motivador, optimista, épico y graciosa (wholesome)';
+            : 'motivador, optimista, épico y "basado" (wholesome)';
         
         const diagnosisInstruction = judgeMood === 'roast'
             ? 'Frase lapidaria y sarcástica'
@@ -354,14 +357,25 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
              </p>
           </div>
         )}
-        <button 
-             onClick={handleAskPepe}
-             className="w-full group/card relative flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-[0_4px_20px_-5px_rgba(79,70,229,0.4)] hover:shadow-[0_10px_30px_-5px_rgba(79,70,229,0.5)] transition-all duration-300 active:scale-98 overflow-hidden mt-4"
-        >
-             <div className="absolute inset-0 bg-white/10 opacity-0 group-hover/card:opacity-20 transition-opacity duration-300"></div>
-             <RefreshCw size={18} className="group-hover/card:rotate-180 transition-transform duration-700" />
-             <span className="font-black text-xs uppercase tracking-widest">Apelar Sentencia (Regenerar)</span>
-        </button>
+
+        <div className="flex flex-col gap-2 mt-6">
+            <button 
+                onClick={handleAskPepe}
+                className="w-full group/card relative flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-[0_4px_20px_-5px_rgba(79,70,229,0.4)] hover:shadow-[0_10px_30px_-5px_rgba(79,70,229,0.5)] transition-all duration-300 active:scale-98 overflow-hidden"
+            >
+                <div className="absolute inset-0 bg-white/10 opacity-0 group-hover/card:opacity-20 transition-opacity duration-300"></div>
+                <RefreshCw size={18} className="group-hover/card:rotate-180 transition-transform duration-700" />
+                <span className="font-black text-xs uppercase tracking-widest">Apelar Sentencia (Regenerar)</span>
+            </button>
+            
+            <button 
+                onClick={handleResetVerdict}
+                className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-all duration-200 border border-slate-700 hover:border-slate-500 mt-2 group"
+            >
+                <Undo2 size={16} className="group-hover:-translate-x-1 transition-transform" />
+                <span className="font-bold text-[10px] uppercase tracking-widest">Nuevo Juicio (Volver)</span>
+            </button>
+        </div>
       </div>
     );
   };
@@ -371,12 +385,10 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
     const chartMargins = { top: 10, right: 30, left: 0, bottom: 5 };
     const gradients = (
         <defs>
-            {/* Gradiente Vertical para el Área: De Turquesa (High) a Rojo (Low) */}
             <linearGradient id="moodGradientArea" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.4}/>
                 <stop offset="95%" stopColor="#ef4444" stopOpacity={0.0}/>
             </linearGradient>
-            {/* Gradiente para la Línea: Igual, Turquesa -> Lima -> Rojo */}
             <linearGradient id="moodGradientLine" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#06b6d4" stopOpacity={1}/>
                 <stop offset="50%" stopColor="#84cc16" stopOpacity={1}/>
@@ -435,8 +447,6 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-8">
              {ACHIEVEMENTS.map((ach) => {
                  const isUnlocked = unlockedIds.includes(ach.id);
-                 
-                 // Generate random positions for particles for each card to look varied
                  const particles = isUnlocked ? [...Array(4)].map((_, i) => ({
                     top: Math.random() * 80 + 10 + '%',
                     left: Math.random() * 80 + 10 + '%',
@@ -460,13 +470,10 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                      >
                         {isUnlocked && (
                             <>
-                                {/* Background Gradient Glow */}
                                 <div 
                                     className="absolute inset-0 opacity-[0.08] pointer-events-none group-hover:opacity-[0.15] transition-opacity duration-500"
                                     style={{ background: `radial-gradient(circle at top right, ${ach.color}, transparent 80%)` }}
                                 />
-                                
-                                {/* Floating Particles */}
                                 {particles.map((p, i) => (
                                     <div 
                                         key={i}
@@ -481,13 +488,10 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                                         }}
                                     />
                                 ))}
-
-                                {/* Shine Effect */}
                                 <div className="absolute inset-0 -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none z-10" />
                             </>
                         )}
 
-                        {/* Icon Container */}
                         <div 
                             className={`
                                 p-3 rounded-2xl shrink-0 transition-all duration-500 group-hover:scale-110 relative z-20
@@ -499,16 +503,8 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                                 boxShadow: isUnlocked ? `0 0 15px ${ach.color}30` : 'none'
                             }}
                         >
-                            {isUnlocked ? (
-                                <ach.icon size={26} className="drop-shadow-sm filter" />
-                            ) : (
-                                <Lock size={26} />
-                            )}
-                            
-                            {/* Inner Glow for Icon */}
-                            {isUnlocked && (
-                                <div className="absolute inset-0 rounded-2xl opacity-20 blur-md animate-pulse" style={{ backgroundColor: ach.color }}></div>
-                            )}
+                            {isUnlocked ? <ach.icon size={26} className="drop-shadow-sm filter" /> : <Lock size={26} />}
+                            {isUnlocked && <div className="absolute inset-0 rounded-2xl opacity-20 blur-md animate-pulse" style={{ backgroundColor: ach.color }}></div>}
                         </div>
 
                         <div className="flex-1 relative z-20">
@@ -518,7 +514,6 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                             <p className="text-[10px] text-slate-400/80 font-medium leading-relaxed group-hover:text-slate-300 transition-colors">
                                 {ach.description}
                             </p>
-                            
                             {isUnlocked && (
                                 <div className="mt-3 inline-flex items-center gap-1.5 bg-slate-950/30 px-2 py-1 rounded-lg border border-slate-700/50">
                                     <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: ach.color }}></div>
@@ -712,7 +707,6 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                                         <span className="md:hidden">Tribunal de Pepe</span>
                                         <span className="hidden md:inline">Tribunal Supremo de Pepe</span>
                                     </span>
-                                    {/* BADGE DE HERENCIA DE FILTRO GLOBAL */}
                                     <span className="text-[10px] font-bold text-white bg-indigo-500/20 px-3 py-1.5 rounded-xl border border-indigo-500/40 shadow-sm animate-in fade-in flex items-center gap-2">
                                         <CalendarRange size={12} className="text-indigo-300" />
                                         Juzgando: <span className="text-indigo-300 uppercase tracking-wider">{getRangeLabel()}</span>
@@ -768,50 +762,74 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                                                     Pepe analizará tus patrones del periodo <b>{getRangeLabel()}</b>. Elige la vibra del juez.
                                                 </p>
                                                 
-                                                {/* NEW JUDGE MOOD SWITCH */}
-                                                <div className="w-full grid grid-cols-2 gap-3">
+                                                {/* NEW REDESIGNED JUDGE MOOD SELECTOR */}
+                                                <div className="w-full grid grid-cols-2 gap-4 my-2">
                                                     <button 
                                                         onClick={() => setJudgeMood('roast')}
                                                         className={`
-                                                            group relative overflow-hidden rounded-2xl p-4 border-2 transition-all duration-300 flex flex-col items-center justify-center gap-2
+                                                            group relative overflow-hidden rounded-2xl p-4 border-2 transition-all duration-300 flex flex-col items-center justify-center gap-3
                                                             ${judgeMood === 'roast' 
-                                                                ? 'bg-red-500/10 border-red-500 text-red-100 shadow-[0_0_20px_rgba(239,68,68,0.2)]' 
+                                                                ? 'bg-gradient-to-br from-red-950/40 to-red-600/10 border-red-500 text-red-100 shadow-[0_0_25px_rgba(239,68,68,0.25)] scale-[1.02]' 
                                                                 : 'bg-slate-900/40 border-slate-700 text-slate-500 hover:border-red-500/50 hover:text-red-300 hover:bg-red-900/10'
                                                             }
                                                         `}
                                                     >
-                                                        <div className={`p-2 rounded-full transition-transform duration-300 ${judgeMood === 'roast' ? 'bg-red-500 text-white scale-110' : 'bg-slate-800 group-hover:bg-red-500/20'}`}>
-                                                            <Skull size={20} className={judgeMood === 'roast' ? 'animate-[tada_1s_infinite]' : ''} />
+                                                        <div className={`
+                                                            p-3 rounded-full transition-transform duration-300 shadow-lg
+                                                            ${judgeMood === 'roast' 
+                                                                ? 'bg-red-500 text-white scale-110 shadow-red-500/30' 
+                                                                : 'bg-slate-800 group-hover:bg-red-500/20 group-hover:scale-110'
+                                                            }
+                                                        `}>
+                                                            <Skull size={24} className={judgeMood === 'roast' ? 'animate-[tada_1.5s_infinite]' : 'group-hover:text-red-400'} />
                                                         </div>
-                                                        <span className="text-[10px] font-black uppercase tracking-widest">Roast Mode</span>
-                                                        {judgeMood === 'roast' && <div className="absolute inset-0 bg-red-500/5 animate-pulse pointer-events-none"></div>}
+                                                        <div className="flex flex-col items-center gap-0.5 z-10">
+                                                            <span className="text-[11px] font-black uppercase tracking-widest group-hover:text-red-200 transition-colors">Roast Mode</span>
+                                                            <span className="text-[9px] font-medium opacity-60">Sin piedad</span>
+                                                        </div>
+                                                        {judgeMood === 'roast' && (
+                                                            <>
+                                                                <div className="absolute inset-0 bg-red-500/5 animate-pulse pointer-events-none"></div>
+                                                                <Flame size={100} className="absolute -bottom-8 -right-8 text-red-500/10 blur-sm animate-pulse pointer-events-none" />
+                                                            </>
+                                                        )}
                                                     </button>
 
                                                     <button 
                                                         onClick={() => setJudgeMood('wholesome')}
                                                         className={`
-                                                            group relative overflow-hidden rounded-2xl p-4 border-2 transition-all duration-300 flex flex-col items-center justify-center gap-2
+                                                            group relative overflow-hidden rounded-2xl p-4 border-2 transition-all duration-300 flex flex-col items-center justify-center gap-3
                                                             ${judgeMood === 'wholesome' 
-                                                                ? 'bg-pink-500/10 border-pink-500 text-pink-100 shadow-[0_0_20px_rgba(236,72,153,0.2)]' 
+                                                                ? 'bg-gradient-to-br from-pink-950/40 to-pink-600/10 border-pink-500 text-pink-100 shadow-[0_0_25px_rgba(236,72,153,0.25)] scale-[1.02]' 
                                                                 : 'bg-slate-900/40 border-slate-700 text-slate-500 hover:border-pink-500/50 hover:text-pink-300 hover:bg-pink-900/10'
                                                             }
                                                         `}
                                                     >
-                                                        <div className={`p-2 rounded-full transition-transform duration-300 ${judgeMood === 'wholesome' ? 'bg-pink-500 text-white scale-110' : 'bg-slate-800 group-hover:bg-pink-500/20'}`}>
-                                                            <Heart size={20} className={judgeMood === 'wholesome' ? 'animate-bounce' : ''} />
+                                                        <div className={`
+                                                            p-3 rounded-full transition-transform duration-300 shadow-lg
+                                                            ${judgeMood === 'wholesome' 
+                                                                ? 'bg-pink-500 text-white scale-110 shadow-pink-500/30' 
+                                                                : 'bg-slate-800 group-hover:bg-pink-500/20 group-hover:scale-110'
+                                                            }
+                                                        `}>
+                                                            <Heart size={24} className={judgeMood === 'wholesome' ? 'animate-[bounce_2s_infinite]' : 'group-hover:text-pink-400'} />
                                                         </div>
-                                                        <span className="text-[10px] font-black uppercase tracking-widest">Love Mode</span>
+                                                        <div className="flex flex-col items-center gap-0.5 z-10">
+                                                            <span className="text-[11px] font-black uppercase tracking-widest group-hover:text-pink-200 transition-colors">Love Mode</span>
+                                                            <span className="text-[9px] font-medium opacity-60">Amor duro</span>
+                                                        </div>
                                                         {judgeMood === 'wholesome' && (
                                                             <>
                                                                 <div className="absolute inset-0 bg-pink-500/5 animate-pulse pointer-events-none"></div>
-                                                                <Sparkles size={12} className="absolute top-2 right-2 text-yellow-300 animate-spin" />
+                                                                <Sparkles size={16} className="absolute top-3 right-3 text-yellow-300 animate-[spin_3s_linear_infinite]" />
+                                                                <Sparkles size={10} className="absolute bottom-4 left-4 text-pink-300 animate-pulse" />
                                                             </>
                                                         )}
                                                     </button>
                                                 </div>
 
-                                                <button onClick={handleAskPepe} className="w-full group relative px-8 py-3 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-3 shadow-[0_10px_20px_-5px_rgba(79,70,229,0.4)] overflow-hidden mt-1">
-                                                    <span className="relative z-10 flex items-center gap-2"><Brain size={16} /> SOLICITAR VEREDICTO</span>
+                                                <button onClick={handleAskPepe} className="w-full group relative px-8 py-4 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-3 shadow-[0_10px_25px_-5px_rgba(79,70,229,0.5)] overflow-hidden mt-2 active:scale-95">
+                                                    <span className="relative z-10 flex items-center gap-2"><Brain size={18} /> SOLICITAR VEREDICTO</span>
                                                     <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 skew-y-12 transition-transform duration-500"></div>
                                                 </button>
                                             </div>
