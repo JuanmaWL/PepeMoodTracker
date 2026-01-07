@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { X, Music, Trophy, Brain, Quote, Loader2, TrendingUp, PieChart as PieChartIcon, BarChart3, Hexagon, Waves, CalendarRange, Filter, RefreshCw, Zap, Lock, Gavel } from 'lucide-react';
+import { X, Music, Trophy, Brain, Quote, Loader2, TrendingUp, PieChart as PieChartIcon, BarChart3, Hexagon, Waves, CalendarRange, Filter, RefreshCw, Zap, Lock, Gavel, Microscope, Flame, Scale, Siren, Skull, Heart, Sparkles } from 'lucide-react';
 import { YearData, MoodLevel, DayData } from '../types';
 import { MOODS, MONTHS, PEPE_ASSETS } from '../constants';
 import Heatmap from './Heatmap';
@@ -22,6 +22,7 @@ interface StatsModalProps {
 type ChartType = 'area' | 'radar' | 'bar';
 type TimeRange = 'all' | 'last_7' | 'last_30' | string;
 type Tab = 'stats' | 'achievements';
+type JudgeMood = 'roast' | 'wholesome';
 
 const JUDGE_POOL = [
   PEPE_ASSETS.JUDGE_1, 
@@ -59,6 +60,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
   
   const [timeRange, setTimeRange] = useState<TimeRange>('0'); 
   const [chartType, setChartType] = useState<ChartType>('bar');
+  const [judgeMood, setJudgeMood] = useState<JudgeMood>('roast');
 
   useEffect(() => {
     if (isOpen) {
@@ -68,13 +70,14 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
       // Seleccionar Juez aleatorio al abrir
       setJudgeImage(JUDGE_POOL[Math.floor(Math.random() * JUDGE_POOL.length)]);
       setActiveTab('stats');
+      setJudgeMood('roast'); // Default to roast
     }
   }, [isOpen]);
 
   useEffect(() => {
     setAiAnalysis("");
     setErrorAi("");
-  }, [timeRange]);
+  }, [timeRange, judgeMood]);
 
   const getRangeLabel = () => {
     if (timeRange === 'all') return 'Todo el Año';
@@ -183,28 +186,63 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
 
         const ai = new GoogleGenAI({ apiKey: apiKey });
 
+        // LÓGICA DE FILTRADO PARA EL TRIBUNAL
+        // Usamos stats.filteredEntries que ya está filtrado por el filtro global (timeRange)
+        let daysToAnalyze = [...stats.filteredEntries];
+        let contextLabel = getRangeLabel();
+
+        // Sampling para no exceder tokens si son muchos días
+        if (daysToAnalyze.length > 20) {
+             // Tomar muestras distribuidas uniformemente
+             const step = Math.floor(daysToAnalyze.length / 20);
+             daysToAnalyze = daysToAnalyze.filter((_, i) => i % step === 0).slice(0, 20);
+        }
+
         const contextData = {
-            range: getRangeLabel(),
-            totalDays: stats.totalDays,
+            range: contextLabel,
+            totalDaysAnalyzed: daysToAnalyze.length,
             averageMood: stats.average.toFixed(2),
             topMoods: stats.pieData.map(d => `${d.name} (${d.value})`).join(', '),
-            days: stats.filteredEntries.map(([date, d]) => ({ 
+            days: daysToAnalyze.map(([date, d]) => ({ 
                 date, 
                 mood: MOODS[d.level as MoodLevel].label, 
                 note: d.note || "Sin nota" 
-            })).slice(0, 15)
+            }))
         };
 
+        // VARIABLES DINÁMICAS SEGÚN EL MODO (ROAST VS WHOLESOME)
+        const toneInstruction = judgeMood === 'roast' 
+            ? 'sarcástico, lapidario y ácido (pero nostálgico)' 
+            : 'motivador, optimista, épico y graciosa (wholesome)';
+        
+        const diagnosisInstruction = judgeMood === 'roast'
+            ? 'Frase lapidaria y sarcástica'
+            : 'Frase motivadora y épica';
+
+        const musicInstruction = judgeMood === 'roast'
+            ? '[Argumento gracioso/ácido]'
+            : '[Argumento inspirador/positivo]';
+
+        const achievementInstruction = judgeMood === 'roast'
+            ? 'sarcástico'
+            : 'épico/glorioso';
+
         const prompt = `
-            ACTÚA COMO: Pepe el Juez Supremo de la Vida (Meme Culture).
-            CONTEXTO: Analiza las estadísticas de estado de ánimo del usuario (${contextData.range}).
+            ACTÚA COMO: Pepe the Frog versión Millennial.
+            MODO: ${judgeMood.toUpperCase()} (${toneInstruction}).
+            CONTEXTO: Analiza el diario del usuario: "${contextLabel}".
             DATOS: ${JSON.stringify(contextData)}
-            
-            TAREA: Genera un veredicto sarcástico, divertido y "basado".
-            FORMATO DE RESPUESTA (Estricto):
-            [DIAGNÓSTICO] (Tu análisis ácido aquí, max 50 palabras)
-            [SOUNDTRACK] (Canción real que defina su racha. Formato: "Artista - Canción. Por qué: [razón breve]")
-            [LOGRO] (Inventa un logro absurdo desbloqueado, ej: "Superviviente del Cringe", max 10 palabras)
+            Misión (RESPUESTA ESTRUCTURADA OBLIGATORIA):
+            [DIAGNÓSTICO]: ${diagnosisInstruction} sobre cómo le ha ido al usuario en este periodo (${contextLabel}).
+            [SOUNDTRACK]: Elige UNA canción (2000s, Nu Metal, Emo, Pop Punk, Rock Alternativo, Pop Rock, etc) que defina este periodo.
+            FORMATO SOUNDTRACK: "Titulo - Artista. Por qué: ${musicInstruction}".
+            [LOGRO]: Logro desbloqueado ${achievementInstruction} (max 10 palabras).
+            REGLAS:
+            - Texto natural, ${toneInstruction}.
+            - Utiliza referencias a cultura pop como Dexter, Prison Break, Naruto, Pokemon, Stranger Things, Taylor Swift, Linkin Park, etc.
+            - Terminantemente prohibido usar apelativos como "crack, fiera, figura, socio, máquina, etc".
+            - SIN Markdown ni asteriscos (IMPORTANTE: No uses negritas).
+            - Máximo 120 palabras total.
         `;
 
         const response = await ai.models.generateContent({
@@ -674,8 +712,10 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                                         <span className="md:hidden">Tribunal de Pepe</span>
                                         <span className="hidden md:inline">Tribunal Supremo de Pepe</span>
                                     </span>
-                                    <span className="text-[10px] font-bold text-indigo-400/60 bg-indigo-500/10 px-2 py-1 rounded-lg border border-indigo-500/20">
-                                        Expediente: <span className="text-indigo-300">{getRangeLabel()}</span>
+                                    {/* BADGE DE HERENCIA DE FILTRO GLOBAL */}
+                                    <span className="text-[10px] font-bold text-white bg-indigo-500/20 px-3 py-1.5 rounded-xl border border-indigo-500/40 shadow-sm animate-in fade-in flex items-center gap-2">
+                                        <CalendarRange size={12} className="text-indigo-300" />
+                                        Juzgando: <span className="text-indigo-300 uppercase tracking-wider">{getRangeLabel()}</span>
                                     </span>
                                 </div>
                             
@@ -722,10 +762,55 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                                         ) : aiAnalysis ? (
                                             parseAiResponse(aiAnalysis)
                                         ) : (
-                                            <div className="flex flex-col gap-4 items-center lg:items-start max-w-md">
+                                            <div className="flex flex-col gap-4 items-center lg:items-start max-w-md w-full">
                                                 <h4 className="text-indigo-200 font-bold text-lg leading-tight">¿Listo para la sentencia?</h4>
-                                                <p className="text-indigo-200/50 text-xs leading-relaxed">Pepe analizará tus patrones, tus días malos y tus victorias para generar un veredicto cósmico único.</p>
-                                                <button onClick={handleAskPepe} className="mt-2 group relative px-8 py-3 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-3 shadow-[0_10px_20px_-5px_rgba(79,70,229,0.4)] overflow-hidden">
+                                                <p className="text-indigo-200/50 text-xs leading-relaxed">
+                                                    Pepe analizará tus patrones del periodo <b>{getRangeLabel()}</b>. Elige la vibra del juez.
+                                                </p>
+                                                
+                                                {/* NEW JUDGE MOOD SWITCH */}
+                                                <div className="w-full grid grid-cols-2 gap-3">
+                                                    <button 
+                                                        onClick={() => setJudgeMood('roast')}
+                                                        className={`
+                                                            group relative overflow-hidden rounded-2xl p-4 border-2 transition-all duration-300 flex flex-col items-center justify-center gap-2
+                                                            ${judgeMood === 'roast' 
+                                                                ? 'bg-red-500/10 border-red-500 text-red-100 shadow-[0_0_20px_rgba(239,68,68,0.2)]' 
+                                                                : 'bg-slate-900/40 border-slate-700 text-slate-500 hover:border-red-500/50 hover:text-red-300 hover:bg-red-900/10'
+                                                            }
+                                                        `}
+                                                    >
+                                                        <div className={`p-2 rounded-full transition-transform duration-300 ${judgeMood === 'roast' ? 'bg-red-500 text-white scale-110' : 'bg-slate-800 group-hover:bg-red-500/20'}`}>
+                                                            <Skull size={20} className={judgeMood === 'roast' ? 'animate-[tada_1s_infinite]' : ''} />
+                                                        </div>
+                                                        <span className="text-[10px] font-black uppercase tracking-widest">Roast Mode</span>
+                                                        {judgeMood === 'roast' && <div className="absolute inset-0 bg-red-500/5 animate-pulse pointer-events-none"></div>}
+                                                    </button>
+
+                                                    <button 
+                                                        onClick={() => setJudgeMood('wholesome')}
+                                                        className={`
+                                                            group relative overflow-hidden rounded-2xl p-4 border-2 transition-all duration-300 flex flex-col items-center justify-center gap-2
+                                                            ${judgeMood === 'wholesome' 
+                                                                ? 'bg-pink-500/10 border-pink-500 text-pink-100 shadow-[0_0_20px_rgba(236,72,153,0.2)]' 
+                                                                : 'bg-slate-900/40 border-slate-700 text-slate-500 hover:border-pink-500/50 hover:text-pink-300 hover:bg-pink-900/10'
+                                                            }
+                                                        `}
+                                                    >
+                                                        <div className={`p-2 rounded-full transition-transform duration-300 ${judgeMood === 'wholesome' ? 'bg-pink-500 text-white scale-110' : 'bg-slate-800 group-hover:bg-pink-500/20'}`}>
+                                                            <Heart size={20} className={judgeMood === 'wholesome' ? 'animate-bounce' : ''} />
+                                                        </div>
+                                                        <span className="text-[10px] font-black uppercase tracking-widest">Love Mode</span>
+                                                        {judgeMood === 'wholesome' && (
+                                                            <>
+                                                                <div className="absolute inset-0 bg-pink-500/5 animate-pulse pointer-events-none"></div>
+                                                                <Sparkles size={12} className="absolute top-2 right-2 text-yellow-300 animate-spin" />
+                                                            </>
+                                                        )}
+                                                    </button>
+                                                </div>
+
+                                                <button onClick={handleAskPepe} className="w-full group relative px-8 py-3 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-3 shadow-[0_10px_20px_-5px_rgba(79,70,229,0.4)] overflow-hidden mt-1">
                                                     <span className="relative z-10 flex items-center gap-2"><Brain size={16} /> SOLICITAR VEREDICTO</span>
                                                     <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 skew-y-12 transition-transform duration-500"></div>
                                                 </button>

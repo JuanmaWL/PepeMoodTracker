@@ -2,19 +2,20 @@
 {
   "name": "Pepe's Feels Tracker",
   "short_name": "PepeLore",
-  "start_url": ".",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#020617",
   "theme_color": "#020617",
   "orientation": "portrait",
   "icons": [
     {
-      "src": "/assets/images/pepe_icon.png",
+      "src": "https://sme2zz26xzjq57zw.public.blob.vercel-storage.com/pepe_icon.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/assets/images/pepe_icon.png",
+      "src": "https://sme2zz26xzjq57zw.public.blob.vercel-storage.com/pepe_icon.png",
       "sizes": "512x512",
       "type": "image/png"
     }
