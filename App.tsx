@@ -7,7 +7,7 @@ import Particles from './components/Particles';
 import QuickLogMenu from './components/QuickLogMenu'; 
 import { YearData, DayData, MoodLevel } from './types';
 import { STORAGE_KEY, PEPE_BANNER } from './constants';
-import { Plus, Flame, Trash2, AlertTriangle, Settings, Sliders, Loader2, BatteryCharging } from 'lucide-react';
+import { Plus, Flame, Trash2, AlertTriangle, Settings, Sliders, Loader2, BatteryCharging, Download, Upload, HardDrive } from 'lucide-react';
 import SoundManager from './utils/sounds';
 
 const MoodModal = React.lazy(() => import('./components/MoodModal'));
@@ -48,6 +48,8 @@ const App: React.FC = () => {
   const [isCloudModalOpen, setIsCloudModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Estados de Configuración
   const [ecoMode, setEcoMode] = useState(false);
@@ -354,6 +356,12 @@ const App: React.FC = () => {
     dl.remove();
   };
 
+  const handleImportClick = () => {
+    SoundManager.play('click');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    fileInputRef.current?.click();
+  };
+
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -366,6 +374,7 @@ const App: React.FC = () => {
           triggerHaptic('medium');
           SoundManager.play('success');
           setYearData(importedData);
+          setIsSettingsOpen(false); // Cerrar modal al importar
         }
       } catch (err) {
         console.error("Import error:", err);
@@ -379,6 +388,15 @@ const App: React.FC = () => {
     <div className="flex flex-col items-center min-h-screen pb-24 overflow-x-hidden text-slate-100 relative">
       <Particles count={particleCount} enabled={!ecoMode} />
       
+      {/* Input oculto para importación */}
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        onChange={handleImport} 
+        accept=".json" 
+        className="hidden" 
+      />
+
       <QuickLogMenu 
         isOpen={quickLogState.isActive}
         startPos={quickLogState.startPos}
@@ -446,8 +464,6 @@ const App: React.FC = () => {
       </footer>
 
       <FloatingMenu 
-        onExport={handleExport}
-        onImport={handleImport}
         onStats={() => { triggerHaptic('light'); setIsStatsModalOpen(true); }}
         onReset={() => { triggerHaptic('medium'); setShowResetConfirm(true); }}
         onSearch={() => { triggerHaptic('light'); setIsSearchModalOpen(true); }}
@@ -483,7 +499,7 @@ const App: React.FC = () => {
                  </div>
                  <div>
                     <h3 className="text-lg font-black text-white uppercase tracking-tight">Configuración</h3>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Ajustes visuales</p>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Ajustes & Datos</p>
                  </div>
               </div>
 
@@ -528,11 +544,34 @@ const App: React.FC = () => {
                   </div>
                   )}
 
+                  {/* DATA MANAGEMENT */}
+                  <div className="pt-4 border-t border-slate-700">
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-3 flex items-center gap-2">
+                        <HardDrive size={12} /> Gestión de Datos
+                    </p>
+                    <div className="grid grid-cols-2 gap-3">
+                        <button 
+                            onClick={handleExport}
+                            className="flex flex-col items-center justify-center gap-2 p-3 bg-slate-800 hover:bg-slate-700 rounded-xl border border-slate-700 transition-all text-green-400"
+                        >
+                            <Download size={20} />
+                            <span className="text-[9px] font-black uppercase tracking-wider">Exportar</span>
+                        </button>
+                        <button 
+                            onClick={handleImportClick}
+                            className="flex flex-col items-center justify-center gap-2 p-3 bg-slate-800 hover:bg-slate-700 rounded-xl border border-slate-700 transition-all text-indigo-400"
+                        >
+                            <Upload size={20} />
+                            <span className="text-[9px] font-black uppercase tracking-wider">Importar</span>
+                        </button>
+                    </div>
+                  </div>
+
                   <button 
                     onClick={() => setIsSettingsOpen(false)}
                     className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white font-black uppercase text-xs rounded-xl transition-colors"
                   >
-                    Listo
+                    Cerrar
                   </button>
               </div>
            </div>

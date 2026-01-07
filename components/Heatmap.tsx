@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { memo } from 'react';
 import { YearData, MoodLevel } from '../types';
 import { MOODS } from '../constants';
 
@@ -155,4 +155,5 @@ const Heatmap: React.FC<HeatmapProps> = ({ data, year }) => {
   );
 };
 
-export default Heatmap;
+// CRITICAL: Export memoized component to prevent re-rendering 750+ nodes on parent state changes
+export default memo(Heatmap);

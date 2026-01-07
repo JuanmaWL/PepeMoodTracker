@@ -1,10 +1,9 @@
-import React, { useRef } from 'react';
-import { Download, Upload, BarChart2, RotateCcw, Search, Cloud, Settings } from 'lucide-react';
+
+import React from 'react';
+import { BarChart2, RotateCcw, Search, Cloud, Settings } from 'lucide-react';
 import SoundManager from '../utils/sounds';
 
 interface FloatingMenuProps {
-  onExport: () => void;
-  onImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onStats: () => void;
   onReset: () => void;
   onSearch: () => void;
@@ -12,16 +11,8 @@ interface FloatingMenuProps {
   onSettings: () => void;
 }
 
-const FloatingMenu: React.FC<FloatingMenuProps> = ({ onExport, onImport, onStats, onReset, onSearch, onCloud, onSettings }) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleImportClick = () => {
-    SoundManager.play('click');
-    // Resetear valor para permitir cargar el mismo archivo dos veces si falla
-    if (fileInputRef.current) fileInputRef.current.value = '';
-    fileInputRef.current?.click();
-  };
-
+const FloatingMenu: React.FC<FloatingMenuProps> = ({ onStats, onReset, onSearch, onCloud, onSettings }) => {
+  
   const handleClick = (action: () => void) => {
     SoundManager.play('click');
     action();
@@ -71,15 +62,6 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({ onExport, onImport, onStats
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-max max-w-[95vw]">
       
-      {/* Input oculto para importación */}
-      <input 
-        type="file" 
-        ref={fileInputRef} 
-        onChange={onImport} 
-        accept=".json" 
-        className="hidden" 
-      />
-
       {/* Contenedor Dock */}
       <div className="
         flex items-center gap-1 md:gap-6 px-2 py-2 md:px-8 md:py-4
@@ -113,21 +95,7 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({ onExport, onImport, onStats
 
         <Separator />
 
-        {/* GRUPO 2: GESTIÓN DE DATOS */}
-        <MenuButton 
-          icon={Download} 
-          label="Exportar" 
-          onClick={() => handleClick(onExport)} 
-          colorClass="hover:text-green-400"
-        />
-
-        <MenuButton 
-          icon={Upload} 
-          label="Importar" 
-          onClick={handleImportClick} 
-          colorClass="hover:text-indigo-400"
-        />
-
+        {/* GRUPO 2: ACCIONES */}
         <MenuButton 
           icon={RotateCcw} 
           label="Reset" 
@@ -135,9 +103,6 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({ onExport, onImport, onStats
           colorClass="hover:text-red-500"
         />
 
-        <Separator />
-
-        {/* GRUPO 3: CONFIGURACIÓN */}
         <MenuButton 
           icon={Settings} 
           label="Config" 
