@@ -5,10 +5,10 @@ import FloatingMenu from './components/FloatingMenu';
 import PepeOracle from './components/PepeOracle';
 import Particles from './components/Particles';
 import QuickLogMenu from './components/QuickLogMenu'; 
-import WelcomeModal from './components/WelcomeModal'; // Importar el nuevo tutorial
+import WelcomeModal from './components/WelcomeModal'; 
 import { YearData, DayData, MoodLevel, Achievement } from './types';
 import { STORAGE_KEY, PEPE_BANNER } from './constants';
-import { Plus, Flame, Trash2, AlertTriangle, Settings, Sliders, Loader2, BatteryCharging, Download, Upload, FileJson, Save, Trophy, X } from 'lucide-react';
+import { Plus, Flame, Trash2, AlertTriangle, Settings, Sliders, Loader2, BatteryCharging, Download, Upload, FileJson, Save, Trophy, X, HelpCircle, BookOpen } from 'lucide-react';
 import SoundManager from './utils/sounds';
 import { ACHIEVEMENTS, getUnlockedAchievements } from './utils/gamification';
 
@@ -26,6 +26,8 @@ const ModalLoader = () => (
   </div>
 );
 
+const TUTORIAL_KEY = 'pepe_tutorial_seen_v1';
+
 const App: React.FC = () => {
   const currentYear = new Date().getFullYear();
   const [yearData, setYearData] = useState<YearData>({});
@@ -38,10 +40,11 @@ const App: React.FC = () => {
   const [isCloudModalOpen, setIsCloudModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false); // Estado elevado
   
   // Real-time achievement notifications
   const [newlyUnlocked, setNewlyUnlocked] = useState<Achievement | null>(null);
-  const [isClosingToast, setIsClosingToast] = useState(false); // New state for exit animation
+  const [isClosingToast, setIsClosingToast] = useState(false); 
   const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const prevUnlockedRef = useRef<string[]>([]);
@@ -95,6 +98,12 @@ const App: React.FC = () => {
 
   useEffect(() => {
     SoundManager.preload();
+    
+    // Check Tutorial Logic
+    const hasSeenTutorial = localStorage.getItem(TUTORIAL_KEY);
+    if (!hasSeenTutorial) {
+        setTimeout(() => setIsWelcomeModalOpen(true), 1000);
+    }
   }, []);
 
   // Función para cerrar el toast con animación
@@ -276,21 +285,22 @@ const App: React.FC = () => {
             if (isCloudModalOpen) setIsCloudModalOpen(false);
             if (isSettingsOpen) setIsSettingsOpen(false);
             if (showResetConfirm) setShowResetConfirm(false);
+            if (isWelcomeModalOpen) setIsWelcomeModalOpen(false);
             if (newlyUnlocked) closeAchievementToast();
         }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isMoodModalOpen, isStatsModalOpen, isSearchModalOpen, isCloudModalOpen, isSettingsOpen, showResetConfirm, newlyUnlocked, closeAchievementToast]);
+  }, [isMoodModalOpen, isStatsModalOpen, isSearchModalOpen, isCloudModalOpen, isSettingsOpen, showResetConfirm, newlyUnlocked, closeAchievementToast, isWelcomeModalOpen]);
 
   useEffect(() => {
-    const isAnyModalOpen = isMoodModalOpen || isStatsModalOpen || isSearchModalOpen || isCloudModalOpen || isSettingsOpen || showResetConfirm || quickLogState.isActive;
+    const isAnyModalOpen = isMoodModalOpen || isStatsModalOpen || isSearchModalOpen || isCloudModalOpen || isSettingsOpen || showResetConfirm || quickLogState.isActive || isWelcomeModalOpen;
     if (isAnyModalOpen) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
     }
-  }, [isMoodModalOpen, isStatsModalOpen, isSearchModalOpen, isCloudModalOpen, isSettingsOpen, showResetConfirm, quickLogState.isActive]);
+  }, [isMoodModalOpen, isStatsModalOpen, isSearchModalOpen, isCloudModalOpen, isSettingsOpen, showResetConfirm, quickLogState.isActive, isWelcomeModalOpen]);
 
   const streak = useMemo(() => {
     const entries = (Object.entries(yearData) as [string, DayData][])
@@ -423,7 +433,7 @@ const App: React.FC = () => {
       <Particles count={particleCount} enabled={!ecoMode} />
       
       {/* Componente de Tutorial Inicial */}
-      <WelcomeModal />
+      <WelcomeModal isOpen={isWelcomeModalOpen} onClose={() => setIsWelcomeModalOpen(false)} />
 
       {/* Input oculto para importación - se mantiene en el DOM para funcionar */}
       <input 
@@ -680,6 +690,27 @@ const App: React.FC = () => {
               </div>
 
               <div className="space-y-6">
+                  {/* TUTORIAL RELOAD BUTTON - NEW */}
+                  <button 
+                    onClick={() => {
+                        SoundManager.play('click');
+                        setIsSettingsOpen(false);
+                        setIsWelcomeModalOpen(true);
+                    }}
+                    className="w-full flex items-center justify-between p-3 bg-indigo-500/10 hover:bg-indigo-500/20 rounded-xl border border-indigo-500/30 group transition-all"
+                  >
+                     <div className="flex items-center gap-3">
+                         <div className="p-2 rounded-lg bg-indigo-500/20 text-indigo-400 group-hover:scale-110 transition-transform">
+                             <BookOpen size={18} />
+                         </div>
+                         <div className="text-left">
+                             <div className="text-xs font-bold text-indigo-200 uppercase tracking-wider">Ver Tutorial / Guía</div>
+                             <div className="text-[9px] text-indigo-400/70 font-medium">Instrucciones y trucos</div>
+                         </div>
+                     </div>
+                     <HelpCircle size={18} className="text-indigo-400 opacity-50 group-hover:opacity-100" />
+                  </button>
+
                   {/* ECO MODE TOGGLE */}
                   <div className="flex items-center justify-between p-3 bg-slate-800/50 rounded-xl border border-slate-700">
                       <div className="flex items-center gap-3">

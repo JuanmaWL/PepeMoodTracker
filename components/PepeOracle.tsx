@@ -13,7 +13,6 @@ interface PepeOracleProps {
 const ORACLE_FALLBACKS = [
   "Necesito más lore para juzgarte, lince. Registra un par de días más.",
   "Poco lore veo aquí, amigo. Vuelve cuando hayas vivido algo épico.",
-  "¿Solo esto? Mi sabiduría requiere al menos dos fragmentos de tu historia.",
   "El archivo está vacío, tú. Dale chicha al diario para que Pepe hable.",
   "Falta contexto. Registra más días o el Oráculo seguirá AFK.",
   "No puedo leer tu destino con tan poco material, ¿sabes?. Escribe más.",
