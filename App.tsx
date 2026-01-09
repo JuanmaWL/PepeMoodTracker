@@ -27,6 +27,7 @@ const ModalLoader = () => (
 );
 
 const TUTORIAL_KEY = 'pepe_tutorial_seen_v1';
+const ACHIEVEMENTS_STORAGE_KEY = 'pepe_achievements_unlocked_v1';
 
 const App: React.FC = () => {
   const currentYear = new Date().getFullYear();
@@ -48,6 +49,7 @@ const App: React.FC = () => {
   const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const prevUnlockedRef = useRef<string[]>([]);
+  const notifiedAchievementsRef = useRef<Set<string>>(new Set());
   const isFirstLoad = useRef(true);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -109,6 +111,19 @@ const App: React.FC = () => {
     if (!hasSeenTutorial) {
         setTimeout(() => setIsWelcomeModalOpen(true), 1000);
     }
+
+    // Load persisted achievements
+    try {
+        const storedAchievements = localStorage.getItem(ACHIEVEMENTS_STORAGE_KEY);
+        if (storedAchievements) {
+            const parsed = JSON.parse(storedAchievements);
+            if (Array.isArray(parsed)) {
+                notifiedAchievementsRef.current = new Set(parsed);
+            }
+        }
+    } catch (e) {
+        console.error("Failed to load achievements", e);
+    }
   }, []);
 
   // Función para cerrar el toast con animación
@@ -131,7 +146,12 @@ const App: React.FC = () => {
         return;
     }
 
-    const newIds = currentUnlocked.filter(id => !prevUnlockedRef.current.includes(id));
+    // Identificar nuevos logros que NO hayan sido notificados previamente
+    const newIds = currentUnlocked.filter(id => 
+        !prevUnlockedRef.current.includes(id) && 
+        !notifiedAchievementsRef.current.has(id)
+    );
+
     if (newIds.length > 0) {
         // Find the full achievement object for the first new one
         const achievement = ACHIEVEMENTS.find(ach => ach.id === newIds[0]);
@@ -150,6 +170,10 @@ const App: React.FC = () => {
             toastTimeoutRef.current = setTimeout(() => {
                 closeAchievementToast();
             }, 6000);
+
+            // Persistir los logros notificados
+            newIds.forEach(id => notifiedAchievementsRef.current.add(id));
+            localStorage.setItem(ACHIEVEMENTS_STORAGE_KEY, JSON.stringify(Array.from(notifiedAchievementsRef.current)));
         }
     }
     
