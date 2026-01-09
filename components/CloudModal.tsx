@@ -1,6 +1,8 @@
+
 import React, { useMemo, useState } from 'react';
-import { X, BrainCircuit } from 'lucide-react';
+import { X, BrainCircuit, CalendarRange, Filter, Sparkles, Zap, Network } from 'lucide-react';
 import { YearData, DayData } from '../types';
+import { MONTHS } from '../constants';
 import SoundManager from '../utils/sounds';
 
 interface CloudModalProps {
@@ -9,114 +11,185 @@ interface CloudModalProps {
   data: YearData;
 }
 
-// Lista de stopwords
-const STOPWORDS = new Set([
-  'san', 
-  'el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas', 'lo', 'al', 'del',
-  'a', 'ante', 'bajo', 'cabe', 'con', 'contra', 'de', 'desde', 'durante',
-  'en', 'entre', 'hacia', 'hasta', 'mediante', 'para', 'por', 'segun', 'sin',
-  'so', 'sobre', 'tras', 'versus', 'via',
-  'yo', 'tu', 'el', 'ella', 'ello', 'nosotros', 'nosotras', 'vosotros', 'vosotras',
-  'ellos', 'ellas', 'mi', 'mis', 'tu', 'tus', 'su', 'sus', 'nuestro', 'nuestra',
-  'vuestro', 'vuestra', 'me', 'te', 'se', 'nos', 'os', 'le', 'les', 'migo', 'tigo',
-  'conmigo', 'contigo', 'consigo',
-  'soy', 'eres', 'es', 'somos', 'sois', 'son', 'fui', 'fuiste', 'fue', 'fuimos', 'fueron',
-  'era', 'eras', 'eramos', 'eran', 'sido', 'siendo',
-  'estoy', 'estas', 'esta', 'estamos', 'estais', 'estan', 'estuve', 'estuviste', 'estuvo',
-  'estuvimos', 'estuvieron', 'estaba', 'estabas', 'estabamos', 'estaban', 'estado', 'estando',
-  'he', 'has', 'ha', 'hemos', 'habeis', 'han', 'hube', 'hubiste', 'hubo', 'hubimos', 'hubieron',
-  'habia', 'habias', 'habiamos', 'habian', 'habido', 'habiendo',
-  'tengo', 'tienes', 'tiene', 'tenemos', 'teneis', 'tienen', 'tuve', 'tuviste', 'tuvo',
-  'tuvimos', 'tuvieron', 'tenia', 'tenias', 'teniamos', 'tenian', 'tenido', 'teniendo',
-  'voy', 'vas', 'va', 'vamos', 'vais', 'van', 'iba', 'ibas', 'ibamos', 'iban', 'ido', 'yendo',
-  'hago', 'haces', 'hace', 'hacemos', 'haceis', 'hacen', 'hice', 'hiciste', 'hizo',
-  'hicimos', 'hicieron', 'hacia', 'hacias', 'haciamos', 'hacian', 'hecho', 'haciendo',
-  'puedo', 'puedes', 'puede', 'podemos', 'podeis', 'pueden', 'podia', 'podias', 'podiamos',
-  'queria', 'querias', 'queriamos', 'dije', 'dijo', 'dice', 'dicen', 'saber', 'sabia',
-  'y', 'e', 'ni', 'o', 'u', 'pero', 'mas', 'sino', 'aunque', 'porque', 'pues',
-  'como', 'cuando', 'donde', 'quien', 'que', 'cual', 'cuanto', 'si', 'no',
-  'muy', 'mucho', 'poco', 'bastante', 'tan', 'tanto', 'asi', 'entonces', 'luego',
-  'ahora', 'despues', 'mientras', 'siempre', 'nunca', 'jamas', 'tambien', 'tampoco',
-  'quizas', 'talvez', 'acaso', 'aqui', 'alli', 'alla', 'ahi', 'cerca', 'lejos',
-  'arriba', 'abajo', 'dentro', 'fuera', 'encima', 'debajo', 'delante', 'detras',
-  'bien', 'mal', 'mejor', 'peor', 'regular', 'tal', 'tipo', 'cosa', 'cosas', 'algo',
-  'nada', 'todo', 'toda', 'todos', 'todas', 'otro', 'otra', 'otros', 'otras',
-  'mismo', 'misma', 'mismos', 'mismas', 'ese', 'esa', 'eso', 'esos', 'esas',
-  'este', 'esta', 'esto', 'estos', 'estas', 'aquel', 'aquella', 'aquello',
-  'dia', 'dias', 'hoy', 'ayer', 'mañana', 'año', 'mes', 'semana', 'vez', 'veces',
-  'creo', 'parece', 'siento', 'veo', 'digo', 'bueno', 'malo', 'claro', 'vale',
-  'fin', 'principio', 'mitad', 'lado', 'parte', 'gran', 'solo', 'solamente', 'super',
-  'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo',
-  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+type TimeRange = 'all' | 'last_7' | 'last_30' | string;
+
+// Lista Negra (Stopwords) Ampliada
+const SPANISH_STOPWORDS = new Set([
+  // Preposiciones y conjunciones
+  "a", "ante", "bajo", "cabe", "con", "contra", "de", "desde", "durante",
+  "en", "entre", "hacia", "hasta", "mediante", "para", "por", "según", "segun",
+  "sin", "so", "sobre", "tras", "versus", "via", "y", "e", "ni", "o", "u",
+  "pero", "mas", "sino", "aunque", "porque", "pues", "si", "no",
+  
+  // Artículos
+  "el", "la", "los", "las", "un", "una", "unos", "unas", "lo", "al", "del",
+  
+  // Pronombres y posesivos
+  "yo", "tu", "el", "ella", "ello", "nosotros", "nosotras", "vosotros", "vosotras",
+  "ellos", "ellas", "mi", "mis", "tu", "tus", "su", "sus", "nuestro", "nuestra",
+  "vuestro", "vuestra", "me", "te", "se", "nos", "os", "le", "les", "migo", "tigo",
+  "conmigo", "contigo", "consigo", "que", "qué", "quien", "quién", "cual", "cuál",
+  "cuanto", "cuánto", "donde", "dónde", "como", "cómo", "cuando", "cuándo",
+  "este", "esta", "esto", "estos", "estas", "ese", "esa", "eso", "esos", "esas",
+  "aquel", "aquella", "aquello", "mismo", "misma", "otro", "otra", "otros", "otras",
+  "todo", "toda", "todos", "todas", "nada", "algo", "alguien", "nadie",
+  
+  // Verbos auxiliares / comunes (ser, estar, haber, tener, ir, hacer...)
+  "soy", "eres", "es", "somos", "sois", "son", "fui", "fuiste", "fue", "fuimos", "fueron",
+  "era", "eras", "eramos", "eran", "sido", "siendo",
+  "estoy", "estas", "esta", "estamos", "estais", "estan", "estuve", "estuviste", "estuvo",
+  "estuvimos", "estuvieron", "estaba", "estabas", "estabamos", "estaban", "estado", "estando",
+  "he", "has", "ha", "hemos", "habeis", "han", "hube", "hubiste", "hubo", "hubimos", "hubieron",
+  "habia", "habias", "habiamos", "habian", "habido", "habiendo",
+  "tengo", "tienes", "tiene", "tenemos", "teneis", "tienen", "tuve", "tuviste", "tuvo",
+  "tuvimos", "tuvieron", "tenia", "tenias", "teniamos", "tenian", "tenido", "teniendo",
+  "voy", "vas", "va", "vamos", "vais", "van", "iba", "ibas", "ibamos", "iban", "ido", "yendo",
+  "hago", "haces", "hace", "hacemos", "haceis", "hacen", "hice", "hiciste", "hizo",
+  "hicimos", "hicieron", "hacia", "hacias", "haciamos", "hacian", "hecho", "haciendo",
+  "puedo", "puedes", "puede", "podemos", "podeis", "pueden", "podia", "podias", "podiamos",
+  "queria", "querias", "queriamos", "dije", "dijo", "dice", "dicen", "saber", "sabia",
+  "creo", "parece", "siento", "veo", "digo", "bueno", "malo", "claro", "vale",
+  
+  // Adverbios y tiempo
+  "muy", "mucho", "poco", "bastante", "tan", "tanto", "asi", "entonces", "luego",
+  "ahora", "despues", "mientras", "siempre", "nunca", "jamas", "tambien", "tampoco",
+  "quizas", "talvez", "acaso", "aqui", "alli", "alla", "ahi", "cerca", "lejos",
+  "arriba", "abajo", "dentro", "fuera", "encima", "debajo", "delante", "detras",
+  "hoy", "ayer", "mañana", "dia", "dias", "año", "mes", "semana", "vez", "veces",
+  "fin", "principio", "mitad", "lado", "parte", "gran", "solo", "solamente", "super",
+  
+  // Días y meses
+  "lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo",
+  "enero", "febrero", "marzo", "abril", "mayo", "junio",
+  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
 ]);
 
-const WHITELIST_SHORT = new Set(['sol', 'mar', 'luz', 'paz', 'fe', 'ron', 'bar', 'gym', 'gas', 'red', 'gol', 'ojo', 'sed', 'fan']);
-
-const normalizeText = (text: string) => {
-  return text.toLowerCase();
-};
-
-const getStem = (word: string) => {
-  if (WHITELIST_SHORT.has(word)) return word;
-  if (word.length <= 3) return word;
-
-  if (word.endsWith('ces')) {
-    return word.slice(0, -3) + 'z';
-  }
-  
-  if (word.endsWith('es')) {
-    const stem = word.slice(0, -2);
-    if (stem.length > 2) return stem;
-  }
-
-  if (word.endsWith('s') && !word.endsWith('ss')) {
-    const stem = word.slice(0, -1);
-    if (stem.length > 2) return stem;
-  }
-
-  return word;
-};
+// Palabras cortas permitidas (Whitelist)
+const WHITELIST_SHORT = new Set(['sol', 'mar', 'luz', 'paz', 'fe', 'ron', 'bar', 'gym', 'gas', 'red', 'gol', 'ojo', 'sed', 'fan', 'zen', 'vip', 'té', 'fe', 'ir']);
 
 const CloudModal: React.FC<CloudModalProps> = ({ isOpen, onClose, data }) => {
   const [selectedWord, setSelectedWord] = useState<string | null>(null);
+  const [timeRange, setTimeRange] = useState<TimeRange>('all');
+
+  const getRangeLabel = () => {
+    if (timeRange === 'all') return 'Todo el Año';
+    if (timeRange === 'last_7') return 'Últimos 7 Días';
+    if (timeRange === 'last_30') return 'Últimos 30 Días';
+    return MONTHS[parseInt(timeRange)];
+  };
 
   const words = useMemo(() => {
     if (!data) return [];
     
-    const allNotes = (Object.values(data) as DayData[])
-      .map(d => d.note || '')
-      .join(' . '); 
+    // 1. Filtrar datos por fecha
+    const entries = Object.entries(data) as [string, DayData][];
+    const allValidEntries = entries.filter(([_, d]) => d.note && d.note.trim().length > 0).sort((a, b) => a[0].localeCompare(b[0]));
+    
+    let filteredEntries: [string, DayData][] = [];
 
-    const cleanText = normalizeText(allNotes);
-    const tokens = cleanText.replace(/[^a-z0-9ñáéíóúü\s]/g, " ").split(/\s+/);
+    if (timeRange === 'all') {
+        filteredEntries = allValidEntries;
+    } else if (timeRange === 'last_7') {
+        filteredEntries = allValidEntries.slice(-7);
+    } else if (timeRange === 'last_30') {
+        filteredEntries = allValidEntries.slice(-30);
+    } else {
+        const monthIndex = parseInt(timeRange);
+        filteredEntries = allValidEntries.filter(([date]) => {
+             const [_, m] = date.split('-');
+             return parseInt(m) - 1 === monthIndex;
+        });
+    }
 
-    const counts: Record<string, number> = {};
+    if (filteredEntries.length === 0) return [];
 
+    // 2. Procesamiento de texto con preservación de tildes
+    const allNotes = filteredEntries.map(([_, d]) => d.note || '').join(' . '); 
+    
+    // Limpieza básica pero manteniendo tildes para el display
+    // Solo quitamos caracteres raros que no sean letras o números
+    const cleanText = allNotes
+        .toLowerCase()
+        .replace(/[^a-záéíóúñü0-9\s]/g, " "); 
+
+    const tokens = cleanText.split(/\s+/);
+    
+    // Estructura: { "palabra_sin_tilde": { count: 10, variants: { "canción": 8, "cancion": 2 } } }
+    const groupedCounts: Record<string, { count: number, variants: Record<string, number> }> = {};
+
+    // 3. Conteo Inteligente
     tokens.forEach(token => {
         if (!token) return;
+        // Filtrar números puros
+        if (/^\d+$/.test(token)) return;
+        // Normalizar clave (sin tildes) para agrupar
+        const normalizedKey = token.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+        // Filtrar palabras muy cortas (salvo whitelist)
+        if (normalizedKey.length < 3 && !WHITELIST_SHORT.has(token)) return;
+        // Filtrar Stopwords (usando la clave normalizada)
+        if (SPANISH_STOPWORDS.has(normalizedKey)) return;
+
+        if (!groupedCounts[normalizedKey]) {
+            groupedCounts[normalizedKey] = { count: 0, variants: {} };
+        }
         
-        if (token.length < 3 && !WHITELIST_SHORT.has(token)) return;
-        if (STOPWORDS.has(token)) return;
-        if (/^\d+$/.test(token)) return; 
-
-        const stem = getStem(token);
-
-        if (STOPWORDS.has(stem)) return;
-
-        counts[stem] = (counts[stem] || 0) + 1;
+        groupedCounts[normalizedKey].count++;
+        groupedCounts[normalizedKey].variants[token] = (groupedCounts[normalizedKey].variants[token] || 0) + 1;
     });
 
-    let result = Object.entries(counts)
-      .map(([text, value]) => ({ text, value }))
+    // 4. Algoritmo de Fusión (Singularización)
+    const uniqueKeys = Object.keys(groupedCounts).sort((a, b) => b.length - a.length);
+
+    uniqueKeys.forEach(key => {
+        if (!groupedCounts[key]) return; // Ya fue fusionado
+
+        let stem = null;
+        
+        // Plurales simples (s, es)
+        if (key.endsWith('es')) {
+            const candidate = key.slice(0, -2);
+            if (groupedCounts[candidate]) stem = candidate;
+        } else if (key.endsWith('s') && !key.endsWith('ss')) {
+            const candidate = key.slice(0, -1);
+            if (groupedCounts[candidate]) stem = candidate;
+        }
+
+        if (stem) {
+            // Fusionar conteos
+            groupedCounts[stem].count += groupedCounts[key].count;
+            // Fusionar variantes para decidir nombre final
+            Object.entries(groupedCounts[key].variants).forEach(([variant, count]) => {
+                groupedCounts[stem].variants[variant] = (groupedCounts[stem].variants[variant] || 0) + count;
+            });
+            delete groupedCounts[key];
+        }
+    });
+
+    // 5. Determinar Display Name (la variante más usada) y convertir a array
+    let result = Object.entries(groupedCounts)
+      .map(([key, data]) => {
+          // Encontrar la variante más frecuente (ej: "música" vs "musica")
+          let bestVariant = key;
+          let maxVariantCount = 0;
+          
+          Object.entries(data.variants).forEach(([v, c]) => {
+              if (c > maxVariantCount) {
+                  maxVariantCount = c;
+                  bestVariant = v;
+              }
+          });
+
+          return { text: bestVariant, value: data.count };
+      })
       .filter(item => item.value >= 1)
       .sort((a, b) => b.value - a.value);
 
-    const totalEntries = Object.keys(data).length;
-    const maxItemsToShow = totalEntries < 10 ? 15 : 40;
-
+    // Limitar cantidad mostrada
+    const maxItemsToShow = 45;
     return result.slice(0, maxItemsToShow);
-  }, [data]);
+
+  }, [data, timeRange]);
 
   const maxCount = words.length > 0 ? words[0].value : 1;
   const minCount = words.length > 0 ? words[words.length - 1].value : 0;
@@ -143,41 +216,87 @@ const CloudModal: React.FC<CloudModalProps> = ({ isOpen, onClose, data }) => {
         onClick={handleBackgroundClick}
     >
       <div 
-        className="bg-slate-800 border border-slate-700 w-full max-w-3xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col h-[80vh] max-h-[800px]"
+        className="bg-slate-900/90 border border-slate-700 w-full max-w-4xl rounded-[2.5rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col h-[85vh] max-h-[800px] relative"
         onClick={(e) => e.stopPropagation()}
       >
         
-        <div className="p-6 border-b border-slate-700 flex justify-between items-center bg-slate-800 relative z-10">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-pink-500/10 rounded-xl text-pink-400 animate-pulse">
-                <BrainCircuit size={24} />
-            </div>
-            <div>
-                <h2 className="text-2xl font-black text-white uppercase tracking-tight leading-none">Pepe Mindset</h2>
-                <p className="text-[10px] text-pink-400/80 font-bold uppercase tracking-widest mt-1">Las palabras del año</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-700 rounded-full text-slate-400 transition-colors">
-            <X size={24} />
-          </button>
+        {/* FONDO NEURONAL ANIMADO */}
+        <div className="absolute inset-0 z-0 opacity-20 pointer-events-none overflow-hidden">
+             {/* Grid Cyberpunk */}
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+            
+            {/* Orbes flotantes */}
+            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-600/30 rounded-full blur-[100px] animate-pulse"></div>
+            <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-pink-600/20 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '2s' }}></div>
         </div>
 
+        {/* HEADER */}
+        <div className="p-5 md:p-6 border-b border-white/5 flex flex-col gap-4 bg-slate-900/50 relative z-20 backdrop-blur-md">
+            <div className="flex justify-between items-center w-full">
+                <div className="flex items-center gap-3">
+                    <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl text-white shadow-lg shadow-indigo-500/20 animate-pulse">
+                        <Network size={24} />
+                    </div>
+                    <div>
+                        <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-tight leading-none bg-gradient-to-r from-indigo-300 to-purple-300 bg-clip-text text-transparent">
+                            Pepe Neural Net
+                        </h2>
+                        <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest mt-1 flex items-center gap-1">
+                            <Zap size={10} className="fill-current" /> Mapa de Conceptos
+                        </p>
+                    </div>
+                </div>
+                <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full text-slate-400 transition-colors">
+                    <X size={24} />
+                </button>
+            </div>
+
+            {/* FILTRO DE RANGO */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-950/50 p-1.5 rounded-2xl border border-white/5">
+                <div className="flex items-center gap-2 text-slate-400 px-3">
+                    <Filter size={14} className="text-indigo-400" />
+                    <span className="text-[10px] uppercase font-black tracking-widest">Sincronizar Datos:</span>
+                </div>
+                
+                <div className="relative group w-full sm:w-auto flex-1">
+                    <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-slate-400">
+                        <CalendarRange size={14} />
+                    </div>
+                    <select 
+                        value={timeRange} 
+                        onChange={(e) => setTimeRange(e.target.value)}
+                        className="w-full bg-slate-800 text-white text-[10px] font-bold py-2.5 px-4 pr-10 rounded-xl outline-none hover:bg-slate-700 transition-colors cursor-pointer border border-slate-700 focus:border-indigo-500 appearance-none uppercase tracking-wide shadow-inner"
+                    >
+                        <option value="last_7">Últimos 7 días</option>
+                        <option value="last_30">Últimos 30 días</option>
+                        <option disabled>──────────</option>
+                        {MONTHS.map((m, i) => <option key={m} value={i}>{m}</option>)}
+                        <option disabled>──────────</option>
+                        <option value="all">Todo el Año</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        {/* CONTENT */}
         <div 
-            className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-slate-900/50"
+            className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar relative z-10"
             onClick={handleBackgroundClick}
         >
           {words.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center px-6 animate-in fade-in zoom-in duration-300">
-                <div className="bg-slate-800/50 p-6 rounded-full mb-6 border border-slate-700/50 shadow-[0_0_30px_rgba(236,72,153,0.1)] transform hover:scale-105 transition-transform duration-500 group">
-                    <BrainCircuit size={48} className="text-pink-400/50 group-hover:text-pink-400/80 transition-colors" />
+                <div className="bg-slate-800/50 p-8 rounded-full mb-6 border border-indigo-500/20 shadow-[0_0_50px_rgba(99,102,241,0.1)] transform hover:scale-105 transition-transform duration-500 group relative">
+                    <div className="absolute inset-0 bg-indigo-500/10 rounded-full animate-ping opacity-20"></div>
+                    <BrainCircuit size={64} className="text-indigo-400/50 group-hover:text-indigo-400 transition-colors" />
                 </div>
-                <h3 className="text-xl font-black text-slate-400 mb-2 uppercase tracking-tight">Nada por aquí</h3>
+                <h3 className="text-xl font-black text-slate-300 mb-2 uppercase tracking-tight">Sin Señal Neuronal</h3>
                 <p className="text-xs uppercase tracking-widest text-slate-500 max-w-xs leading-relaxed">
-                  Tu mapa mental está vacío. Registra pensamientos para conectar las neuronas de Pepe.
+                  No se detectan patrones en <span className="text-indigo-400 font-bold">{getRangeLabel()}</span>. 
+                  Alimenta la IA con más vivencias.
                 </p>
             </div>
           ) : (
-            <div className="flex flex-wrap justify-center items-center gap-x-4 gap-y-2 content-center min-h-full py-10">
+            <div className="flex flex-wrap justify-center items-center gap-3 md:gap-5 content-center min-h-full py-10 perspective-[1000px]">
               {words.map((w, i) => {
                 let normalized = 0;
                 if (maxCount !== minCount) {
@@ -186,54 +305,91 @@ const CloudModal: React.FC<CloudModalProps> = ({ isOpen, onClose, data }) => {
                   normalized = 1; 
                 }
 
-                const minSize = 0.8;
-                const maxSize = 4.5;
-                const size = minSize + (Math.pow(normalized, 1.5) * (maxSize - minSize));
-                const opacity = 0.5 + (normalized * 0.5);
-
-                const colors = [
-                   'text-green-400', 'text-emerald-300', 'text-teal-200', 
-                   'text-indigo-400', 'text-violet-300', 'text-purple-200',
-                   'text-pink-400', 'text-rose-300', 'text-yellow-400', 'text-orange-300'
-                ];
-                const colorIndex = w.text.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
-                const colorClass = colors[colorIndex];
-
+                // Ajuste de tamaños con penalización por longitud para móviles
+                const minSize = 0.9;
+                const maxSize = 3.5;
+                let size = minSize + (Math.pow(normalized, 1.2) * (maxSize - minSize)); 
+                
+                const wordLength = w.text.length;
+                if (wordLength > 12) size = size * 0.6; 
+                else if (wordLength > 8) size = size * 0.8;
+                
                 const isSelected = selectedWord === w.text;
-                const isTop = i < 3;
+                const isTop = i < 5;
+
+                // Estilos dinámicos para el "Nodo"
+                const nodeColors = [
+                    { text: 'text-emerald-200', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30', glow: 'shadow-emerald-500/20' },
+                    { text: 'text-cyan-200', bg: 'bg-cyan-500/10', border: 'border-cyan-500/30', glow: 'shadow-cyan-500/20' },
+                    { text: 'text-indigo-200', bg: 'bg-indigo-500/10', border: 'border-indigo-500/30', glow: 'shadow-indigo-500/20' },
+                    { text: 'text-fuchsia-200', bg: 'bg-fuchsia-500/10', border: 'border-fuchsia-500/30', glow: 'shadow-fuchsia-500/20' },
+                    { text: 'text-rose-200', bg: 'bg-rose-500/10', border: 'border-rose-500/30', glow: 'shadow-rose-500/20' },
+                ];
+                
+                const styleIndex = w.text.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % nodeColors.length;
+                const style = nodeColors[styleIndex];
 
                 return (
                   <button 
                     key={w.text}
                     onClick={(e) => handleWordClick(e, w.text)}
                     className={`
-                      ${colorClass} font-black uppercase tracking-tight transition-all duration-500 cursor-pointer relative group outline-none select-none appearance-none leading-none
-                      ${isTop ? 'z-10 drop-shadow-[0_0_15px_rgba(255,255,255,0.15)]' : 'z-0'}
-                      ${isSelected ? 'scale-110 z-20 brightness-125' : 'hover:scale-110'}
+                      relative group outline-none select-none
+                      px-4 py-2 rounded-full border backdrop-blur-sm
+                      transition-all duration-500 cursor-pointer
+                      flex items-center gap-2
+                      ${isSelected ? 'z-50 scale-110 bg-slate-900 border-white/50 shadow-[0_0_30px_rgba(255,255,255,0.2)]' : 'hover:scale-105 hover:bg-slate-800/60'}
+                      ${isSelected ? 'opacity-100' : 'opacity-90 hover:opacity-100'}
+                      ${style.bg} ${style.border}
                     `}
                     style={{ 
-                      fontSize: `${size}rem`,
-                      opacity: isSelected ? 1 : opacity,
-                      transform: isSelected ? 'rotate(0deg)' : `rotate(${(i % 2 === 0 ? 1 : -1) * (Math.random() * 4)}deg)`,
-                      margin: `${Math.max(0.2, normalized)}rem` 
+                      opacity: selectedWord && !isSelected ? 0.3 : 1,
+                      transform: isSelected ? 'scale(1.15) translateZ(20px)' : `scale(1) translateZ(0px)`,
+                      boxShadow: isSelected || isTop ? `0 0 15px ${style.glow.replace('shadow-', '').replace('/20', '')}` : 'none',
+                      animation: isSelected ? 'none' : `float ${3 + Math.random() * 2}s ease-in-out infinite`,
+                      animationDelay: `${Math.random() * -5}s`
                     }}
-                  >
-                    {w.text}
-                    
-                    <span className={`
-                        absolute -top-10 left-1/2 -translate-x-1/2 
-                        bg-slate-900/95 text-white text-[12px] px-3 py-1.5 rounded-xl 
-                        whitespace-nowrap pointer-events-none border border-slate-700/50 shadow-xl backdrop-blur-sm
-                        transition-all duration-200 origin-bottom z-50
-                        ${isSelected 
-                            ? 'opacity-100 scale-100 translate-y-0' 
-                            : 'opacity-0 scale-75 translate-y-2 group-hover:opacity-100 group-hover:scale-100 group-hover:translate-y-0'
+                  > 
+                    {/* Estilos para animación flotante */}
+                    <style>{`
+                        @keyframes float {
+                            0%, 100% { transform: translateY(0); }
+                            50% { transform: translateY(-5px); }
                         }
-                    `}>
-                        <span className="font-bold text-yellow-400 mr-1">{w.value}</span>
-                        {w.value === 1 ? 'vez' : 'veces'}
-                        <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 border-l-4 border-l-transparent border-r-4 border-r-transparent border-t-4 border-t-slate-900/95"></span>
+                    `}</style>
+
+                    {/* Nodo Dot */}
+                    <div className={`
+                        w-1.5 h-1.5 rounded-full transition-all duration-500
+                        ${isSelected ? 'bg-white scale-150' : style.text.replace('text-', 'bg-').replace('-200', '-400')}
+                        ${isTop ? 'animate-pulse' : ''}
+                    `}></div>
+
+                    {/* Texto */}
+                    <span 
+                        className={`
+                            font-black uppercase tracking-tight leading-none text-center
+                            ${style.text}
+                            ${isSelected ? '!text-white' : ''}
+                            drop-shadow-sm
+                        `}
+                        style={{ fontSize: `${size}rem` }}
+                    >
+                        {w.text}
                     </span>
+
+                    {/* Badge de conteo (Solo visible en hover/select) */}
+                    <div className={`
+                        absolute -top-3 -right-3 
+                        bg-slate-900 text-white text-[10px] font-bold px-2 py-0.5 rounded-full border border-slate-600
+                        transition-all duration-300 shadow-xl z-20
+                        ${isSelected ? 'scale-100 opacity-100' : 'scale-0 opacity-0 group-hover:scale-100 group-hover:opacity-100'}
+                    `}>
+                        {w.value}
+                    </div>
+                    
+                    {/* Brillo interno */}
+                    <div className="absolute inset-0 rounded-full bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
                   </button>
                 );
               })}
@@ -241,16 +397,20 @@ const CloudModal: React.FC<CloudModalProps> = ({ isOpen, onClose, data }) => {
           )}
         </div>
         
-        <div className="p-4 bg-slate-800 border-t border-slate-700 flex justify-between items-center px-8">
+        {/* FOOTER */}
+        <div className="p-3 md:p-4 bg-slate-900/80 border-t border-white/5 flex justify-between items-center px-6 md:px-8 relative z-20 backdrop-blur-md">
              <div className="flex gap-4">
                  <div className="flex items-center gap-2">
-                     <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
-                     <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Top Conceptos</span>
+                     <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+                     <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Sistema Online</span>
                  </div>
              </div>
-             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em]">
-                {words.length} Nodos Mentales
-             </p>
+             <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/5">
+                <Sparkles size={10} className="text-indigo-300" />
+                <p className="text-[10px] text-indigo-300 font-bold uppercase tracking-[0.2em]">
+                    {words.length} Conceptos
+                </p>
+             </div>
         </div>
 
       </div>
