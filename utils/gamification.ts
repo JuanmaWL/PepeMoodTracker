@@ -25,7 +25,8 @@ export const ACHIEVEMENTS: Achievement[] = [
             const prev = new Date(dates[i-1]);
             const curr = new Date(dates[i]);
             const diffTime = Math.abs(curr.getTime() - prev.getTime());
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            // Use Math.round to handle DST (23h or 25h days) correctly
+            const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
             
             if (diffDays === 1) {
                 currentStreak++;
@@ -106,7 +107,7 @@ export const ACHIEVEMENTS: Achievement[] = [
             const next = data[dates[i+1]].level;
             const prevDate = new Date(dates[i]);
             const nextDate = new Date(dates[i+1]);
-            const diffDays = Math.ceil(Math.abs(nextDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
+            const diffDays = Math.round(Math.abs(nextDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
 
             if (diffDays === 1 && (current === MoodLevel.Rage || current === MoodLevel.Sadge) && next === MoodLevel.Legendary) {
                 return true;
@@ -130,7 +131,7 @@ export const ACHIEVEMENTS: Achievement[] = [
             const next = data[dates[i+1]].level;
             const prevDate = new Date(dates[i]);
             const nextDate = new Date(dates[i+1]);
-            const diffDays = Math.ceil(Math.abs(nextDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
+            const diffDays = Math.round(Math.abs(nextDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
 
             if (diffDays === 1 && current === MoodLevel.Legendary && (next === MoodLevel.Rage || next === MoodLevel.Sadge)) {
                 return true;
@@ -165,7 +166,7 @@ export const ACHIEVEMENTS: Achievement[] = [
         for (let i = 1; i < dates.length; i++) {
             const prevDate = new Date(dates[i-1]);
             const currDate = new Date(dates[i]);
-            const diffDays = Math.ceil(Math.abs(currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
+            const diffDays = Math.round(Math.abs(currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
             
             // Chequear que sean consecutivos Y que tengan el mismo nivel
             if (diffDays === 1 && data[dates[i]].level === data[dates[i-1]].level) {
@@ -195,7 +196,7 @@ export const ACHIEVEMENTS: Achievement[] = [
                  if (i > 0) {
                       const prev = new Date(dates[i-1]);
                       const curr = new Date(dates[i]);
-                      const diffDays = Math.ceil(Math.abs(curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
+                      const diffDays = Math.round(Math.abs(curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
                       if (diffDays === 1) toxicStreak++;
                       else toxicStreak = 1;
                  } else {
@@ -212,32 +213,12 @@ export const ACHIEVEMENTS: Achievement[] = [
   {
     id: 'wagmi',
     title: 'To The Moon',
-    description: '3 días Legendarios. WAGMI. Stonks only go up.',
+    description: '3 días Legendarios acumulados. WAGMI. Stonks only go up.',
     icon: Rocket,
     color: '#06b6d4', // Cyan
     condition: (data: YearData) => {
-         const dates = Object.keys(data).sort();
-         let moonStreak = 0;
-         let maxMoon = 0;
-         
-         for (let i = 0; i < dates.length; i++) {
-             const level = data[dates[i]].level;
-             if (level === MoodLevel.Legendary) {
-                 if (i > 0) {
-                      const prev = new Date(dates[i-1]);
-                      const curr = new Date(dates[i]);
-                      const diffDays = Math.ceil(Math.abs(curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
-                      if (diffDays === 1) moonStreak++;
-                      else moonStreak = 1;
-                 } else {
-                    moonStreak = 1;
-                 }
-             } else {
-                moonStreak = 0;
-             }
-             maxMoon = Math.max(maxMoon, moonStreak);
-         }
-         return maxMoon >= 3;
+         // Changed from streak logic to total count to enable easy unlocking from imported history
+         return Object.values(data).filter(d => d.level === MoodLevel.Legendary).length >= 3;
     }
   },
   {
@@ -253,7 +234,7 @@ export const ACHIEVEMENTS: Achievement[] = [
         for (let i = 0; i < dates.length - 1; i++) {
             const prev = new Date(dates[i]);
             const curr = new Date(dates[i+1]);
-            const diffDays = Math.ceil(Math.abs(curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
+            const diffDays = Math.round(Math.abs(curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
             
             if (diffDays > 7) return true;
         }
@@ -281,7 +262,7 @@ export const ACHIEVEMENTS: Achievement[] = [
                 if (idx === 0) return true;
                 const prev = new Date(slice[idx-1]);
                 const curr = new Date(date);
-                const diffDays = Math.ceil(Math.abs(curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
+                const diffDays = Math.round(Math.abs(curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
                 return diffDays === 1;
             });
 
@@ -311,7 +292,7 @@ export const ACHIEVEMENTS: Achievement[] = [
                  if (i > 0) {
                       const prev = new Date(dates[i-1]);
                       const curr = new Date(dates[i]);
-                      const diffDays = Math.ceil(Math.abs(curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
+                      const diffDays = Math.round(Math.abs(curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
                       if (diffDays === 1) streak++;
                       else streak = 1;
                  } else {
@@ -404,7 +385,7 @@ export const ACHIEVEMENTS: Achievement[] = [
             if (l1 === MoodLevel.Normal && l2 === MoodLevel.Normal && l3 === MoodLevel.Normal && l4 === MoodLevel.Rage) {
                  const d1 = new Date(dates[i]);
                  const d4 = new Date(dates[i+3]);
-                 const diffDays = Math.ceil(Math.abs(d4.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
+                 const diffDays = Math.round(Math.abs(d4.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
                  // Si hay 3 días de diferencia entre el primero y el cuarto, son consecutivos (0,1,2,3)
                  if (diffDays === 3) return true;
             }
@@ -428,7 +409,7 @@ export const ACHIEVEMENTS: Achievement[] = [
             
             const prev = new Date(dates[i]);
             const curr = new Date(dates[i+1]);
-            const diffDays = Math.ceil(Math.abs(curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
+            const diffDays = Math.round(Math.abs(curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
 
             // Verificar consecutividad (1 día de diferencia)
             if (diffDays === 1) {
@@ -462,7 +443,7 @@ export const ACHIEVEMENTS: Achievement[] = [
             const next = data[dates[i+1]].level;
             const prevDate = new Date(dates[i]);
             const nextDate = new Date(dates[i+1]);
-            const diffDays = Math.ceil(Math.abs(nextDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
+            const diffDays = Math.round(Math.abs(nextDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
 
             if (diffDays === 1 && (current === MoodLevel.MoiBiens || current === MoodLevel.Legendary) && next === MoodLevel.Rage) {
                 return true;
@@ -486,7 +467,7 @@ export const ACHIEVEMENTS: Achievement[] = [
             const next = data[dates[i+1]].level;
             const prevDate = new Date(dates[i]);
             const nextDate = new Date(dates[i+1]);
-            const diffDays = Math.ceil(Math.abs(nextDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
+            const diffDays = Math.round(Math.abs(nextDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
 
             if (diffDays === 1 && current === MoodLevel.Sadge && next >= MoodLevel.Normal) {
                 return true;
@@ -527,7 +508,7 @@ export const ACHIEVEMENTS: Achievement[] = [
                  if (i > 0) {
                       const prev = new Date(dates[i-1]);
                       const curr = new Date(dates[i]);
-                      const diffDays = Math.ceil(Math.abs(curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
+                      const diffDays = Math.round(Math.abs(curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
                       if (diffDays === 1) streak++;
                       else streak = 1;
                  } else {
@@ -556,7 +537,7 @@ export const ACHIEVEMENTS: Achievement[] = [
             const next = data[dates[i+1]].level;
             const prevDate = new Date(dates[i]);
             const nextDate = new Date(dates[i+1]);
-            const diffDays = Math.ceil(Math.abs(nextDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
+            const diffDays = Math.round(Math.abs(nextDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
             
             // De Triste a Furioso directamente
             if (diffDays === 1 && current === MoodLevel.Sadge && next === MoodLevel.Rage) {
@@ -609,7 +590,7 @@ export const ACHIEVEMENTS: Achievement[] = [
                  if (i > 0) {
                       const prev = new Date(dates[i-1]);
                       const curr = new Date(dates[i]);
-                      const diffDays = Math.ceil(Math.abs(curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
+                      const diffDays = Math.round(Math.abs(curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
                       if (diffDays === 1) streak++;
                       else streak = 1;
                  } else {
@@ -653,8 +634,8 @@ export const ACHIEVEMENTS: Achievement[] = [
             const d3 = new Date(dates[i+2]);
             
             // Verificar consecutividad
-            const diff1 = Math.ceil(Math.abs(d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
-            const diff2 = Math.ceil(Math.abs(d3.getTime() - d2.getTime()) / (1000 * 60 * 60 * 24));
+            const diff1 = Math.round(Math.abs(d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
+            const diff2 = Math.round(Math.abs(d3.getTime() - d2.getTime()) / (1000 * 60 * 60 * 24));
 
             if (diff1 === 1 && diff2 === 1) {
                 if (l1 < l2 && l2 < l3) return true;
@@ -714,7 +695,7 @@ export const ACHIEVEMENTS: Achievement[] = [
             const prev = new Date(dates[i-1]);
             const curr = new Date(dates[i]);
             const diffTime = Math.abs(curr.getTime() - prev.getTime());
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
             
             if (diffDays === 1) {
                 currentStreak++;
@@ -771,7 +752,7 @@ export const ACHIEVEMENTS: Achievement[] = [
             const prev = new Date(dates[i-1]);
             const curr = new Date(dates[i]);
             const diffTime = Math.abs(curr.getTime() - prev.getTime());
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
             
             if (diffDays === 1) {
                 currentStreak++;

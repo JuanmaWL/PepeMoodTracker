@@ -799,7 +799,20 @@ const App: React.FC = () => {
             </div>
             <div className="flex flex-col w-full gap-3 pt-2">
               <button
-                onClick={() => { triggerHaptic('heavy'); SoundManager.play('trash'); setYearData({}); setShowResetConfirm(false); }}
+                onClick={() => { 
+                    triggerHaptic('heavy'); 
+                    SoundManager.play('trash'); 
+                    // 1. Clear Data
+                    setYearData({}); 
+                    // 2. Clear Achievement Memory
+                    localStorage.removeItem(ACHIEVEMENTS_STORAGE_KEY);
+                    notifiedAchievementsRef.current = new Set();
+                    prevUnlockedRef.current = [];
+                    // 3. Optional: Clear specific achievements if needed
+                    localStorage.removeItem('pepe_ach_dark_knight_unlocked');
+                    
+                    setShowResetConfirm(false); 
+                }}
                 className="w-full py-4 bg-red-600 hover:bg-red-500 text-white font-black uppercase tracking-[0.2em] text-xs rounded-2xl transition-all shadow-lg shadow-red-900/40 flex items-center justify-center gap-2"
               >
                 <Trash2 size={16} /> SÍ, BORRAR TODO
