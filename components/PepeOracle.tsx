@@ -296,7 +296,7 @@ const PepeOracle: React.FC<PepeOracleProps> = ({ data }) => {
                     {loading ? (
                     <>
                         <Loader2 size={24} className="animate-spin relative z-10" />
-                        <span className="relative z-10">Transcendiendo...</span>
+                        <span className="relative z-10">Trascendiendo...</span>
                     </>
                     ) : (
                     <>

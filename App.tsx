@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo, useCallback, Suspense, useRef } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, useRef } from 'react';
 import Calendar from './components/Calendar';
 import FloatingMenu from './components/FloatingMenu';
 import PepeOracle from './components/PepeOracle';
@@ -8,7 +8,7 @@ import QuickLogMenu from './components/QuickLogMenu';
 import WelcomeModal from './components/WelcomeModal'; 
 import { YearData, DayData, MoodLevel, Achievement } from './types';
 import { STORAGE_KEY, PEPE_BANNER } from './constants';
-import { Plus, Flame, Trash2, AlertTriangle, Settings, Sliders, Loader2, BatteryCharging, Download, Upload, FileJson, Save, Trophy, X, HelpCircle, BookOpen } from 'lucide-react';
+import { Plus, Trash2, AlertTriangle, Settings, Sliders, Loader2, BatteryCharging, Download, Upload, FileJson, Save, Trophy, HelpCircle, BookOpen } from 'lucide-react';
 import SoundManager from './utils/sounds';
 import { ACHIEVEMENTS, getUnlockedAchievements } from './utils/gamification';
 
@@ -75,6 +75,11 @@ const App: React.FC = () => {
   }, [quickLogState]);
 
   const [highlightedDates, setHighlightedDates] = useState<string[]>([]);
+
+  // Fix for infinite loop: Stable callback for highlighting results
+  const handleHighlightResults = useCallback((dates: string[]) => {
+      setHighlightedDates(dates);
+  }, []);
 
   // Efecto para Modo Eco (Body Class)
   useEffect(() => {
@@ -301,35 +306,6 @@ const App: React.FC = () => {
       document.body.style.overflow = '';
     }
   }, [isMoodModalOpen, isStatsModalOpen, isSearchModalOpen, isCloudModalOpen, isSettingsOpen, showResetConfirm, quickLogState.isActive, isWelcomeModalOpen]);
-
-  const streak = useMemo(() => {
-    const entries = (Object.entries(yearData) as [string, DayData][])
-      .filter(([_, d]) => d.level > 0)
-      .sort((a, b) => b[0].localeCompare(a[0]));
-    
-    if (entries.length === 0) return 0;
-
-    let count = 0;
-    const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
-
-    if (!yearData[todayStr] && !yearData[yesterdayStr]) return 0;
-
-    let currentDate = yearData[todayStr] ? today : yesterday;
-    while (true) {
-      const dateStr = currentDate.toISOString().split('T')[0];
-      if (yearData[dateStr] && yearData[dateStr].level > 0) {
-        count++;
-        currentDate.setDate(currentDate.getDate() - 1);
-      } else {
-        break;
-      }
-    }
-    return count;
-  }, [yearData]);
 
   // Titulo Fijo para mayor claridad
   const MAIN_TITLE = "PEPE PIXEL YEAR";
@@ -590,13 +566,7 @@ const App: React.FC = () => {
       )}
       
       <header className="mt-8 mb-6 text-center flex flex-col items-center relative w-full px-4">
-        {streak > 0 && (
-          <div className="mb-4 lg:absolute lg:top-0 lg:right-12 flex items-center gap-2 bg-slate-900/60 backdrop-blur-md border border-orange-500/40 px-5 py-2.5 rounded-full shadow-[0_0_20px_rgba(249,115,22,0.2)] animate-in fade-in slide-in-from-top duration-700 z-30">
-            <Flame size={20} className="text-orange-500 fill-orange-500 animate-pulse" />
-            <span className="text-xs md:text-sm font-black text-white tracking-widest">{streak} DÍAS DE RACHA</span>
-          </div>
-        )}
-
+        
         <div className="relative group mb-8 mt-4">
             <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[180%] h-[180%] pointer-events-none opacity-80 ${ecoMode ? 'hidden' : ''}`}>
                  <div className="absolute inset-0 border-2 border-green-500/30 rounded-full border-dashed animate-[spin_20s_linear_infinite]"></div>
@@ -669,7 +639,7 @@ const App: React.FC = () => {
             />
         )}
         {isStatsModalOpen && <StatsModal isOpen={isStatsModalOpen} onClose={() => setIsStatsModalOpen(false)} data={yearData} />}
-        {isSearchModalOpen && <SearchModal isOpen={isSearchModalOpen} onClose={() => setIsSearchModalOpen(false)} data={yearData} onJumpToDate={(date) => { setSelectedDate(date); setIsMoodModalOpen(true); }} onHighlightResults={(dates) => setHighlightedDates(dates)} />}
+        {isSearchModalOpen && <SearchModal isOpen={isSearchModalOpen} onClose={() => setIsSearchModalOpen(false)} data={yearData} onJumpToDate={(date) => { setSelectedDate(date); setIsMoodModalOpen(true); }} onHighlightResults={handleHighlightResults} />}
         {isCloudModalOpen && <CloudModal isOpen={isCloudModalOpen} onClose={() => setIsCloudModalOpen(false)} data={yearData} />}
       </Suspense>
 

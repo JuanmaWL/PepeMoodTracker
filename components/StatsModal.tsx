@@ -237,7 +237,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
             DATOS: ${JSON.stringify(contextData)}
             Misión (RESPUESTA ESTRUCTURADA OBLIGATORIA):
             [DIAGNÓSTICO]: ${diagnosisInstruction} sobre cómo le ha ido al usuario en este periodo (${contextLabel}).
-            [SOUNDTRACK]: Elige UNA canción (2000s, Nu Metal, Emo, Pop Punk, Rock Alternativo, Pop Rock, etc) que defina este periodo.
+            [SOUNDTRACK]: Elige UNA canción (2000s, 2010s, Nu Metal, Emo, Pop Punk, Rock Alternativo, Pop Rock, o incluso Taylor Swift o Avril Lavigne etc) que defina este periodo.
             FORMATO SOUNDTRACK: "Titulo - Artista. Por qué: ${musicInstruction}".
             [LOGRO]: Logro desbloqueado ${achievementInstruction} (max 10 palabras).
             REGLAS:

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Save, MessageSquareText, Trash2, Download, Loader2, Image as ImageIcon, Sparkles, RefreshCw, ChevronRight, Info, Star } from 'lucide-react';
+import { X, Save, MessageSquareText, Trash2, Download, Loader2, Image as ImageIcon, Sparkles, RefreshCw, Info } from 'lucide-react';
 import { MOODS, PEPE_ASSETS } from '../constants';
 import { MoodLevel, DayData } from '../types';
 import SoundManager from '../utils/sounds';

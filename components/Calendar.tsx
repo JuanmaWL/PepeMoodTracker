@@ -172,11 +172,18 @@ const DayCell = memo(({
       <div className="hidden md:block opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-slate-900 text-white text-[10px] py-1 px-2 rounded pointer-events-none whitespace-nowrap z-30 border border-slate-700 shadow-2xl transition-opacity">
         {isToday ? "¡HOY!" : `Día ${day}`}
       </div>
+      
+      {/* Indicador de Nota (Estilo Actualizado) */}
       {hasNote && (
         <div className={`
-            absolute top-0 right-0 w-3 h-3 md:w-3 md:h-3 bg-white border-l-2 border-b-2 border-slate-950 rounded-bl-md z-20 pointer-events-none
+            absolute top-0 right-0 w-2.5 h-2.5 md:w-3 md:h-3 
+            bg-gradient-to-bl from-indigo-400 to-purple-600
+            rounded-bl-lg 
+            shadow-[0_0_6px_rgba(139,92,246,0.8)] 
+            z-20 pointer-events-none
         `} />
       )}
+
     </button>
   );
 }, (prev, next) => {

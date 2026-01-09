@@ -1,7 +1,8 @@
 
-import React, { memo } from 'react';
+import React, { memo, useMemo } from 'react';
 import { YearData, MoodLevel } from '../types';
 import { MOODS } from '../constants';
+import { CalendarOff, FileText } from 'lucide-react';
 
 interface HeatmapProps {
   data: YearData;
@@ -13,6 +14,29 @@ const Heatmap: React.FC<HeatmapProps> = ({ data, year }) => {
   const days = Array.from({ length: 31 }, (_, i) => i + 1); // 1..31
   
   const monthNames = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
+
+  const stats = useMemo(() => {
+    let withMood = 0;
+    let withNotes = 0;
+    let totalDays = 0;
+
+    for (let m = 0; m < 12; m++) {
+        const daysInMonth = new Date(year, m + 1, 0).getDate();
+        totalDays += daysInMonth;
+        for (let d = 1; d <= daysInMonth; d++) {
+            const dateStr = `${year}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+            const entry = data[dateStr];
+            if (entry) {
+                if (entry.level !== MoodLevel.None) withMood++;
+                if (entry.note && entry.note.trim().length > 0) withNotes++;
+            }
+        }
+    }
+    return { 
+        empty: totalDays - withMood, 
+        withNotes 
+    };
+  }, [data, year]);
 
   const getMoodConfig = (m: number, d: number) => {
     // Validar fecha real (ej: evitar 30 Feb)
@@ -134,12 +158,33 @@ const Heatmap: React.FC<HeatmapProps> = ({ data, year }) => {
 
   return (
     <div className="w-full flex flex-col items-center">
-      <div className="w-full bg-slate-950/30 p-2 md:p-6 rounded-3xl border border-slate-800/50 transition-all duration-500">
+      <div className="w-full bg-slate-950/30 p-2 md:p-6 rounded-3xl border border-slate-800/50 transition-all duration-500 group/container">
          <div className="md:hidden">
             {renderMobileLayout()}
          </div>
          <div className="hidden md:block">
             {renderDesktopLayout()}
+         </div>
+         
+         {/* Stats Metrics */}
+         <div className="mt-4 md:mt-6 pt-3 md:pt-4 border-t border-slate-800/50 flex items-center justify-between px-2 md:px-4 opacity-70 group-hover/container:opacity-100 transition-opacity">
+            <div className="flex items-center gap-2" title="Días sin estado registrado">
+                <CalendarOff size={14} className="text-slate-600" />
+                <div className="flex flex-col">
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">{stats.empty}</span>
+                    <span className="text-[8px] font-bold text-slate-600 uppercase tracking-wider leading-none">Sin Registro</span>
+                </div>
+            </div>
+            
+            <div className="flex items-center gap-2" title="Días con notas escritas">
+                <div className="p-1 bg-indigo-500/10 rounded-full">
+                    <FileText size={14} className="text-indigo-400" />
+                </div>
+                <div className="flex flex-col text-right">
+                    <span className="text-[10px] font-black text-indigo-300 uppercase tracking-widest leading-none">{stats.withNotes}</span>
+                    <span className="text-[8px] font-bold text-indigo-400/60 uppercase tracking-wider leading-none">Con Lore</span>
+                </div>
+            </div>
          </div>
       </div>
       
