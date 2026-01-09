@@ -5,6 +5,7 @@ import FloatingMenu from './components/FloatingMenu';
 import PepeOracle from './components/PepeOracle';
 import Particles from './components/Particles';
 import QuickLogMenu from './components/QuickLogMenu'; 
+import WelcomeModal from './components/WelcomeModal'; // Importar el nuevo tutorial
 import { YearData, DayData, MoodLevel, Achievement } from './types';
 import { STORAGE_KEY, PEPE_BANNER } from './constants';
 import { Plus, Flame, Trash2, AlertTriangle, Settings, Sliders, Loader2, BatteryCharging, Download, Upload, FileJson, Save, Trophy, X } from 'lucide-react';
@@ -24,18 +25,6 @@ const ModalLoader = () => (
       </div>
   </div>
 );
-
-const APP_TITLES = [
-  "Pepe Tracker 2026",
-  "Feels Tracker 2026",
-  "Pepe Mood Index 2026",
-  "Frog Status 2026",
-  "Pepe Database 2026",
-  "Vibe Check 2026",
-  "Pepe Monitor 2026",
-  "Mood Pepe 2026",
-  "Pepe Control 2026"
-];
 
 const App: React.FC = () => {
   const currentYear = new Date().getFullYear();
@@ -332,19 +321,9 @@ const App: React.FC = () => {
     return count;
   }, [yearData]);
 
-  const selectedTitle = useMemo(() => APP_TITLES[Math.floor(Math.random() * APP_TITLES.length)], []);
-  const dynamicSubtitle = useMemo(() => {
-    const phrases = [
-      `Pepe está tomando notas de tu ${currentYear}`,
-      `Juzgando tus decisiones de vida en ${currentYear}`,
-      `El testigo ocular de tus dramas en ${currentYear}`,
-      `Gestionando el caos emocional de ${currentYear}`,
-      `¿Todo bien en casa? Edición ${currentYear}`,
-      `La película de tu vida: Temporada ${currentYear}`,
-      `Documentando el lore de tu vida en ${currentYear}`
-    ];
-    return phrases[Math.floor(Math.random() * phrases.length)];
-  }, [currentYear]);
+  // Titulo Fijo para mayor claridad
+  const MAIN_TITLE = "PEPE PIXEL YEAR";
+  const SUBTITLE = `${currentYear} EDITION`;
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -443,6 +422,9 @@ const App: React.FC = () => {
     <div className="flex flex-col items-center min-h-screen pb-24 overflow-x-hidden text-slate-100 relative">
       <Particles count={particleCount} enabled={!ecoMode} />
       
+      {/* Componente de Tutorial Inicial */}
+      <WelcomeModal />
+
       {/* Input oculto para importación - se mantiene en el DOM para funcionar */}
       <input 
         type="file" 
@@ -628,10 +610,10 @@ const App: React.FC = () => {
         </div>
         
         <h1 className="text-4xl md:text-6xl font-black bg-gradient-to-r from-green-400 via-emerald-300 to-green-600 bg-clip-text text-transparent py-2 px-6 leading-tight animate-shimmer tracking-tighter uppercase text-center drop-shadow-lg">
-          {selectedTitle}
+          {MAIN_TITLE}
         </h1>
         <p className="text-slate-400 font-bold tracking-[0.2em] text-[10px] md:text-sm mt-1 italic opacity-90 uppercase text-center max-w-lg mx-auto">
-          {dynamicSubtitle}
+          {SUBTITLE}
         </p>
       </header>
 

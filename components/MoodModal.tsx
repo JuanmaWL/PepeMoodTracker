@@ -15,12 +15,6 @@ interface MoodModalProps {
   dateStr: string;
 }
 
-const SAVE_PHRASES = [
-  "REGISTRAR LORE", "INMORTALIZAR MOMENTO", "ACTUALIZAR STATUS", "GUARDAR DÍA",
-  "CHECKEAR VIBES", "GUARDAR PROGRESO", "CONFIRMAR EXISTENCIA",
-  "SUBIR AL ARCHIVO", "SINCRONIZAR VIVENCIA", "PUBLICAR LORE", "ESTABLECER CANON"
-];
-
 // Usar constantes centralizadas de assets locales
 const PEPE_BASE_SOURCE = PEPE_ASSETS.BANNER;
 const PEPE_FAIL_SOURCE = PEPE_ASSETS.CLOWN_GIF;
@@ -29,7 +23,6 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
   const [level, setLevel] = useState<MoodLevel>(MoodLevel.None);
   const [note, setNote] = useState('');
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
-  const [buttonText, setButtonText] = useState(SAVE_PHRASES[0]);
   const [showInfo, setShowInfo] = useState(false);
   
   // Estados para Pepe Magic Image Editor
@@ -50,8 +43,6 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
       setMemeUrl(null);
       setMagicExcuse(null);
       setGeneratingMeme(false);
-      const randomPhrase = SAVE_PHRASES[Math.floor(Math.random() * SAVE_PHRASES.length)];
-      setButtonText(randomPhrase);
     }
   }, [isOpen, initialData]);
 
@@ -526,7 +517,7 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
               >
                 <div className="flex items-center gap-2 px-2 text-center">
                   <Save size={24} className="shrink-0" />
-                  <span className="leading-tight text-xs md:text-sm tracking-[0.1em] uppercase">{buttonText}</span>
+                  <span className="leading-tight text-xs md:text-sm tracking-[0.1em] uppercase">GUARDAR DÍA</span>
                 </div>
               </button>
             </div>
