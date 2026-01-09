@@ -443,9 +443,18 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
   };
 
   const renderAchievements = () => {
+    // SORTING LOGIC: Unlocked first
+    const sortedAchievements = [...ACHIEVEMENTS].sort((a, b) => {
+        const aUnlocked = unlockedIds.includes(a.id);
+        const bUnlocked = unlockedIds.includes(b.id);
+        if (aUnlocked && !bUnlocked) return -1;
+        if (!aUnlocked && bUnlocked) return 1;
+        return 0; // Maintain original order otherwise
+    });
+
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-8">
-             {ACHIEVEMENTS.map((ach) => {
+             {sortedAchievements.map((ach) => {
                  const isUnlocked = unlockedIds.includes(ach.id);
                  const particles = isUnlocked ? [...Array(4)].map((_, i) => ({
                     top: Math.random() * 80 + 10 + '%',

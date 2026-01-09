@@ -1,3 +1,4 @@
+
 class SoundManager {
   private static ctx: AudioContext | null = null;
   private static isMuted = false;
@@ -22,7 +23,7 @@ class SoundManager {
     }
   }
 
-  static play(type: 'pop' | 'click' | 'success' | 'magic' | 'trash' | 'open', volumeOverride?: number) {
+  static play(type: 'pop' | 'click' | 'success' | 'magic' | 'trash' | 'open' | 'achievement', volumeOverride?: number) {
     const ctx = this.getContext();
     if (!ctx || this.isMuted) return;
 
@@ -59,7 +60,20 @@ class SoundManager {
         this.synthNote(ctx, t + 0.05, 659.25, 0.4, 'sine', vol); // Mi (E5)
         this.synthNote(ctx, t + 0.10, 783.99, 0.6, 'sine', vol); // Sol (G5)
         break;
+      
+      case 'achievement':
+        // FANFARRIA "LEVEL UP": Arpegio rápido ascendente + Magia
+        const volAch = volumeOverride ?? 0.15;
+        // C5 -> E5 -> G5 -> C6 (Octava)
+        this.synthNote(ctx, t, 523.25, 0.15, 'triangle', volAch);
+        this.synthNote(ctx, t + 0.08, 659.25, 0.15, 'triangle', volAch);
+        this.synthNote(ctx, t + 0.16, 783.99, 0.15, 'triangle', volAch);
+        this.synthNote(ctx, t + 0.24, 1046.50, 0.6, 'sine', volAch); // Nota final larga y suave
         
+        // Capa de "Brillo" (Magia)
+        setTimeout(() => this.play('magic', 0.05), 100);
+        break;
+
       case 'trash':
         // Tono descendente rápido (descarte)
         this.synthOsc(ctx, t, 150, 40, 0.2, 'sawtooth', (volumeOverride ?? 0.1));

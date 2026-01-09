@@ -5,10 +5,11 @@ import FloatingMenu from './components/FloatingMenu';
 import PepeOracle from './components/PepeOracle';
 import Particles from './components/Particles';
 import QuickLogMenu from './components/QuickLogMenu'; 
-import { YearData, DayData, MoodLevel } from './types';
+import { YearData, DayData, MoodLevel, Achievement } from './types';
 import { STORAGE_KEY, PEPE_BANNER } from './constants';
-import { Plus, Flame, Trash2, AlertTriangle, Settings, Sliders, Loader2, BatteryCharging, Download, Upload, FileJson, Save } from 'lucide-react';
+import { Plus, Flame, Trash2, AlertTriangle, Settings, Sliders, Loader2, BatteryCharging, Download, Upload, FileJson, Save, Trophy, X } from 'lucide-react';
 import SoundManager from './utils/sounds';
+import { ACHIEVEMENTS, getUnlockedAchievements } from './utils/gamification';
 
 const MoodModal = React.lazy(() => import('./components/MoodModal'));
 const StatsModal = React.lazy(() => import('./components/StatsModal'));
@@ -48,6 +49,14 @@ const App: React.FC = () => {
   const [isCloudModalOpen, setIsCloudModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  
+  // Real-time achievement notifications
+  const [newlyUnlocked, setNewlyUnlocked] = useState<Achievement | null>(null);
+  const [isClosingToast, setIsClosingToast] = useState(false); // New state for exit animation
+  const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const prevUnlockedRef = useRef<string[]>([]);
+  const isFirstLoad = useRef(true);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -98,6 +107,52 @@ const App: React.FC = () => {
   useEffect(() => {
     SoundManager.preload();
   }, []);
+
+  // Función para cerrar el toast con animación
+  const closeAchievementToast = useCallback(() => {
+      setIsClosingToast(true);
+      // Esperar a que termine la animación de salida (700ms)
+      setTimeout(() => {
+          setNewlyUnlocked(null);
+          setIsClosingToast(false);
+      }, 700);
+  }, []);
+
+  // Achievement Logic
+  useEffect(() => {
+    const currentUnlocked = getUnlockedAchievements(yearData);
+    
+    if (isFirstLoad.current) {
+        prevUnlockedRef.current = currentUnlocked;
+        isFirstLoad.current = false;
+        return;
+    }
+
+    const newIds = currentUnlocked.filter(id => !prevUnlockedRef.current.includes(id));
+    if (newIds.length > 0) {
+        // Find the full achievement object for the first new one
+        const achievement = ACHIEVEMENTS.find(ach => ach.id === newIds[0]);
+        if (achievement) {
+            // Si ya hay uno mostrándose, lo reemplazamos inmediatamente (o podríamos ponerlo en cola)
+            if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+            
+            setNewlyUnlocked(achievement);
+            setIsClosingToast(false);
+            
+            // Play the new EPIC achievement sound
+            SoundManager.play('achievement'); 
+            triggerHaptic('heavy');
+            
+            // Auto-hide after 6 seconds (longer duration for better visibility)
+            toastTimeoutRef.current = setTimeout(() => {
+                closeAchievementToast();
+            }, 6000);
+        }
+    }
+    
+    prevUnlockedRef.current = currentUnlocked;
+  }, [yearData, triggerHaptic, closeAchievementToast]);
+
 
   const handleGlobalMove = useCallback((e: TouchEvent | MouseEvent) => {
     if (!quickLogStateRef.current.isActive) return;
@@ -232,11 +287,12 @@ const App: React.FC = () => {
             if (isCloudModalOpen) setIsCloudModalOpen(false);
             if (isSettingsOpen) setIsSettingsOpen(false);
             if (showResetConfirm) setShowResetConfirm(false);
+            if (newlyUnlocked) closeAchievementToast();
         }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isMoodModalOpen, isStatsModalOpen, isSearchModalOpen, isCloudModalOpen, isSettingsOpen, showResetConfirm]);
+  }, [isMoodModalOpen, isStatsModalOpen, isSearchModalOpen, isCloudModalOpen, isSettingsOpen, showResetConfirm, newlyUnlocked, closeAchievementToast]);
 
   useEffect(() => {
     const isAnyModalOpen = isMoodModalOpen || isStatsModalOpen || isSearchModalOpen || isCloudModalOpen || isSettingsOpen || showResetConfirm || quickLogState.isActive;
@@ -401,6 +457,145 @@ const App: React.FC = () => {
         startPos={quickLogState.startPos}
         currentPos={quickLogState.currentPos}
       />
+
+      {/* ENHANCED ACHIEVEMENT TOAST NOTIFICATION (ULTIMATE VERSION) */}
+      {newlyUnlocked && (
+          <div className="fixed top-0 left-0 right-0 z-[100] flex justify-center pt-8 pointer-events-none px-4">
+              <style>{`
+                @keyframes bounceIn {
+                    0% { opacity: 0; transform: translateY(-100px) scale(0.5); }
+                    60% { opacity: 1; transform: translateY(20px) scale(1.1); }
+                    80% { transform: translateY(-5px) scale(0.95); }
+                    100% { transform: translateY(0) scale(1); }
+                }
+                @keyframes implodeOut {
+                    0% { opacity: 1; transform: translateY(0) scale(1); filter: brightness(1); }
+                    30% { opacity: 1; transform: translateY(0) scale(1.1); filter: brightness(1.5); }
+                    100% { opacity: 0; transform: translateY(0) scale(0) rotate(720deg); filter: brightness(3) blur(20px); }
+                }
+                @keyframes spin-border {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+                @keyframes god-rays {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+                @keyframes pulse-shadow {
+                    0%, 100% { box-shadow: 0 0 20px ${newlyUnlocked.color}40, 0 0 40px ${newlyUnlocked.color}20; }
+                    50% { box-shadow: 0 0 50px ${newlyUnlocked.color}80, 0 0 80px ${newlyUnlocked.color}40; }
+                }
+                @keyframes shimmer-fast {
+                    0% { transform: translateX(-150%) skewX(-15deg); }
+                    100% { transform: translateX(150%) skewX(-15deg); }
+                }
+              `}</style>
+              
+              {/* Main Animation Container */}
+              <div 
+                  className="w-full max-w-sm relative pointer-events-auto"
+                  style={{ 
+                      animation: isClosingToast 
+                        ? 'implodeOut 0.7s cubic-bezier(0.6, -0.28, 0.735, 0.045) forwards' 
+                        : 'bounceIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)' 
+                  }}
+                  onClick={() => {
+                      if (!isClosingToast) {
+                          closeAchievementToast();
+                          setTimeout(() => setIsStatsModalOpen(true), 700);
+                      }
+                  }}
+              >
+                 
+                 {/* God Rays Background - Fixed to be soft and circular */}
+                 <div className="absolute inset-0 z-0 flex items-center justify-center opacity-30 pointer-events-none">
+                      <div 
+                          className="w-[500px] h-[500px] bg-[conic-gradient(from_0deg,transparent,rgba(255,255,255,0.2),transparent)] rounded-full"
+                          style={{ 
+                              animation: 'god-rays 10s linear infinite',
+                              maskImage: 'radial-gradient(closest-side, black 40%, transparent 100%)',
+                              WebkitMaskImage: 'radial-gradient(closest-side, black 40%, transparent 100%)'
+                          }}
+                      />
+                 </div>
+
+                 {/* Explosion Particles */}
+                 {!isClosingToast && (
+                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 overflow-visible w-full h-full pointer-events-none">
+                     {[...Array(20)].map((_, i) => (
+                         <div key={i} className="absolute w-2 h-2 rounded-full animate-ping"
+                             style={{
+                                 backgroundColor: i % 2 === 0 ? newlyUnlocked.color : '#fff',
+                                 top: '50%', left: '50%',
+                                 transform: `rotate(${i * 18}deg) translate(${80 + Math.random()*60}px)`,
+                                 animationDuration: `${0.6 + Math.random() * 0.8}s`,
+                                 animationDelay: `0.1s`
+                             }}
+                         />
+                     ))}
+                 </div>
+                 )}
+
+                 {/* Card Wrapper with Rotating Border */}
+                 <div className="relative z-10 p-[3px] rounded-3xl overflow-hidden group">
+                     {/* Spinning Gradient Border */}
+                     <div 
+                        className="absolute inset-[-50%] animate-[spin-border_3s_linear_infinite]"
+                        style={{ 
+                            background: `conic-gradient(from 0deg, transparent 0deg, ${newlyUnlocked.color} 90deg, transparent 180deg, ${newlyUnlocked.color} 270deg, transparent 360deg)`
+                        }}
+                     />
+                     
+                     {/* The Card Itself */}
+                     <div 
+                        className="relative bg-slate-900 rounded-[22px] overflow-hidden backdrop-blur-3xl"
+                        style={{ animation: 'pulse-shadow 2s infinite ease-in-out' }}
+                     >
+                        <div className="absolute inset-0 bg-slate-900/90 z-0" />
+                        
+                        {/* Dynamic Background Noise/Texture */}
+                        <div className="absolute inset-0 opacity-10 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjZmZmIi8+CjxyZWN0IHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiMwMDAiLz4KPC9zdmc+')] z-0" />
+                        
+                        <div className="relative z-10 p-5 flex items-center gap-5">
+                            {/* Icon Container */}
+                            <div className="shrink-0 relative">
+                                <div className="absolute inset-0 blur-2xl opacity-60 animate-pulse" style={{ backgroundColor: newlyUnlocked.color }}></div>
+                                <div 
+                                    className="w-16 h-16 rounded-2xl flex items-center justify-center relative shadow-lg border border-white/20 overflow-hidden"
+                                    style={{ backgroundColor: `${newlyUnlocked.color}20` }}
+                                >
+                                    <div className="absolute inset-0 bg-white/20 animate-pulse" />
+                                    <newlyUnlocked.icon size={36} style={{ color: newlyUnlocked.color }} className="drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)] animate-[spin_3s_ease-in-out_infinite_alternate]" />
+                                </div>
+                            </div>
+
+                            {/* Text Content */}
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <div className="px-2 py-0.5 rounded-md bg-yellow-500/20 border border-yellow-500/40 flex items-center gap-1 shadow-sm">
+                                        <Trophy size={10} className="text-yellow-400 fill-yellow-400" />
+                                        <span className="text-[9px] font-black uppercase tracking-widest text-yellow-400">Logro Desbloqueado</span>
+                                    </div>
+                                </div>
+                                <h4 className="text-xl font-black text-white leading-tight mb-1 drop-shadow-md tracking-tight">
+                                    {newlyUnlocked.title}
+                                </h4>
+                                <p className="text-xs text-slate-300 font-medium leading-relaxed opacity-90 line-clamp-2">
+                                    {newlyUnlocked.description}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Hyper Shimmer Overlay */}
+                        <div 
+                            className="absolute inset-0 pointer-events-none bg-gradient-to-r from-transparent via-white/30 to-transparent z-20"
+                            style={{ animation: 'shimmer-fast 2s infinite linear' }}
+                        />
+                     </div>
+                 </div>
+              </div>
+          </div>
+      )}
       
       <header className="mt-8 mb-6 text-center flex flex-col items-center relative w-full px-4">
         {streak > 0 && (
