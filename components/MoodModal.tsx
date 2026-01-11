@@ -424,29 +424,31 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
                 // CORRECCIÓN ALINEACIÓN: Contenedor estático idéntico para todos
                 const containerSizeClass = "w-20 h-20 sm:w-24 sm:h-24"; 
 
-                // Lógica de Escala Visual (Zoom) en la imagen
-                // Esto permite que Moi Biens/Normal sean visualmente más grandes sin afectar el layout
+                // Lógica de Escala Visual (Zoom) - REDUCIDA para evitar efecto "zoomed in" en móviles
                 let imgScaleClass = isSelected 
-                    ? "scale-[1.15]" 
-                    : "scale-100 group-hover:scale-110";
+                    ? "scale-[1.05]" // Antes 1.15
+                    : "scale-90 group-hover:scale-100"; // Antes 100/110
                 
                 // NUEVO: Ajuste de posición vertical específico para imágenes altas (ICONOS GRID)
                 let imgTranslateClass = "";
 
                 if (moodLvl === MoodLevel.MoiBiens) {
                     // Base 115% -> Selected 130%
+                    // AJUSTE: Reducimos un poco la escala máxima
                     imgScaleClass = isSelected 
-                        ? "scale-[1.3]" 
-                        : "scale-[1.15] group-hover:scale-[1.25]";
+                        ? "scale-[1.15]"  // Antes 1.3
+                        : "scale-[1.05] group-hover:scale-[1.15]";
                 } else if (moodLvl === MoodLevel.Normal) {
                     // Base 105% -> Selected 120%
+                    // AJUSTE: Reducimos escala
                     imgScaleClass = isSelected 
-                        ? "scale-[1.2]" 
-                        : "scale-[1.05] group-hover:scale-[1.15]";
-                    imgTranslateClass = "translate-y--1";
+                        ? "scale-[1.10]" // Antes 1.2
+                        : "scale-[1.0] group-hover:scale-[1.1]";
+                    // AJUSTE: El usuario pide bajarlas. Quitamos el -translate-y-2.
+                    imgTranslateClass = ""; 
                 } else if (moodLvl === MoodLevel.Regular) {
-
-                    imgTranslateClass = "translate-y--1";
+                    // AJUSTE: Quitamos el -translate-y-2.
+                    imgTranslateClass = "";
                 }
 
                 return (
@@ -540,17 +542,22 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
                          <div className={`relative ${containerSizeClass} flex items-center justify-center`}>
                             {/* 
                                 WRAPPER DE ANIMACIÓN: Se mueve (flota) pero no afecta el layout gracias a estar dentro del wrapper rígido.
-                                IMAGEN: Se escala visualmente pero no empuja el contenido.
+                                AÑADIDO: p-1 para evitar que toque los bordes incluso con el zoom.
                             */}
                             <div 
-                                className="w-full h-full flex items-center justify-center"
+                                className="w-full h-full flex items-center justify-center p-1"
                                 style={{ animation: isSelected ? 'organic-float 6s ease-in-out infinite' : 'none' }}
                             >
+                                {/* 
+                                   FIX MOBILE ZOOM: 
+                                   - max-w-full / max-h-full (antes max-w-none)
+                                   - w-auto / h-auto para respetar aspect ratio
+                                */}
                                 <img 
                                     src={config.image} 
                                     alt={config.label} 
                                     className={`
-                                        max-w-none w-full h-full object-contain transition-all duration-500
+                                        w-auto h-auto max-w-full max-h-full object-contain transition-all duration-500
                                         ${isSelected ? 'drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]' : 'grayscale-[0.7] group-hover:grayscale-0'}
                                         ${imgScaleClass}
                                         ${imgTranslateClass}
