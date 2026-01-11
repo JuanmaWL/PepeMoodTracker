@@ -55,8 +55,11 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
   if (!isOpen) return null;
 
   const handleMoodSelect = (lvl: MoodLevel) => {
-    SoundManager.play('pop');
-    setLevel(lvl);
+    // Solo reproducir sonido si cambia la selección
+    if (level !== lvl) {
+        SoundManager.play('pop');
+        setLevel(lvl);
+    }
   };
 
   const handleSave = () => {
@@ -217,6 +220,60 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/95 backdrop-blur-md animate-in fade-in duration-300">
       
+      {/* ANIMACIONES CSS PURAS (Inyectadas localmente para portabilidad) */}
+      <style>{`
+        /* Efecto Gelatina al seleccionar */
+        @keyframes jelly-pop {
+            0% { transform: scale(1); }
+            30% { transform: scale(1.15, 0.85); }
+            40% { transform: scale(0.85, 1.15); }
+            50% { transform: scale(1.05, 0.95); }
+            65% { transform: scale(0.98, 1.02); }
+            75% { transform: scale(1.02, 0.98); }
+            100% { transform: scale(1); }
+        }
+        
+        /* Plasma/Líquido rotatorio para el fondo */
+        @keyframes liquid-rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Flotación orgánica de la imagen */
+        @keyframes organic-float {
+            0%, 100% { transform: translate3d(0,0,0) translateY(0) rotate(0deg); }
+            33% { transform: translate3d(0,0,0) translateY(-6px) rotate(2deg); }
+            66% { transform: translate3d(0,0,0) translateY(3px) rotate(-1deg); }
+        }
+        
+        /* Brillo pulsante del borde */
+        @keyframes border-glow-pulse {
+            0%, 100% { opacity: 0.5; box-shadow: 0 0 10px currentColor; }
+            50% { opacity: 1; box-shadow: 0 0 25px currentColor; }
+        }
+
+        /* Partículas ascendentes (burbujas) */
+        @keyframes bubble-rise {
+            0% { transform: translateY(100%) scale(0.5); opacity: 0; }
+            20% { opacity: 0.5; }
+            80% { opacity: 0.5; }
+            100% { transform: translateY(-20%) scale(1.2); opacity: 0; }
+        }
+
+        .mood-card-selected {
+            animation: jelly-pop 0.6s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+            /* Fix para el cuadrado transparente: forzar renderizado de capa */
+            backface-visibility: hidden;
+            transform: translate3d(0,0,0);
+            will-change: transform;
+        }
+
+        .liquid-bg {
+            background-size: 200% 200%;
+            animation: liquid-rotate 10s linear infinite;
+        }
+      `}</style>
+
       <div 
         className="absolute inset-0 z-0 transition-colors duration-1000 ease-in-out opacity-20 pointer-events-none"
         style={{ background: `radial-gradient(circle at 50% 30%, ${activeColor}, transparent 70%)` }}
@@ -278,89 +335,171 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
               <div className="h-px flex-1 bg-gradient-to-r from-slate-800 to-transparent"></div>
             </div>
             
-            {/* GRID ACTUALIZADA: 2 Columnas móvil, 3 Tablet, 6 Desktop */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
+            {/* GRID ACTUALIZADA: 3 Columnas móvil, 6 Desktop. Esto permite ver los 6 en móvil sin scroll. */}
+            <div className="grid grid-cols-3 lg:grid-cols-6 gap-2 md:gap-5">
               {moodLevels.map((moodLvl) => {
                 const config = MOODS[moodLvl as MoodLevel];
                 const isSelected = level === moodLvl;
                 
+                // CORRECCIÓN ALINEACIÓN: Contenedor estático idéntico para todos
+                const containerSizeClass = "w-20 h-20 sm:w-24 sm:h-24"; 
+
+                // Lógica de Escala Visual (Zoom) en la imagen
+                // Esto permite que Moi Biens/Normal sean visualmente más grandes sin afectar el layout
+                let imgScaleClass = isSelected 
+                    ? "scale-[1.15]" 
+                    : "scale-100 group-hover:scale-110";
+
+                if (moodLvl === MoodLevel.MoiBiens) {
+                    // Base 115% -> Selected 130%
+                    imgScaleClass = isSelected 
+                        ? "scale-[1.3]" 
+                        : "scale-[1.15] group-hover:scale-[1.25]";
+                } else if (moodLvl === MoodLevel.Normal) {
+                    // Base 105% -> Selected 120%
+                    imgScaleClass = isSelected 
+                        ? "scale-[1.2]" 
+                        : "scale-[1.05] group-hover:scale-[1.15]";
+                }
+
                 return (
                   <button
                     key={moodLvl}
                     disabled={isConfirmingDelete}
                     onClick={() => handleMoodSelect(moodLvl as MoodLevel)}
+                    // Padding reducido (py-3) para maximizar espacio de imagen en móvil
                     className={`
-                      group relative overflow-visible rounded-2xl transition-all duration-300 w-full flex flex-col items-center justify-between
-                      border-2 py-4
-                      ${isSelected 
-                        ? 'scale-[1.02] z-10 shadow-[0_0_20px_rgba(0,0,0,0.5)]' 
-                        : 'hover:scale-[1.01] hover:bg-slate-800/50 border-slate-800 opacity-60 hover:opacity-100'
-                      }
-                      ${isConfirmingDelete ? 'blur-[1px] grayscale opacity-50 pointer-events-none' : ''}
+                      group relative rounded-2xl transition-all duration-300 w-full aspect-[4/5] flex flex-col items-center justify-between py-3 md:py-6 overflow-hidden outline-none
+                      border border-transparent
+                      ${isSelected ? 'mood-card-selected z-10' : 'hover:scale-[1.03] active:scale-95 opacity-70 hover:opacity-100'}
+                      ${isConfirmingDelete ? 'blur-[1px] grayscale opacity-30 pointer-events-none' : ''}
                     `}
+                    // Propiedades para evitar el glitch del cuadrado transparente
                     style={{ 
-                      borderColor: isSelected ? config.color : undefined,
-                      backgroundColor: isSelected ? `${config.color}15` : 'transparent',
-                      boxShadow: isSelected ? `0 0 20px ${config.color}20` : undefined
+                        WebkitBackfaceVisibility: 'hidden', 
+                        WebkitTransform: 'translate3d(0, 0, 0)',
+                        transformStyle: 'preserve-3d'
                     }}
                   >
-                    <div 
-                        className={`absolute inset-0 bg-gradient-to-br from-white/5 to-transparent transition-opacity duration-300 rounded-2xl ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} 
-                        style={{ background: isSelected ? `linear-gradient(135deg, ${config.color}30 0%, transparent 100%)` : undefined }}
-                    />
-
-                    {/* Image Container */}
-                    <div className="p-2 shrink-0 relative mb-2">
-                        {isSelected && (
-                            <>
-                                <div className="absolute inset-0 bg-current rounded-full blur-xl opacity-40 animate-pulse"
-                                     style={{ color: config.color }}></div>
-                            </>
-                        )}
-
-                        <div className={`
-                            w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden transition-all duration-500 relative
-                            ${isSelected 
-                                ? 'scale-110 shadow-2xl ring-2 ring-offset-2 ring-offset-slate-900 animate-[pulse_3s_ease-in-out_infinite]' 
-                                : 'group-hover:scale-105 grayscale-[0.5] group-hover:grayscale-0'
-                            }
-                        `}
-                        style={{ 
-                            boxShadow: isSelected ? `0 0 25px ${config.color}80` : undefined,
-                            borderColor: config.color
-                        }}
-                        >
-                            {/* Fondo optimizado para GIFs transparentes */}
+                    {/* --- CAPA 1: FONDO & PLASMA (Solo visible si seleccionado) --- */}
+                    {isSelected ? (
+                        <div className="absolute inset-0 z-0 overflow-hidden rounded-2xl">
                             <div className="absolute inset-0 bg-slate-900"></div>
+                            {/* Plasma Effect */}
                             <div 
-                                className="absolute inset-0 opacity-60"
-                                style={{ background: `radial-gradient(circle at center, ${config.color} 10%, transparent 90%)` }}
-                            ></div>
-                            
-                            <img 
-                                src={config.image} 
-                                alt={config.label} 
-                                className="w-full h-full object-cover relative z-10" 
+                                className="absolute -inset-[100%] liquid-bg opacity-40 blur-2xl" 
+                                style={{ 
+                                    background: `conic-gradient(from 0deg, ${config.color} 0deg, transparent 120deg, ${config.color} 240deg, transparent 360deg)` 
+                                }}
                             />
+                             <div 
+                                className="absolute -inset-[100%] liquid-bg opacity-30 blur-xl" 
+                                style={{ 
+                                    background: `conic-gradient(from 180deg, transparent 0deg, ${config.color} 120deg, transparent 240deg, ${config.color} 360deg)`,
+                                    animationDirection: 'reverse',
+                                    animationDuration: '15s'
+                                }}
+                            />
+                            
+                            {/* Partículas */}
+                            {[...Array(5)].map((_, i) => (
+                                <div 
+                                    key={i}
+                                    className="absolute rounded-full bg-white blur-[1px]"
+                                    style={{
+                                        width: Math.random() * 4 + 2 + 'px',
+                                        height: Math.random() * 4 + 2 + 'px',
+                                        left: Math.random() * 100 + '%',
+                                        bottom: '-10px',
+                                        backgroundColor: config.color,
+                                        opacity: 0.6,
+                                        animation: `bubble-rise ${3 + Math.random() * 4}s infinite ease-in ${Math.random() * 2}s`
+                                    }}
+                                />
+                            ))}
                         </div>
+                    ) : (
+                        // Fondo por defecto
+                        <div className="absolute inset-0 bg-slate-800/20 border border-slate-700/50 rounded-2xl group-hover:bg-slate-700/40 group-hover:border-slate-600 transition-all"></div>
+                    )}
+
+                    {/* --- CAPA 2: BORDE BRILLANTE --- */}
+                    {isSelected && (
+                        <div 
+                            className="absolute inset-0 rounded-2xl pointer-events-none z-20 border-[2px]"
+                            style={{ 
+                                borderColor: config.color,
+                                boxShadow: `inset 0 0 15px ${config.color}40`,
+                                animation: 'border-glow-pulse 3s infinite alternate'
+                            }}
+                        />
+                    )}
+
+                    {/* --- CAPA 3: IMAGEN FLOTANTE (ESTRUCTURA RÍGIDA) --- */}
+                    {/* El contenedor padre tiene flex-1 y centra el contenido, pero el contenido TIENE TAMAÑO FIJO para no romper la alineación */}
+                    <div className="relative z-30 w-full flex items-center justify-center flex-1 pointer-events-none">
+                         {isSelected && (
+                             <div 
+                                className="absolute w-24 h-24 rounded-full blur-[40px] opacity-40 animate-pulse" 
+                                style={{ backgroundColor: config.color }} 
+                             />
+                         )}
+                         
+                         {/* 
+                            WRAPPER RÍGIDO: Define el espacio físico que ocupa la imagen.
+                            NO tiene animaciones de transform que cambien su tamaño en el flow.
+                         */}
+                         <div className={`relative ${containerSizeClass} flex items-center justify-center`}>
+                            {/* 
+                                WRAPPER DE ANIMACIÓN: Se mueve (flota) pero no afecta el layout gracias a estar dentro del wrapper rígido.
+                                IMAGEN: Se escala visualmente pero no empuja el contenido.
+                            */}
+                            <div 
+                                className="w-full h-full flex items-center justify-center"
+                                style={{ animation: isSelected ? 'organic-float 6s ease-in-out infinite' : 'none' }}
+                            >
+                                <img 
+                                    src={config.image} 
+                                    alt={config.label} 
+                                    className={`
+                                        max-w-none w-full h-full object-contain transition-all duration-500
+                                        ${isSelected ? 'drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]' : 'grayscale-[0.7] group-hover:grayscale-0'}
+                                        ${imgScaleClass}
+                                    `}
+                                    style={{ 
+                                        filter: isSelected ? 'drop-shadow(0 0 8px rgba(0,0,0,0.3))' : 'none',
+                                    }}
+                                />
+                            </div>
+                         </div>
                     </div>
 
-                    {/* Text Container */}
-                    <div className="flex-1 w-full flex flex-col justify-end items-center text-center relative z-10">
+                    {/* --- CAPA 4: TEXTO (ESTRUCTURA RÍGIDA) --- */}
+                    <div className="relative z-30 text-center w-full mt-1 md:mt-2">
                       <div 
-                        className="font-black text-xs sm:text-sm uppercase tracking-tight leading-none mb-1 transition-colors px-1" 
-                        style={{ color: isSelected ? config.color : '#94a3b8' }}
+                        // Eliminado 'scale-110' para evitar que el texto "baje" visualmente.
+                        // En su lugar usamos scale-105 muy sutil y color.
+                        className={`font-black text-[10px] md:text-sm uppercase tracking-tight leading-none mb-0.5 md:mb-1 transition-all px-1 ${isSelected ? 'scale-105' : ''}`} 
+                        style={{ 
+                            color: isSelected ? '#fff' : '#94a3b8',
+                            textShadow: isSelected ? `0 0 10px ${config.color}` : 'none'
+                        }}
                       >
                         {config.label}
                       </div>
-                      <div className={`text-[9px] font-bold uppercase tracking-wider transition-colors ${isSelected ? 'text-slate-300' : 'text-slate-600'}`}>
+                      <div 
+                        className={`text-[8px] md:text-[9px] font-bold uppercase tracking-wider transition-all hidden sm:block
+                        ${isSelected ? 'text-slate-200 opacity-90' : 'text-slate-600 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0'}`}
+                      >
                         {config.subLabel}
                       </div>
                     </div>
 
-                    {isSelected && (
-                        <div className="absolute bottom-0 left-0 right-0 h-1" style={{ backgroundColor: config.color }}></div>
+                    {/* Efecto de brillo "Sweep" al hacer hover (solo no seleccionados) */}
+                    {!isSelected && (
+                        <div className="absolute inset-0 -translate-x-full group-hover:animate-[shimmer_0.8s_linear] bg-gradient-to-r from-transparent via-white/5 to-transparent z-40 pointer-events-none"></div>
                     )}
+
                   </button>
                 );
               })}
