@@ -4,9 +4,10 @@ import React, { useEffect, useRef, memo } from 'react';
 interface ParticlesProps {
   count: number;
   enabled: boolean;
+  pixelMode?: boolean; // Nuevo prop opcional
 }
 
-const Particles: React.FC<ParticlesProps> = ({ count, enabled }) => {
+const Particles: React.FC<ParticlesProps> = ({ count, enabled, pixelMode = false }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mouseRef = useRef({ x: -1000, y: -1000 }); 
 
@@ -52,7 +53,11 @@ const Particles: React.FC<ParticlesProps> = ({ count, enabled }) => {
         this.y = Math.random() * canvas!.height;
         this.baseX = this.x;
         this.baseY = this.y;
-        this.size = Math.random() * (isMobile ? 1.5 : 2.5) + 0.5;
+        
+        // Ajustar tamaño para Pixel Mode (un poco más grandes para que se noten los cuadros)
+        const baseSize = Math.random() * (isMobile ? 1.5 : 2.5) + 0.5;
+        this.size = pixelMode ? Math.max(2, baseSize * 1.5) : baseSize;
+        
         this.density = (Math.random() * 10) + 2;
         this.color = colors[Math.floor(Math.random() * colors.length)];
         
@@ -76,6 +81,9 @@ const Particles: React.FC<ParticlesProps> = ({ count, enabled }) => {
         if (this.y < -20) this.y = canvas!.height + 20;
 
         this.angle += this.velocity;
+        
+        // Movimiento ligeramente más robótico/lineal en pixel mode opcionalmente, 
+        // pero mantener el float suave queda bien con cuadrados también.
         this.x += Math.cos(this.angle) * 0.2;
         this.y += Math.sin(this.angle) * 0.2;
 
@@ -105,12 +113,21 @@ const Particles: React.FC<ParticlesProps> = ({ count, enabled }) => {
       draw() {
         if (!ctx) return;
         ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        
+        if (pixelMode) {
+            // DIBUJAR CUADRADOS (Pixel Art Style)
+            // No usamos arc, usamos rect
+            ctx.rect(this.x, this.y, this.size * 2, this.size * 2);
+        } else {
+            // DIBUJAR CÍRCULOS (Estilo original)
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        }
         
         ctx.fillStyle = `rgba(${this.color}, ${Math.abs(this.opacity)})`;
         ctx.fill();
         
-        if (!isMobile && this.opacity > 0.3 && this.size > 2) {
+        // En modo pixel, quitamos el shadowBlur para bordes duros (crisp edges)
+        if (!isMobile && this.opacity > 0.3 && this.size > 2 && !pixelMode) {
             ctx.shadowBlur = 4;
             ctx.shadowColor = `rgba(${this.color}, 0.3)`;
         } else {
@@ -122,6 +139,12 @@ const Particles: React.FC<ParticlesProps> = ({ count, enabled }) => {
     const init = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
+      
+      // En modo pixel, deshabilitamos el suavizado de imagen para bordes duros
+      if (pixelMode) {
+          ctx.imageSmoothingEnabled = false;
+      }
+      
       particles = [];
       for (let i = 0; i < count; i++) {
         particles.push(new Particle());
@@ -181,7 +204,7 @@ const Particles: React.FC<ParticlesProps> = ({ count, enabled }) => {
       window.removeEventListener('touchmove', handleTouchMove);
       document.removeEventListener('mouseleave', handleMouseLeave);
     };
-  }, [count, enabled]); // Re-run if enabled changes
+  }, [count, enabled, pixelMode]); // Re-run if pixelMode changes
 
   if (!enabled) return null;
 
@@ -189,7 +212,11 @@ const Particles: React.FC<ParticlesProps> = ({ count, enabled }) => {
     <canvas
       ref={canvasRef}
       className="fixed inset-0 pointer-events-none z-0" 
-      style={{ mixBlendMode: 'screen' }} 
+      style={{ 
+          mixBlendMode: 'screen',
+          // Asegurar renderizado pixelado si está activo
+          imageRendering: pixelMode ? 'pixelated' : 'auto' 
+      }} 
     />
   );
 };

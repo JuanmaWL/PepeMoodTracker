@@ -6,6 +6,8 @@ import { MoodConfig, MoodLevel } from './types';
 const BLOB_BASE_URL = "https://sme2zz26xzjq57zw.public.blob.vercel-storage.com";
 
 export const PEPE_ASSETS = {
+    FAVICON_1: `${BLOB_BASE_URL}/favicon_1.png`,
+    FAVICON_2: `${BLOB_BASE_URL}/favicon_2.png`,
     BANNER: `${BLOB_BASE_URL}/banner.png`,
     ORACLE_AVATAR: `${BLOB_BASE_URL}/oracle_face.jpg`,
     ORACLE_BG: `${BLOB_BASE_URL}/oracle_bg.png`,
@@ -25,7 +27,15 @@ export const PEPE_ASSETS = {
     NOTES_4: `${BLOB_BASE_URL}/pepe_notes_4.gif`
 };
 
-export const PEPE_BANNER = PEPE_ASSETS.BANNER;
+// Secuencia de imágenes para el banner rotativo
+export const BANNER_SLIDES = [
+    PEPE_ASSETS.FAVICON_2, // Empezamos con el 2 que suele ser impactante
+    PEPE_ASSETS.BANNER,    // El clásico
+    PEPE_ASSETS.FAVICON_1  // El nuevo oficial
+];
+
+// Mantenemos esto por compatibilidad, aunque usaremos el array arriba
+export const PEPE_BANNER = PEPE_ASSETS.FAVICON_1; 
 
 // Rutas remotas para las imágenes de los estados de ánimo
 export const PEPE_MOOD_IMAGES = {

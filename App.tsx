@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback, Suspense, useRef } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, useRef, useMemo } from 'react';
 import Calendar from './components/Calendar';
 import FloatingMenu from './components/FloatingMenu';
 import PepeOracle from './components/PepeOracle';
@@ -7,8 +7,8 @@ import Particles from './components/Particles';
 import QuickLogMenu from './components/QuickLogMenu'; 
 import WelcomeModal from './components/WelcomeModal'; 
 import { YearData, DayData, MoodLevel, Achievement } from './types';
-import { STORAGE_KEY, PEPE_BANNER } from './constants';
-import { Plus, Trash2, AlertTriangle, Settings, Sliders, Loader2, BatteryCharging, Download, Upload, FileJson, Save, Trophy, HelpCircle, BookOpen } from 'lucide-react';
+import { STORAGE_KEY, BANNER_SLIDES, PEPE_ASSETS } from './constants';
+import { Plus, Trash2, AlertTriangle, Sliders, Loader2, BatteryCharging, Download, Upload, FileJson, Save, Trophy, HelpCircle, BookOpen, Monitor, BoxSelect } from 'lucide-react';
 import SoundManager from './utils/sounds';
 import { ACHIEVEMENTS, getUnlockedAchievements } from './utils/gamification';
 
@@ -32,8 +32,10 @@ const ACHIEVEMENTS_STORAGE_KEY = 'pepe_achievements_unlocked_v1';
 const App: React.FC = () => {
   const currentYear = new Date().getFullYear();
   const [yearData, setYearData] = useState<YearData>({});
-  const [bannerError, setBannerError] = useState(false);
   
+  // Banner Slideshow State
+  const [bannerIndex, setBannerIndex] = useState(0);
+
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [isMoodModalOpen, setIsMoodModalOpen] = useState(false);
   const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
@@ -46,7 +48,7 @@ const App: React.FC = () => {
   // Real-time achievement notifications
   const [newlyUnlocked, setNewlyUnlocked] = useState<Achievement | null>(null);
   const [isClosingToast, setIsClosingToast] = useState(false); 
-  const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const prevUnlockedRef = useRef<string[]>([]);
   const notifiedAchievementsRef = useRef<Set<string>>(new Set());
@@ -56,6 +58,7 @@ const App: React.FC = () => {
 
   // Estados de Configuración
   const [ecoMode, setEcoMode] = useState(false);
+  const [pixelMode, setPixelMode] = useState(false); // NUEVO: Modo Píxel
   const [particleCount, setParticleCount] = useState(() => window.innerWidth < 768 ? 40 : 150);
 
   const [quickLogState, setQuickLogState] = useState<{
@@ -71,6 +74,32 @@ const App: React.FC = () => {
   });
   
   const quickLogStateRef = useRef(quickLogState);
+  
+  // GENERACIÓN DE PÍXELES ACTIVOS PARA EL BANNER
+  // Calculamos posiciones alineadas al grid de 14px
+  const activePixels = useMemo(() => {
+    const colors = [
+        '#4ade80', // Green (Pepe base)
+        '#22c55e', // Green strong
+        '#60a5fa', // Blue
+        '#818cf8', // Indigo
+        '#c084fc', // Purple
+        '#f472b6', // Pink (Requested)
+        '#fb7185', // Rose (Requested)
+        '#fbbf24', // Amber
+        '#38bdf8'  // Sky
+    ];
+
+    return Array.from({ length: 28 }).map((_, i) => ({
+      id: i,
+      // Grid size is 14px. Max width roughly 18 cols for w-64
+      left: Math.floor(Math.random() * 18) * 14, 
+      top: Math.floor(Math.random() * 18) * 14,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      delay: Math.random() * 5,
+      duration: 3 + Math.random() * 4
+    }));
+  }, []);
   
   useEffect(() => {
     quickLogStateRef.current = quickLogState;
@@ -91,6 +120,14 @@ const App: React.FC = () => {
           document.body.classList.remove('eco-mode');
       }
   }, [ecoMode]);
+
+  // Efecto para rotar el Banner
+  useEffect(() => {
+    const interval = setInterval(() => {
+        setBannerIndex((prev) => (prev + 1) % BANNER_SLIDES.length);
+    }, 4000); // Cambiar cada 4 segundos
+    return () => clearInterval(interval);
+  }, []);
 
   const triggerHaptic = useCallback((type: 'light' | 'medium' | 'heavy' = 'light') => {
     if ('vibrate' in navigator) {
@@ -344,7 +381,9 @@ const App: React.FC = () => {
     // Cargar config
     const storedEco = localStorage.getItem('pepe_eco_mode');
     if (storedEco) setEcoMode(storedEco === 'true');
-    // Note: particleCount not loaded to avoid complexity, defaults to screen size based
+    
+    const storedPixel = localStorage.getItem('pepe_pixel_mode');
+    if (storedPixel) setPixelMode(storedPixel === 'true');
   }, []);
 
   useEffect(() => {
@@ -354,8 +393,9 @@ const App: React.FC = () => {
   // Guardar config al cambiar
   useEffect(() => {
       localStorage.setItem('pepe_eco_mode', String(ecoMode));
+      localStorage.setItem('pepe_pixel_mode', String(pixelMode));
       localStorage.setItem('pepe_particle_count', String(particleCount));
-  }, [ecoMode, particleCount]);
+  }, [ecoMode, particleCount, pixelMode]);
 
   const handleDayClick = useCallback((dateStr: string) => {
     triggerHaptic('light');
@@ -430,7 +470,7 @@ const App: React.FC = () => {
 
   return (
     <div className="flex flex-col items-center min-h-screen pb-24 overflow-x-hidden text-slate-100 relative">
-      <Particles count={particleCount} enabled={!ecoMode} />
+      <Particles count={particleCount} enabled={!ecoMode} pixelMode={pixelMode} />
       
       {/* Componente de Tutorial Inicial */}
       <WelcomeModal isOpen={isWelcomeModalOpen} onClose={() => setIsWelcomeModalOpen(false)} />
@@ -598,18 +638,79 @@ const App: React.FC = () => {
                  <div className="absolute inset-4 bg-green-500/20 blur-[50px] rounded-full animate-pulse"></div>
             </div>
 
-            <div className="relative w-48 h-48 md:w-64 md:h-64 bg-gradient-to-b from-slate-800/80 to-slate-900/90 backdrop-blur-xl rounded-[3rem] border border-slate-700/50 shadow-[0_25px_60px_-15px_rgba(34,197,94,0.3)] flex items-center justify-center overflow-hidden pepe-float z-10 transition-all duration-500 hover:scale-105 group-hover:shadow-[0_30px_70px_-10px_rgba(34,197,94,0.4)]">
-                <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none z-20"></div>
-                {!bannerError ? (
-                <img 
-                    src={PEPE_BANNER} 
-                    alt="Pepe" 
-                    className="w-[85%] h-[85%] object-contain drop-shadow-2xl transition-transform duration-700 group-hover:scale-105 group-hover:rotate-2 relative z-10"
-                    onError={() => setBannerError(true)}
-                />
-                ) : (
-                <span className="text-6xl animate-bounce">🐸</span>
-                )}
+            {/* NEW RETRO/PIXEL STYLE BANNER CONTAINER */}
+            <div 
+                className="relative w-48 h-48 md:w-64 md:h-64 rounded-[3rem] overflow-hidden pepe-float z-10 transition-all duration-500 hover:scale-105 group-hover:shadow-[0_30px_70px_-10px_rgba(34,197,94,0.4)] border-4 border-slate-800/80 shadow-[0_20px_50px_rgba(0,0,0,0.5)] bg-slate-900"
+            >
+                {/* 1. Pixel Grid Background (Fixed: No rotating square) */}
+                <div 
+                    className="absolute inset-0 z-0 pointer-events-none" 
+                    style={{
+                        backgroundImage: `linear-gradient(rgba(34, 197, 94, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(34, 197, 94, 0.2) 1px, transparent 1px)`,
+                        backgroundSize: '14px 14px',
+                        imageRendering: 'pixelated',
+                        // MASCARA RADIAL: Evita el efecto de bordes duros/cuadrados
+                        maskImage: 'radial-gradient(circle at center, black 40%, transparent 100%)',
+                        WebkitMaskImage: 'radial-gradient(circle at center, black 40%, transparent 100%)'
+                    }}
+                >
+                    {/* NEW: Pixel Breathing Animation (By Parts) */}
+                    {!ecoMode && activePixels.map((p) => (
+                        <div
+                            key={p.id}
+                            className="absolute"
+                            style={{
+                                width: '14px',
+                                height: '14px',
+                                top: `${p.top}px`,
+                                left: `${p.left}px`,
+                                backgroundColor: p.color,
+                                animation: `pixel-breath ${p.duration}s infinite ${p.delay}s`,
+                                boxShadow: `0 0 10px ${p.color}`,
+                                opacity: 0 // Start hidden
+                            }}
+                        />
+                    ))}
+                    <style>{`
+                        @keyframes pixel-breath {
+                            0% { opacity: 0; transform: scale(0.5); }
+                            30% { opacity: 0.8; transform: scale(1); box-shadow: 0 0 15px currentColor; }
+                            70% { opacity: 0.8; transform: scale(1); }
+                            100% { opacity: 0; transform: scale(0.5); }
+                        }
+                    `}</style>
+                </div>
+                
+                {/* 2. CRT Scanline Effect */}
+                <div className="absolute inset-0 z-20 pointer-events-none opacity-10 bg-[linear-gradient(transparent_50%,rgba(0,0,0,0.5)_50%)] bg-[size:100%_4px]"></div>
+                <div className="absolute inset-0 z-20 pointer-events-none bg-gradient-to-b from-transparent via-green-500/5 to-transparent animate-[scan_3s_linear_infinite] h-full opacity-30"></div>
+                <style>{`@keyframes scan { 0% { transform: translateY(-100%); } 100% { transform: translateY(100%); } }`}</style>
+                
+                {/* 3. Rotating Images with Cross-Fade */}
+                <div className="absolute inset-0 z-10 p-6 flex items-center justify-center">
+                    {BANNER_SLIDES.map((src, index) => {
+                        const isFavicon1 = src === PEPE_ASSETS.FAVICON_1;
+                        const isActive = index === bannerIndex;
+                        
+                        return (
+                            <img 
+                                key={src}
+                                src={src} 
+                                alt="Pepe Banner" 
+                                className={`
+                                    absolute inset-0 w-full h-full object-contain p-6 transition-all duration-1000 ease-in-out
+                                    ${isActive 
+                                        ? (isFavicon1 ? 'opacity-100 scale-125 blur-0' : 'opacity-100 scale-100 blur-0') 
+                                        : 'opacity-0 scale-90 blur-sm'
+                                    }
+                                `}
+                            />
+                        );
+                    })}
+                </div>
+
+                {/* 4. Glare Effect */}
+                <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none z-30"></div>
             </div>
         </div>
         
@@ -723,6 +824,27 @@ const App: React.FC = () => {
                           <div className={`w-4 h-4 bg-white rounded-full transition-transform duration-300 ${ecoMode ? 'translate-x-4' : ''}`}></div>
                       </button>
                   </div>
+                  
+                  {/* PIXEL MODE TOGGLE - NEW */}
+                  {!ecoMode && (
+                      <div className="flex items-center justify-between p-3 bg-slate-800/50 rounded-xl border border-slate-700">
+                          <div className="flex items-center gap-3">
+                              <div className={`p-2 rounded-lg ${pixelMode ? 'bg-purple-500 text-white' : 'bg-slate-700 text-slate-400'}`}>
+                                  <BoxSelect size={18} />
+                              </div>
+                              <div>
+                                  <div className="text-xs font-bold text-slate-200 uppercase tracking-wider">Partículas Pixel Art</div>
+                                  <div className="text-[9px] text-slate-500 font-medium">Vibra 8-bits retro</div>
+                              </div>
+                          </div>
+                          <button 
+                            onClick={() => setPixelMode(!pixelMode)}
+                            className={`w-10 h-6 rounded-full p-1 transition-colors duration-300 ${pixelMode ? 'bg-purple-500' : 'bg-slate-700'}`}
+                          >
+                              <div className={`w-4 h-4 bg-white rounded-full transition-transform duration-300 ${pixelMode ? 'translate-x-4' : ''}`}></div>
+                          </button>
+                      </div>
+                  )}
 
                   {!ecoMode && (
                   <div className="space-y-3 opacity-100 transition-opacity">
