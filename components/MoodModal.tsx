@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Save, MessageSquareText, Trash2, Download, Loader2, Image as ImageIcon, Sparkles, RefreshCw, Info } from 'lucide-react';
 import { MOODS, PEPE_ASSETS } from '../constants';
@@ -44,7 +43,8 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
       setMagicExcuse(null);
       setGeneratingMeme(false);
     }
-  }, [isOpen, initialData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, dateStr]);
 
   useEffect(() => {
     if (isMemeMode && !memeUrl && !generatingMeme) {

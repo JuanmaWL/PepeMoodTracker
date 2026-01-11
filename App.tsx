@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, Suspense, useRef, useMemo } from 'react';
 import Calendar from './components/Calendar';
 import FloatingMenu from './components/FloatingMenu';
@@ -107,6 +106,9 @@ const App: React.FC = () => {
 
   const [highlightedDates, setHighlightedDates] = useState<string[]>([]);
 
+  // OPTIMIZACIÓN: Detectar si hay modales abiertos para pausar animaciones de fondo
+  const isAnyModalOpen = isMoodModalOpen || isStatsModalOpen || isSearchModalOpen || isCloudModalOpen || isSettingsOpen || showResetConfirm || quickLogState.isActive || isWelcomeModalOpen;
+
   // Fix for infinite loop: Stable callback for highlighting results
   const handleHighlightResults = useCallback((dates: string[]) => {
       setHighlightedDates(dates);
@@ -123,11 +125,14 @@ const App: React.FC = () => {
 
   // Efecto para rotar el Banner
   useEffect(() => {
+    // Si hay un modal abierto, detenemos el intervalo para evitar re-renderizados en App
+    if (isAnyModalOpen) return;
+
     const interval = setInterval(() => {
         setBannerIndex((prev) => (prev + 1) % BANNER_SLIDES.length);
     }, 4000); // Cambiar cada 4 segundos
     return () => clearInterval(interval);
-  }, []);
+  }, [isAnyModalOpen]);
 
   const triggerHaptic = useCallback((type: 'light' | 'medium' | 'heavy' = 'light') => {
     if ('vibrate' in navigator) {
@@ -360,13 +365,12 @@ const App: React.FC = () => {
   }, [isMoodModalOpen, isStatsModalOpen, isSearchModalOpen, isCloudModalOpen, isSettingsOpen, showResetConfirm, newlyUnlocked, closeAchievementToast, isWelcomeModalOpen]);
 
   useEffect(() => {
-    const isAnyModalOpen = isMoodModalOpen || isStatsModalOpen || isSearchModalOpen || isCloudModalOpen || isSettingsOpen || showResetConfirm || quickLogState.isActive || isWelcomeModalOpen;
     if (isAnyModalOpen) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
     }
-  }, [isMoodModalOpen, isStatsModalOpen, isSearchModalOpen, isCloudModalOpen, isSettingsOpen, showResetConfirm, quickLogState.isActive, isWelcomeModalOpen]);
+  }, [isAnyModalOpen]);
 
   // Titulo Fijo para mayor claridad
   const MAIN_TITLE = "PEPE PIXEL YEAR";
