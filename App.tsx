@@ -8,7 +8,7 @@ import QuickLogMenu from './components/QuickLogMenu';
 import WelcomeModal from './components/WelcomeModal'; 
 import { YearData, DayData, MoodLevel, Achievement } from './types';
 import { STORAGE_KEY, BANNER_SLIDES, PEPE_ASSETS } from './constants';
-import { Plus, Trash2, AlertTriangle, Sliders, Loader2, BatteryCharging, Download, Upload, FileJson, Save, Trophy, HelpCircle, BookOpen, Monitor, BoxSelect } from 'lucide-react';
+import { Plus, Trash2, AlertTriangle, Sliders, Loader2, BatteryCharging, FileJson, Save, Trophy, HelpCircle, BookOpen, BoxSelect } from 'lucide-react';
 import SoundManager from './utils/sounds';
 import { ACHIEVEMENTS, getUnlockedAchievements } from './utils/gamification';
 

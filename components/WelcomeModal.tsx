@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Calendar, Smile, BarChart3, CheckCircle2, Zap, Fingerprint, ChevronRight, X, Sparkles, MousePointerClick } from 'lucide-react';
+import { Calendar, Smile, BarChart3, CheckCircle2, Zap, Fingerprint, X, Sparkles } from 'lucide-react';
 import SoundManager from '../utils/sounds';
 import { PEPE_ASSETS } from '../constants';
 

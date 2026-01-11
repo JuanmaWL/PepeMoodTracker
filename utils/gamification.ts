@@ -1,6 +1,6 @@
 
 import { Achievement, YearData, MoodLevel } from '../types';
-import { Flame, BookOpen, Crown, Umbrella, Skull, CalendarCheck, Zap, TrendingUp, TrendingDown, AlignLeft, Gem, Bomb, Rocket, Ghost, Bot, ArrowUpRight, Cat, Leaf, Activity, CheckCircle2, Library, Mic2, Medal, Palette, Award, Hourglass, Music, Gamepad2, Snowflake, Twitter, Waves, Sun, CloudRain, Shield, Atom, Clock, CloudFog, Dna, Feather, HandMetal, Scroll, Map, Smile, ShieldCheck, Moon, HeartCrack, Swords, Droplets, Sprout, Fingerprint } from 'lucide-react';
+import { Flame, BookOpen, Crown, Skull, Zap, TrendingUp, TrendingDown, Gem, Bomb, Rocket, Ghost, Cat, Leaf, Activity, CheckCircle2, Mic2, Medal, Music, Gamepad2, Twitter, Waves, Sun, CloudRain, Shield, Atom, Clock, CloudFog, Dna, Feather, HandMetal, Scroll, Map, Smile, ShieldCheck, Moon, Swords, Droplets, Sprout, Fingerprint } from 'lucide-react';
 
 export const ACHIEVEMENTS: Achievement[] = [
   // --- BASIC ---
