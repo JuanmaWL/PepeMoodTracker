@@ -89,11 +89,12 @@ const App: React.FC = () => {
         '#38bdf8'  // Sky
     ];
 
-    return Array.from({ length: 28 }).map((_, i) => ({
+    // Aumentamos cantidad y rango para asegurar cobertura total (especialmente en desktop 256px)
+    return Array.from({ length: 42 }).map((_, i) => ({
       id: i,
-      // Grid size is 14px. Max width roughly 18 cols for w-64
-      left: Math.floor(Math.random() * 18) * 14, 
-      top: Math.floor(Math.random() * 18) * 14,
+      // Grid size is 14px. Max width roughly 18.2 cols for w-64. We use 19 to cover edges fully.
+      left: Math.floor(Math.random() * 19) * 14, 
+      top: Math.floor(Math.random() * 19) * 14,
       color: colors[Math.floor(Math.random() * colors.length)],
       delay: Math.random() * 5,
       duration: 3 + Math.random() * 4

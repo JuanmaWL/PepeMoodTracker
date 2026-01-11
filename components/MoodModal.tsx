@@ -443,11 +443,10 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
                     imgScaleClass = isSelected 
                         ? "scale-[1.2]" 
                         : "scale-[1.05] group-hover:scale-[1.15]";
-                    // AJUSTE SOLICITADO: Bajar imagen Normal
-                    imgTranslateClass = "translate-y-3";
+                    imgTranslateClass = "translate-y--1";
                 } else if (moodLvl === MoodLevel.Regular) {
-                    // AJUSTE SOLICITADO: Bajar imagen Meh
-                    imgTranslateClass = "translate-y-3";
+
+                    imgTranslateClass = "translate-y--1";
                 }
 
                 return (
