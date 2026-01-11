@@ -722,7 +722,7 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
           {isConfirmingDelete ? (
             <div className="flex flex-col gap-3 animate-in fade-in zoom-in duration-300">
               <div className="text-red-400 font-black text-[10px] uppercase tracking-[0.15em] text-center px-4">
-                ¿Borrar este lore para siempre, compañero?
+                ¿Borrar esta nota para siempre?
               </div>
               <div className="flex flex-col sm:flex-row gap-2">
                 <button
