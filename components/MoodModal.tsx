@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Save, MessageSquareText, Trash2, Download, Loader2, Image as ImageIcon, Sparkles, RefreshCw, Info } from 'lucide-react';
+import { X, Save, MessageSquareText, Trash2, Download, Loader2, Image as ImageIcon, Sparkles, RefreshCw, Info, HelpCircle } from 'lucide-react';
 import { MOODS, PEPE_ASSETS } from '../constants';
 import { MoodLevel, DayData } from '../types';
 import SoundManager from '../utils/sounds';
@@ -309,7 +309,7 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
                  )}
                  <button 
                     onClick={toggleInfo}
-                    className="ml-2 p-1 rounded-full hover:bg-slate-800 text-slate-500 hover:text-indigo-400 transition-colors"
+                    className={`ml-2 p-1 rounded-full transition-all ${showInfo ? 'bg-indigo-500/20 text-indigo-400' : 'hover:bg-slate-800 text-slate-500 hover:text-indigo-400'}`}
                  >
                     <Info size={14} />
                  </button>
@@ -323,16 +323,85 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
           </button>
         </div>
 
-        {/* Info / Legend Panel */}
+        {/* Info / Legend Panel REDESIGNED */}
         {showInfo && (
-            <div className="bg-slate-950/80 border-b border-slate-800 p-4 animate-in slide-in-from-top-2 duration-300">
-                <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-                    {moodLevels.map((lvl) => (
-                        <div key={lvl} className="flex flex-col items-center bg-slate-900 rounded-xl p-2 border border-slate-800/50">
-                            <span className="text-[10px] font-bold mb-1" style={{ color: MOODS[lvl].color }}>{MOODS[lvl].label}</span>
+            <div className="bg-slate-950/90 border-b border-slate-800 p-4 md:p-6 animate-in slide-in-from-top-4 duration-300 relative">
+                
+                {/* Botón de cerrar información - MEJORADO */}
+                <button 
+                    onClick={() => setShowInfo(false)}
+                    className="absolute top-2 right-2 md:top-3 md:right-3 p-2 bg-slate-950/60 hover:bg-slate-800 text-slate-400 hover:text-white border border-white/10 transition-all z-50 rounded-full shadow-lg"
+                    aria-label="Cerrar información"
+                >
+                    <X size={16} />
+                </button>
+
+                {level === MoodLevel.None ? (
+                    // VISTA 1: LISTADO DE TODOS (PENDIENTE)
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2 mb-2 text-slate-400">
+                             <HelpCircle size={14} />
+                             <span className="text-[10px] uppercase font-black tracking-widest">Guía de Vibes</span>
                         </div>
-                    ))}
-                </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {moodLevels.map((lvl) => {
+                                const cfg = MOODS[lvl];
+                                return (
+                                    <div key={lvl} className="flex items-start gap-3 p-3 bg-slate-900/60 rounded-xl border border-slate-800/50 hover:border-slate-700 transition-colors">
+                                        <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: cfg.color }}></div>
+                                        <div>
+                                            <div className="flex items-baseline gap-2 mb-0.5">
+                                                <span className="text-xs font-black uppercase tracking-wide text-slate-200">{cfg.label}</span>
+                                                <span className="text-[9px] font-bold text-slate-500">{cfg.subLabel}</span>
+                                            </div>
+                                            <p className="text-[10px] text-slate-400 leading-relaxed font-medium">
+                                                {cfg.description}
+                                            </p>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                ) : (
+                    // VISTA 2: TARJETA ÚNICA DESTACADA (SELECCIONADO) - REDISEÑADA CON BG IMAGE
+                    <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 p-6 md:p-8 transition-all duration-500 min-h-[140px] flex items-center shadow-2xl group">
+                         {/* 1. Background Image Full Cover */}
+                         <div className="absolute inset-0 z-0">
+                            <img
+                                src={MOODS[level].image}
+                                alt="Background"
+                                className="w-full h-full object-cover opacity-30 group-hover:scale-105 transition-transform duration-1000"
+                                style={{ 
+                                    filter: 'grayscale(30%)',
+                                    // AJUSTE POSICIÓN IMAGEN: Si es Normal o Meh (imágenes altas), enfocar parte superior (20% desde arriba)
+                                    objectPosition: (level === MoodLevel.Normal || level === MoodLevel.Regular) ? 'center 20%' : 'center center'
+                                }}
+                            />
+                            {/* Gradient Overlay for Text Readability */}
+                            <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/90 to-transparent" />
+                            {/* Color tint */}
+                            <div className="absolute inset-0 opacity-20 mix-blend-overlay" style={{ backgroundColor: MOODS[level].color }} />
+                         </div>
+
+                         <div className="relative z-10 w-full max-w-2xl">
+                            <div className="flex items-center gap-3 mb-2">
+                                <h3 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tighter drop-shadow-md">
+                                    {MOODS[level].label}
+                                </h3>
+                                <span
+                                    className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest text-slate-900 shadow-lg"
+                                    style={{ backgroundColor: MOODS[level].color }}
+                                >
+                                    {MOODS[level].subLabel}
+                                </span>
+                            </div>
+                            <p className="text-sm md:text-base text-slate-300 font-medium leading-relaxed drop-shadow-sm border-l-2 pl-3" style={{ borderColor: MOODS[level].color }}>
+                                {MOODS[level].description}
+                            </p>
+                         </div>
+                    </div>
+                )}
             </div>
         )}
 
@@ -360,6 +429,9 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
                 let imgScaleClass = isSelected 
                     ? "scale-[1.15]" 
                     : "scale-100 group-hover:scale-110";
+                
+                // NUEVO: Ajuste de posición vertical específico para imágenes altas (ICONOS GRID)
+                let imgTranslateClass = "";
 
                 if (moodLvl === MoodLevel.MoiBiens) {
                     // Base 115% -> Selected 130%
@@ -371,6 +443,11 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
                     imgScaleClass = isSelected 
                         ? "scale-[1.2]" 
                         : "scale-[1.05] group-hover:scale-[1.15]";
+                    // AJUSTE SOLICITADO: Bajar imagen Normal
+                    imgTranslateClass = "translate-y-3";
+                } else if (moodLvl === MoodLevel.Regular) {
+                    // AJUSTE SOLICITADO: Bajar imagen Meh
+                    imgTranslateClass = "translate-y-3";
                 }
 
                 return (
@@ -477,6 +554,7 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
                                         max-w-none w-full h-full object-contain transition-all duration-500
                                         ${isSelected ? 'drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]' : 'grayscale-[0.7] group-hover:grayscale-0'}
                                         ${imgScaleClass}
+                                        ${imgTranslateClass}
                                     `}
                                     style={{ 
                                         filter: isSelected ? 'drop-shadow(0 0 8px rgba(0,0,0,0.3))' : 'none',

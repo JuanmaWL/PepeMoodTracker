@@ -23,6 +23,7 @@ export interface MoodConfig {
   level: MoodLevel;
   label: string;
   subLabel: string;
+  description: string; // Nueva propiedad para la info detallada
   color: string;
   twColor: string; // Tailwind class equivalent for background
   image: string; // URL for the Pepe image
