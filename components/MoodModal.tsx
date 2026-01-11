@@ -232,6 +232,12 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
             75% { transform: scale(1.02, 0.98); }
             100% { transform: scale(1); }
         }
+
+        /* Efecto de Palpitación (Glow Pulse) */
+        @keyframes card-pulse-shadow {
+            0%, 100% { box-shadow: 0 0 15px var(--pulse-color); }
+            50% { box-shadow: 0 0 35px var(--pulse-color); }
+        }
         
         /* Plasma/Líquido rotatorio para el fondo */
         @keyframes liquid-rotate {
@@ -261,11 +267,16 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
         }
 
         .mood-card-selected {
-            animation: jelly-pop 0.6s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+            /* Combinamos jelly-pop (una vez) con el pulso (infinito) */
+            /* Eliminamos el delay de 0.6s en card-pulse-shadow para que el glow salga al instante */
+            animation: 
+                jelly-pop 0.6s cubic-bezier(0.25, 1, 0.5, 1) forwards,
+                card-pulse-shadow 3s infinite ease-in-out;
+            
             /* Fix para el cuadrado transparente: forzar renderizado de capa */
             backface-visibility: hidden;
             transform: translate3d(0,0,0);
-            will-change: transform;
+            will-change: transform, box-shadow;
         }
 
         .liquid-bg {
@@ -378,8 +389,9 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
                     style={{ 
                         WebkitBackfaceVisibility: 'hidden', 
                         WebkitTransform: 'translate3d(0, 0, 0)',
-                        transformStyle: 'preserve-3d'
-                    }}
+                        transformStyle: 'preserve-3d',
+                        '--pulse-color': isSelected ? `${config.color}60` : 'transparent'
+                    } as React.CSSProperties}
                   >
                     {/* --- CAPA 1: FONDO & PLASMA (Solo visible si seleccionado) --- */}
                     {isSelected ? (
@@ -494,6 +506,17 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
                         {config.subLabel}
                       </div>
                     </div>
+                    
+                    {/* --- CAPA 5: BOTTOM EMPHASIS LINE --- */}
+                    {isSelected && (
+                        <div 
+                            className="absolute bottom-0 left-0 right-0 h-1.5 z-50 rounded-b-xl"
+                            style={{ 
+                                backgroundColor: config.color,
+                                boxShadow: `0 -4px 12px ${config.color}80`
+                            }}
+                        />
+                    )}
 
                     {/* Efecto de brillo "Sweep" al hacer hover (solo no seleccionados) */}
                     {!isSelected && (
