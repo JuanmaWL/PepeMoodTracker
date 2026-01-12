@@ -48,7 +48,7 @@ Este proyecto ha sido forjado con las herramientas más frescas del mercado:
 * **Build Tool:** Vite (Rapidísimo).
 * **Estilos:** Tailwind CSS + Lucide Icons.
 * **IA & Generación:**
-  *  `Google AI Studio` con `Gemini 3 Pro Preview`.
+  * `Google AI Studio` con `Gemini 3 Pro Preview`.
   * `Gemini 2.5 Flash Image`.
 * **Gráficos:** Recharts (Area, Radar, Pie charts).
 * **Audio:** Web Audio API custom engine.
