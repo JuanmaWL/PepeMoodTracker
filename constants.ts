@@ -24,7 +24,10 @@ export const PEPE_ASSETS = {
     NOTES_1: `${BLOB_BASE_URL}/pepe_notes_1.gif`,
     NOTES_2: `${BLOB_BASE_URL}/pepe_notes_2.gif`,
     NOTES_3: `${BLOB_BASE_URL}/pepe_notes_3.gif`,
-    NOTES_4: `${BLOB_BASE_URL}/pepe_notes_4.gif`
+    NOTES_4: `${BLOB_BASE_URL}/pepe_notes_4.gif`,
+    LOADING: `${BLOB_BASE_URL}/pepe_loading.gif`,
+    LOADING_2: `${BLOB_BASE_URL}/pepe_loading_2.gif`,
+    LOADING_3: `${BLOB_BASE_URL}/pepe_loading_3.gif`
 };
 
 // Secuencia de imágenes para el banner rotativo

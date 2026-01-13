@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, Suspense, useRef, useMemo } from 'react';
 import Calendar from './components/Calendar';
 import FloatingMenu from './components/FloatingMenu';
@@ -16,14 +17,40 @@ const StatsModal = React.lazy(() => import('./components/StatsModal'));
 const SearchModal = React.lazy(() => import('./components/SearchModal'));
 const CloudModal = React.lazy(() => import('./components/CloudModal'));
 
-const ModalLoader = () => (
-  <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm">
-      <div className="flex flex-col items-center gap-3">
-          <Loader2 size={40} className="text-green-500 animate-spin" />
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-widest animate-pulse">Cargando módulo...</span>
+const ModalLoader = () => {
+  const gif = useMemo(() => {
+    const gifs = [
+      PEPE_ASSETS.LOADING,
+      PEPE_ASSETS.LOADING_2,
+      PEPE_ASSETS.LOADING_3
+    ];
+    return gifs[Math.floor(Math.random() * gifs.length)];
+  }, []);
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/90 backdrop-blur-md">
+      <div className="flex flex-col items-center gap-6 animate-in fade-in zoom-in duration-300">
+          <div className="relative w-28 h-28">
+             <div className="absolute inset-0 bg-green-500/20 rounded-full blur-xl animate-pulse"></div>
+             <div className="w-full h-full rounded-full overflow-hidden border-4 border-slate-800 bg-slate-900 shadow-2xl relative z-10">
+                 <img 
+                   src={gif} 
+                   alt="Loading..." 
+                   className="w-full h-full object-cover"
+                 />
+             </div>
+             {/* Spinning border */}
+             <div className="absolute -inset-2 border-2 border-dashed border-green-500/30 rounded-full animate-[spin_4s_linear_infinite]"></div>
+          </div>
+          
+          <div className="flex flex-col items-center gap-2 text-center">
+              <span className="text-xs font-black text-green-400 uppercase tracking-[0.25em] animate-pulse">Cargando...</span>
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Procesando Lore</span>
+          </div>
       </div>
-  </div>
-);
+    </div>
+  );
+};
 
 const TUTORIAL_KEY = 'pepe_tutorial_seen_v1';
 const ACHIEVEMENTS_STORAGE_KEY = 'pepe_achievements_unlocked_v1';
