@@ -383,14 +383,10 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
             reasonPart = fullText.substring(splitIndex).replace(/Por qué:|Why:|Because:/i, '').trim();
         }
 
-        const spotifyUrl = `https://open.spotify.com/search/${encodeURIComponent(songPart)}`;
-
+        // --- CHANGE: MADE VISUAL ONLY (No Link) ---
         return (
-            <a 
-                href={spotifyUrl} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="group/card relative p-4 rounded-2xl bg-pink-500/5 border border-pink-500/10 hover:bg-pink-500/10 hover:border-pink-500/30 transition-all duration-300 cursor-pointer flow-root block"
+            <div 
+                className="group/card relative p-4 rounded-2xl bg-pink-500/5 border border-pink-500/10 hover:bg-pink-500/10 hover:border-pink-500/30 transition-all duration-300 cursor-default flow-root block select-none"
             >
                 <div className="float-left mr-4 mb-1 relative">
                     <div className="absolute inset-0 bg-pink-500 rounded-full blur-md opacity-0 group-hover/card:opacity-30 transition-opacity duration-300"></div>
@@ -399,9 +395,9 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                     </div>
                 </div>
                 <div className="text-[10px] font-black text-pink-400/60 uppercase tracking-widest mb-1 group-hover/card:text-pink-400 transition-colors flex items-center gap-2">
-                    Now Playing <ExternalLink size={10} className="opacity-50" />
+                    Now Playing
                 </div>
-                <p className="text-pink-100 text-sm font-bold leading-tight break-words group-hover/card:underline decoration-pink-500/50 underline-offset-2 transition-colors">
+                <p className="text-pink-100 text-sm font-bold leading-tight break-words">
                     {songPart}
                 </p>
                 {reasonPart && (
@@ -409,7 +405,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                         "{reasonPart}"
                     </div>
                 )}
-            </a>
+            </div>
         );
     };
 
@@ -826,7 +822,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                                     <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-indigo-950/20 to-slate-900 z-0"></div>
                                 </div>
 
-                                <div className={`relative z-20 flex flex-row justify-between items-center px-6 pt-6 transition-[padding] duration-300 ${isJudgeCollapsed ? 'pb-6' : 'pb-2'}`}>
+                                <div className={`relative z-20 flex flex-row justify-between items-center px-4 md:px-6 pt-6 transition-[padding] duration-300 ${isJudgeCollapsed ? 'pb-6' : 'pb-2'}`}>
                                     <span className="text-indigo-300 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
                                         <Gavel size={18} className="text-indigo-400" />
                                         <span className="md:hidden">Tribunal de Pepe</span>
@@ -851,12 +847,20 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                                 {/* Contenedor Colapsable para el cuerpo del tribunal */}
                                 <div 
                                     className={`
-                                        flex-1 flex flex-col lg:flex-row items-center justify-center p-6 gap-8 relative z-10 
+                                        flex-1 flex flex-col lg:flex-row items-center justify-center p-4 md:p-6 gap-4 md:gap-8 relative z-10 
                                         transition-all duration-500 ease-in-out overflow-hidden
                                         ${isJudgeCollapsed ? 'max-h-0 opacity-0 py-0' : 'max-h-[800px] opacity-100'}
                                     `}
                                 >
-                                    <div className={`relative transition-all duration-700 ${loadingAi ? 'w-32 h-32 lg:w-40 lg:h-40' : aiAnalysis ? 'w-24 h-24 lg:w-32 lg:h-32' : 'w-40 h-40 lg:w-48 lg:h-48'}`}>
+                                    <div className={`
+                                        relative transition-all duration-700 
+                                        ${loadingAi 
+                                            ? 'w-24 h-24 lg:w-40 lg:h-40' // Smaller on mobile when loading
+                                            : aiAnalysis 
+                                                ? 'w-16 h-16 lg:w-32 lg:h-32 order-first lg:order-none' // Mini avatar on mobile when done to save space
+                                                : 'w-32 h-32 lg:w-48 lg:h-48' // Default size
+                                        }
+                                    `}>
                                         <div className={`absolute -inset-4 bg-indigo-500/20 rounded-full blur-xl transition-all duration-500 ${loadingAi ? 'animate-pulse scale-110' : 'opacity-50'}`}></div>
                                         <div className={`w-full h-full rounded-full overflow-hidden border-4 shadow-2xl relative transition-all duration-500 ${loadingAi ? 'border-indigo-400 shadow-[0_0_30px_rgba(99,102,241,0.5)] bg-slate-950' : 'border-slate-700 shadow-xl bg-slate-800'} ${!loadingAi && !aiAnalysis ? 'animate-[float_4s_ease-in-out_infinite]' : ''}`}>
                                             <img 
@@ -879,8 +883,8 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                                                     <Loader2 size={20} className="text-indigo-400" />
                                                 </div>
                                             ) : aiAnalysis ? (
-                                                <div className="bg-green-600 rounded-full p-2 border-2 border-slate-900 shadow-lg animate-in zoom-in">
-                                                    <Zap size={20} className="text-white fill-white" />
+                                                <div className="bg-green-600 rounded-full p-1.5 md:p-2 border-2 border-slate-900 shadow-lg animate-in zoom-in">
+                                                    <Zap size={14} className="text-white fill-white md:w-5 md:h-5" />
                                                 </div>
                                             ) : null}
                                         </div>
