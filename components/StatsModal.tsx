@@ -1,6 +1,6 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
-import { X, Music, Trophy, Brain, Quote, Loader2, TrendingUp, PieChart as PieChartIcon, BarChart3, Hexagon, Waves, CalendarRange, Filter, RefreshCw, Zap, Lock, Gavel, Skull, Heart, Sparkles, Undo2, Flame } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { X, Music, Trophy, Brain, Quote, Loader2, TrendingUp, PieChart as PieChartIcon, BarChart3, Hexagon, Waves, CalendarRange, Filter, RefreshCw, Zap, Lock, Gavel, Skull, Heart, Sparkles, Undo2, Flame, ListFilter, ExternalLink, ChevronUp, ChevronDown } from 'lucide-react';
 import { YearData, MoodLevel, DayData } from '../types';
 import { MOODS, MONTHS, PEPE_ASSETS } from '../constants';
 import Heatmap from './Heatmap';
@@ -9,7 +9,7 @@ import {
   PieChart, Pie, Cell, Brush, CartesianGrid, AreaChart, Area, BarChart, Bar,
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis
 } from 'recharts';
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 import SoundManager from '../utils/sounds';
 import { ACHIEVEMENTS, getUnlockedAchievements } from '../utils/gamification';
 
@@ -21,6 +21,7 @@ interface StatsModalProps {
 
 type ChartType = 'area' | 'radar' | 'bar';
 type TimeRange = 'all' | 'last_7' | 'last_30' | string;
+type WeekRange = 'all' | '1' | '2' | '3' | '4'; // 1-7, 8-14, 15-21, 22+
 type Tab = 'stats' | 'achievements';
 type JudgeMood = 'roast' | 'wholesome';
 
@@ -42,7 +43,7 @@ const LOADING_PHRASES = [
   "REVISANDO EL HISTORIAL DE CRINGE...",
   "CONSULTANDO EL LIBRO GORDO...",
   "APLICANDO LEY MARCIAL...",
-  "CALCULANDO EL NIVEL DE BASADO...",
+  "CALCULANDO EL NIVEL DE AURA...",
   "AUDITANDO TUS EMOCIONES...",
   "EMITIENDO SENTENCIA FINAL..."
 ];
@@ -59,8 +60,16 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
   const [loadingImage, setLoadingImage] = useState(LOADING_POOL[0]);
   
   const [timeRange, setTimeRange] = useState<TimeRange>('0'); 
+  const [weekRange, setWeekRange] = useState<WeekRange>('all'); // Sub-filtro para semanas
+
   const [chartType, setChartType] = useState<ChartType>('bar');
   const [judgeMood, setJudgeMood] = useState<JudgeMood>('roast');
+  
+  // Nuevo estado para colapsar/expandir el tribunal
+  const [isJudgeCollapsed, setIsJudgeCollapsed] = useState(false);
+
+  // Referencia para mantener el scroll fijo en la sección del juez
+  const judgeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -71,19 +80,34 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
       setJudgeImage(JUDGE_POOL[Math.floor(Math.random() * JUDGE_POOL.length)]);
       setActiveTab('stats');
       setJudgeMood('roast'); // Default to roast
+      setIsJudgeCollapsed(false); // Reset collapse state
     }
   }, [isOpen]);
+
+  // Resetear semana al cambiar de mes
+  useEffect(() => {
+    setWeekRange('all');
+  }, [timeRange]);
 
   useEffect(() => {
     setAiAnalysis("");
     setErrorAi("");
-  }, [timeRange, judgeMood]);
+  }, [timeRange, weekRange, judgeMood]);
 
   const getRangeLabel = () => {
     if (timeRange === 'all') return 'Todo el Año';
     if (timeRange === 'last_7') return 'Últimos 7 Días';
     if (timeRange === 'last_30') return 'Últimos 30 Días';
-    return MONTHS[parseInt(timeRange)];
+    
+    const monthName = MONTHS[parseInt(timeRange)];
+    if (weekRange === 'all') return monthName;
+    
+    if (weekRange === '1') return `${monthName} (Días 1-7)`;
+    if (weekRange === '2') return `${monthName} (Días 8-14)`;
+    if (weekRange === '3') return `${monthName} (Días 15-21)`;
+    if (weekRange === '4') return `${monthName} (Días 22+)`;
+    
+    return monthName;
   };
 
   // Check achievements on mount or data change
@@ -107,6 +131,18 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
              const [_, m] = date.split('-');
              return parseInt(m) - 1 === monthIndex;
         });
+
+        // Aplicar sub-filtro de semana si estamos en modo mes
+        if (weekRange !== 'all') {
+            filteredEntries = filteredEntries.filter(([date]) => {
+                const day = parseInt(date.split('-')[2]);
+                if (weekRange === '1') return day >= 1 && day <= 7;
+                if (weekRange === '2') return day >= 8 && day <= 14;
+                if (weekRange === '3') return day >= 15 && day <= 21;
+                if (weekRange === '4') return day >= 22;
+                return true;
+            });
+        }
     }
 
     if (filteredEntries.length === 0) return null;
@@ -157,16 +193,37 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
     const shiftedRadarData = [...radarData.slice(1), radarData[0]];
 
     return { totalDays, average, pieData, lineData, radarData: shiftedRadarData, filteredEntries };
-  }, [data, timeRange]);
+  }, [data, timeRange, weekRange]);
 
   const handleResetVerdict = () => {
     SoundManager.play('click');
     setAiAnalysis("");
     setErrorAi("");
+    // Scroll back to top of judge section gently
+    setTimeout(() => {
+        judgeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
   };
 
-  const handleAskPepe = async () => {
+  const toggleJudgeCollapse = () => {
+      SoundManager.play('click');
+      setIsJudgeCollapsed(!isJudgeCollapsed);
+  };
+
+  const handleAskPepe = async (e?: React.MouseEvent) => {
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
     if (loadingAi) return;
+
+    // Asegurar que está expandido al preguntar
+    if (isJudgeCollapsed) setIsJudgeCollapsed(false);
+
+    // SCROLL FIX: Ensure we stay on the judge section
+    if (judgeRef.current) {
+        judgeRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
     
     SoundManager.play('magic');
     setLoadingAi(true);
@@ -216,7 +273,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
 
         const toneInstruction = judgeMood === 'roast' 
             ? 'sarcástico, lapidario y ácido (pero nostálgico)' 
-            : 'motivador, optimista, épico y "basado" (wholesome)';
+            : 'motivador, optimista, épico y legendario (wholesome)';
         
         const diagnosisInstruction = judgeMood === 'roast'
             ? 'Frase lapidaria y sarcástica'
@@ -235,22 +292,37 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
             MODO: ${judgeMood.toUpperCase()} (${toneInstruction}).
             CONTEXTO: Analiza el diario del usuario: "${contextLabel}".
             DATOS: ${JSON.stringify(contextData)}
-            Misión (RESPUESTA ESTRUCTURADA OBLIGATORIA):
-            [DIAGNÓSTICO]: ${diagnosisInstruction} sobre cómo le ha ido al usuario en este periodo (${contextLabel}).
-            [SOUNDTRACK]: Elige UNA canción (2000s, 2010s, Nu Metal, Emo, Pop Punk, Rock Alternativo, Pop Rock, o incluso Taylor Swift o Avril Lavigne etc) que defina este periodo.
-            FORMATO SOUNDTRACK: "Titulo - Artista. Por qué: ${musicInstruction}".
-            [LOGRO]: Logro desbloqueado ${achievementInstruction} (max 10 palabras).
+            
+            Misión: Genera un veredicto en formato JSON estricto.
+            Instrucciones para los campos:
+            - diagnosis: ${diagnosisInstruction} sobre el periodo.
+            - soundtrack: "Titulo - Artista. Por qué: ${musicInstruction}".
+            - achievement: Logro desbloqueado ${achievementInstruction} (max 10 palabras).
+
             REGLAS:
             - Texto natural, ${toneInstruction}.
-            - Utiliza referencias a cultura pop como Dexter, Prison Break, Naruto, Pokemon, Stranger Things, Taylor Swift, Linkin Park, etc.
-            - Terminantemente prohibido usar apelativos como "crack, fiera, figura, socio, máquina, etc".
-            - SIN Markdown ni asteriscos (IMPORTANTE: No uses negritas).
-            - Máximo 120 palabras total.
+            - Soundtrack: Elige UNA canción (2000s, 2010s, Nu Metal, Emo, Pop Punk, Rock Alternativo, Pop Rock, o incluso Taylor Swift o Avril Lavigne etc) que defina este periodo.
+            - Usa referencias cultura pop (2000s, series, anime, etc). Como Dexter, Prison Break, Naruto, Pokemon, Stranger Things, Taylor Swift, Linkin Park, etc.
+            - TERMINANTEMENTE PROHIBIDO usar "basado", usa "auténtico" o "con aura" en su lugar. También está prohibido usar crack, fiera, figura, socio, máquina, titán, etc
+            - Máximo 130 palabras total.
         `;
 
+        // USO DE JSON SCHEMA PARA GARANTIZAR RESPUESTA ESTRUCTURADA
         const response = await ai.models.generateContent({
             model: 'gemini-3-flash-preview',
             contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        diagnosis: { type: Type.STRING },
+                        soundtrack: { type: Type.STRING },
+                        achievement: { type: Type.STRING }
+                    },
+                    required: ["diagnosis", "soundtrack", "achievement"]
+                }
+            }
         });
 
         const text = response.text;
@@ -258,6 +330,10 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
         if (text) {
              setAiAnalysis(text);
              SoundManager.play('success');
+             // Asegurar que seguimos viendo al juez tras la carga
+             setTimeout(() => {
+                 judgeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+             }, 100);
         } else {
              throw new Error("Pepe se quedó mudo.");
         }
@@ -274,16 +350,26 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
 
   const parseAiResponse = (rawText: string) => {
     if (!rawText) return null;
-    let text = rawText.replace(/\*\*/g, ''); 
-    const cleanStr = (s: string) => s.trim().replace(/^[:\s-]+/, '');
+    
+    let diagnosis = "";
+    let soundtrackFull = "";
+    let achievement = "";
 
-    const diagMatch = text.match(/\[?DIAGNÓSTICO\]?:?(.*?)(\[|$)/is);
-    const soundMatch = text.match(/\[?SOUNDTRACK\]?:?(.*?)(\[|$)/is);
-    const achievementMatch = text.match(/\[?LOGRO\]?:?(.*?)(\[|$)/is);
-
-    const diagnosis = diagMatch ? cleanStr(diagMatch[1]) : (soundMatch || achievementMatch) ? "" : cleanStr(text);
-    const soundtrackFull = soundMatch ? cleanStr(soundMatch[1]) : "";
-    const achievement = achievementMatch ? cleanStr(achievementMatch[1]) : "";
+    try {
+        const json = JSON.parse(rawText);
+        diagnosis = json.diagnosis || "";
+        soundtrackFull = json.soundtrack || "";
+        achievement = json.achievement || "";
+    } catch (e) {
+        // Fallback en caso de que (raramente) el modelo no devuelva JSON válido
+        const cleanStr = (s: string) => s.trim().replace(/^[:\s-]+/, '');
+        const diagMatch = rawText.match(/\[?DIAGNÓSTICO\]?:?(.*?)(\[|$)/is);
+        const soundMatch = rawText.match(/\[?SOUNDTRACK\]?:?(.*?)(\[|$)/is);
+        const achievementMatch = rawText.match(/\[?LOGRO\]?:?(.*?)(\[|$)/is);
+        diagnosis = diagMatch ? cleanStr(diagMatch[1]) : "";
+        soundtrackFull = soundMatch ? cleanStr(soundMatch[1]) : "";
+        achievement = achievementMatch ? cleanStr(achievementMatch[1]) : "";
+    }
 
     const renderSoundtrackContent = (fullText: string) => {
         const separatorRegex = /Por qué:|Why:|Because:/i;
@@ -297,24 +383,33 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
             reasonPart = fullText.substring(splitIndex).replace(/Por qué:|Why:|Because:/i, '').trim();
         }
 
+        const spotifyUrl = `https://open.spotify.com/search/${encodeURIComponent(songPart)}`;
+
         return (
-            <div className="flex flex-col gap-3 mt-1 w-full">
-                <div className="flex items-start gap-3 bg-pink-500/10 p-3 rounded-xl border border-pink-500/20 w-full">
-                    <div className="shrink-0 p-2 bg-pink-500/20 rounded-lg text-pink-300">
-                        <Music size={16} className="animate-[spin_4s_linear_infinite]" />
-                    </div>
-                    <div className="flex flex-col min-w-0">
-                         <span className="text-[9px] font-black uppercase text-pink-400/70 tracking-widest mb-0.5">Now Playing</span>
-                         <span className="text-pink-100 font-bold text-sm leading-tight break-words">{songPart}</span>
+            <a 
+                href={spotifyUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="group/card relative p-4 rounded-2xl bg-pink-500/5 border border-pink-500/10 hover:bg-pink-500/10 hover:border-pink-500/30 transition-all duration-300 cursor-pointer flow-root block"
+            >
+                <div className="float-left mr-4 mb-1 relative">
+                    <div className="absolute inset-0 bg-pink-500 rounded-full blur-md opacity-0 group-hover/card:opacity-30 transition-opacity duration-300"></div>
+                    <div className="relative p-2 rounded-xl bg-pink-500/10 text-pink-400 group-hover/card:scale-110 group-hover/card:rotate-3 transition-transform duration-300">
+                        <Music size={18} />
                     </div>
                 </div>
-
+                <div className="text-[10px] font-black text-pink-400/60 uppercase tracking-widest mb-1 group-hover/card:text-pink-400 transition-colors flex items-center gap-2">
+                    Now Playing <ExternalLink size={10} className="opacity-50" />
+                </div>
+                <p className="text-pink-100 text-sm font-bold leading-tight break-words group-hover/card:underline decoration-pink-500/50 underline-offset-2 transition-colors">
+                    {songPart}
+                </p>
                 {reasonPart && (
-                    <div className="text-pink-200/80 text-xs italic leading-relaxed pl-2 border-l-2 border-pink-500/30">
+                    <div className="text-pink-200/80 text-xs italic leading-relaxed mt-2 border-l-2 border-pink-500/30 pl-2">
                         "{reasonPart}"
                     </div>
                 )}
-            </div>
+            </a>
         );
     };
 
@@ -336,11 +431,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
            </p>
         </div>
         )}
-        {soundtrackFull && (
-          <div className="group/card relative p-4 rounded-2xl bg-pink-500/5 border border-pink-500/10 hover:bg-pink-500/10 hover:border-pink-500/30 transition-all duration-300 cursor-default">
-             {renderSoundtrackContent(soundtrackFull)}
-          </div>
-        )}
+        {soundtrackFull && renderSoundtrackContent(soundtrackFull)}
         {achievement && (
           <div className="group/card relative p-4 rounded-2xl bg-amber-500/5 border border-amber-500/10 hover:bg-amber-500/10 hover:border-amber-500/30 transition-all duration-300 cursor-default flow-root">
              <div className="float-left mr-4 mb-1 relative">
@@ -360,7 +451,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
 
         <div className="flex flex-col gap-2 mt-6">
             <button 
-                onClick={handleAskPepe}
+                onClick={(e) => handleAskPepe(e)}
                 className="w-full group/card relative flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-[0_4px_20px_-5px_rgba(79,70,229,0.4)] hover:shadow-[0_10px_30px_-5px_rgba(79,70,229,0.5)] transition-all duration-300 active:scale-98 overflow-hidden"
             >
                 <div className="absolute inset-0 bg-white/10 opacity-0 group-hover/card:opacity-20 transition-opacity duration-300"></div>
@@ -538,6 +629,9 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
   };
 
   if (!isOpen) return null;
+  
+  // Helper para saber si el timeRange es un mes numérico
+  const isMonthSelected = !isNaN(parseInt(timeRange));
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/95 backdrop-blur-md animate-in fade-in">
@@ -598,8 +692,8 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                         <span className="text-[10px] uppercase font-black tracking-widest">Filtrar Análisis y Gráficas:</span>
                     </div>
                     
-                    <div className="flex-1 w-full sm:w-auto">
-                        <div className="relative group w-full sm:max-w-xs">
+                    <div className="flex-1 w-full sm:w-auto flex flex-col sm:flex-row gap-3 justify-end">
+                        <div className="relative group w-full sm:w-48">
                             <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-slate-400">
                                 <CalendarRange size={14} />
                             </div>
@@ -616,6 +710,25 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                                 <option value="all">Todo el Año</option>
                             </select>
                         </div>
+                        
+                        {isMonthSelected && (
+                             <div className="relative group w-full sm:w-56 animate-in slide-in-from-left-2 duration-300">
+                                <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-slate-400">
+                                    <ListFilter size={14} />
+                                </div>
+                                <select 
+                                    value={weekRange} 
+                                    onChange={(e) => setWeekRange(e.target.value as WeekRange)}
+                                    className="w-full bg-slate-800 text-indigo-200 text-xs font-bold py-2.5 px-4 pr-10 rounded-xl outline-none hover:bg-slate-700 transition-colors cursor-pointer border border-indigo-500/30 focus:border-indigo-500 appearance-none uppercase tracking-wide shadow-sm"
+                                >
+                                    <option value="all">Todo el Mes</option>
+                                    <option value="1">Semana 1 (1-7)</option>
+                                    <option value="2">Semana 2 (8-14)</option>
+                                    <option value="3">Semana 3 (15-21)</option>
+                                    <option value="4">Semana 4 (22+)</option>
+                                </select>
+                             </div>
+                        )}
                     </div>
                 </div>
 
@@ -690,7 +803,10 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                                 </div>
                             </div>
 
-                            <div className="lg:col-span-2 flex flex-col relative overflow-hidden rounded-3xl border border-indigo-500/30 bg-slate-900 group">
+                            <div 
+                                className="lg:col-span-2 flex flex-col relative overflow-hidden rounded-3xl border border-indigo-500/30 bg-slate-900 group"
+                                ref={judgeRef}
+                            >
                                 <div className="absolute inset-0 z-0">
                                     <div className="absolute inset-0 opacity-[0.07] group-hover:opacity-10 transition-opacity duration-500 pointer-events-none">
                                          <img src={PEPE_ASSETS.COUNCIL} className="w-full h-full object-cover grayscale" />
@@ -710,19 +826,36 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                                     <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-indigo-950/20 to-slate-900 z-0"></div>
                                 </div>
 
-                                <div className="relative z-20 flex flex-row justify-between items-center p-6 pb-2">
+                                <div className={`relative z-20 flex flex-row justify-between items-center px-6 pt-6 transition-[padding] duration-300 ${isJudgeCollapsed ? 'pb-6' : 'pb-2'}`}>
                                     <span className="text-indigo-300 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
                                         <Gavel size={18} className="text-indigo-400" />
                                         <span className="md:hidden">Tribunal de Pepe</span>
                                         <span className="hidden md:inline">Tribunal Supremo de Pepe</span>
                                     </span>
-                                    <span className="text-[10px] font-bold text-white bg-indigo-500/20 px-3 py-1.5 rounded-xl border border-indigo-500/40 shadow-sm animate-in fade-in flex items-center gap-2">
-                                        <CalendarRange size={12} className="text-indigo-300" />
-                                        Juzgando: <span className="text-indigo-300 uppercase tracking-wider">{getRangeLabel()}</span>
-                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[10px] font-bold text-white bg-indigo-500/20 px-3 py-1.5 rounded-xl border border-indigo-500/40 shadow-sm animate-in fade-in flex items-center gap-2">
+                                            <CalendarRange size={12} className="text-indigo-300" />
+                                            <span className="hidden sm:inline">Juzgando:</span>
+                                            <span className="text-indigo-300 uppercase tracking-wider">{getRangeLabel()}</span>
+                                        </span>
+                                        {/* BOTON MINIMIZAR / EXPANDIR ORGÁNICO */}
+                                        <button 
+                                            onClick={toggleJudgeCollapse}
+                                            className="p-1.5 rounded-lg bg-slate-800/50 hover:bg-indigo-500/20 text-slate-400 hover:text-indigo-300 border border-transparent hover:border-indigo-500/30 transition-all"
+                                        >
+                                            {isJudgeCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                                        </button>
+                                    </div>
                                 </div>
                             
-                                <div className="flex-1 flex flex-col lg:flex-row items-center justify-center p-6 gap-8 relative z-10">
+                                {/* Contenedor Colapsable para el cuerpo del tribunal */}
+                                <div 
+                                    className={`
+                                        flex-1 flex flex-col lg:flex-row items-center justify-center p-6 gap-8 relative z-10 
+                                        transition-all duration-500 ease-in-out overflow-hidden
+                                        ${isJudgeCollapsed ? 'max-h-0 opacity-0 py-0' : 'max-h-[800px] opacity-100'}
+                                    `}
+                                >
                                     <div className={`relative transition-all duration-700 ${loadingAi ? 'w-32 h-32 lg:w-40 lg:h-40' : aiAnalysis ? 'w-24 h-24 lg:w-32 lg:h-32' : 'w-40 h-40 lg:w-48 lg:h-48'}`}>
                                         <div className={`absolute -inset-4 bg-indigo-500/20 rounded-full blur-xl transition-all duration-500 ${loadingAi ? 'animate-pulse scale-110' : 'opacity-50'}`}></div>
                                         <div className={`w-full h-full rounded-full overflow-hidden border-4 shadow-2xl relative transition-all duration-500 ${loadingAi ? 'border-indigo-400 shadow-[0_0_30px_rgba(99,102,241,0.5)] bg-slate-950' : 'border-slate-700 shadow-xl bg-slate-800'} ${!loadingAi && !aiAnalysis ? 'animate-[float_4s_ease-in-out_infinite]' : ''}`}>
@@ -837,7 +970,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                                                     </button>
                                                 </div>
 
-                                                <button onClick={handleAskPepe} className="w-full group relative px-8 py-4 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-3 shadow-[0_10px_25px_-5px_rgba(79,70,229,0.5)] overflow-hidden mt-2 active:scale-95">
+                                                <button onClick={(e) => handleAskPepe(e)} className="w-full group relative px-8 py-4 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-3 shadow-[0_10px_25px_-5px_rgba(79,70,229,0.5)] overflow-hidden mt-2 active:scale-95">
                                                     <span className="relative z-10 flex items-center gap-2"><Brain size={18} /> SOLICITAR VEREDICTO</span>
                                                     <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 skew-y-12 transition-transform duration-500"></div>
                                                 </button>

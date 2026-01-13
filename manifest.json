@@ -1,7 +1,7 @@
 
 {
   "name": "Pepe's Feels Tracker",
-  "short_name": "PepeLore",
+  "short_name": "PepePixel",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -10,12 +10,12 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "https://sme2zz26xzjq57zw.public.blob.vercel-storage.com/favicon_1.png",
+      "src": "https://sme2zz26xzjq57zw.public.blob.vercel-storage.com/favicon_2.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "https://sme2zz26xzjq57zw.public.blob.vercel-storage.com/favicon_1.png",
+      "src": "https://sme2zz26xzjq57zw.public.blob.vercel-storage.com/favicon_2.png",
       "sizes": "512x512",
       "type": "image/png"
     }

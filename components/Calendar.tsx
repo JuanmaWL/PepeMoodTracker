@@ -140,7 +140,7 @@ const DayCell = memo(({
         transition-[transform,background-color,border-color,box-shadow,opacity] duration-300
         focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 focus-visible:ring-indigo-500
         ${!isFilled ? 'bg-slate-700/30 hover:bg-slate-600/50' : ''}
-        ${level === MoodLevel.Legendary ? 'animate-pulse hover:animate-none shadow-[0_0_12px_rgba(34,197,94,0.4)]' : ''}
+        ${level === MoodLevel.Legendary ? 'shadow-[0_0_15px_rgba(34,197,94,0.6)] border border-green-400/30' : ''}
         ${isHighlighted ? 'ring-2 ring-fuchsia-500 shadow-[0_0_15px_#d946ef] z-20 scale-110 !bg-fuchsia-900/30' : ''}
         ${isToday && !isFilled && !isHighlighted ? 'border-2 border-dashed border-cyan-400/70 shadow-[0_0_15px_rgba(34,211,238,0.3)] bg-cyan-900/20 animate-pulse' : ''}
         ${isToday && isFilled && !isHighlighted ? 'ring-1 ring-white/80 ring-offset-1 ring-offset-slate-900' : ''}
