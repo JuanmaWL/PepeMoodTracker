@@ -892,8 +892,8 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                                                 {/* Spinner Position Fix for PC visibility */}
                                                 <div className="absolute bottom-0 right-0 z-30">
                                                     {loadingAi ? (
-                                                        <div className="bg-slate-950 rounded-full p-2 border-2 border-indigo-500 shadow-xl shadow-indigo-500/30 animate-spin">
-                                                            <Loader2 size={20} className="text-indigo-400" />
+                                                        <div className="bg-slate-950 rounded-full p-2 border-2 border-indigo-500 shadow-xl shadow-indigo-500/30">
+                                                            <Loader2 size={20} className="text-indigo-400 animate-spin" />
                                                         </div>
                                                     ) : aiAnalysis ? (
                                                         <div className="bg-green-600 rounded-full p-1.5 md:p-2 border-2 border-slate-900 shadow-lg animate-in zoom-in">
