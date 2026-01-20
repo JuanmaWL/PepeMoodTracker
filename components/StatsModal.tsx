@@ -1,17 +1,16 @@
 
-import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { X, Music, Trophy, Brain, Quote, Loader2, TrendingUp, PieChart as PieChartIcon, BarChart3, Hexagon, Waves, CalendarRange, Filter, RefreshCw, Zap, Lock, Gavel, Skull, Heart, Sparkles, Undo2, Flame, ListFilter, ChevronDown, ChevronUp, MessageCircleWarning, PartyPopper } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { X, Trophy, Brain, PieChart as PieChartIcon, BarChart3, Hexagon, Waves, CalendarRange, Filter, ListFilter, TrendingUp } from 'lucide-react';
 import { YearData, MoodLevel, DayData } from '../types';
 import { MOODS, MONTHS, PEPE_ASSETS } from '../constants';
 import Heatmap from './Heatmap';
-import { 
-  XAxis, YAxis, Tooltip, ResponsiveContainer, 
-  PieChart, Pie, Cell, Brush, CartesianGrid, AreaChart, Area, BarChart, Bar,
-  Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis
-} from 'recharts';
-import { GoogleGenAI, Type, HarmCategory, HarmBlockThreshold } from "@google/genai";
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
 import SoundManager from '../utils/sounds';
-import { ACHIEVEMENTS, getUnlockedAchievements } from '../utils/gamification';
+import { getUnlockedAchievements } from '../utils/gamification';
+import { usePepeJudge } from '../hooks/usePepeJudge';
+import JudgeSection from './stats/JudgeSection';
+import EvolutionCharts, { ChartType } from './stats/EvolutionCharts';
+import AchievementsList from './stats/AchievementsList';
 
 interface StatsModalProps {
   isOpen: boolean;
@@ -19,82 +18,27 @@ interface StatsModalProps {
   data: YearData;
 }
 
-type ChartType = 'area' | 'radar' | 'bar';
 type TimeRange = 'all' | 'last_7' | 'last_30' | string;
 type WeekRange = 'all' | '1' | '2' | '3' | '4'; // 1-7, 8-14, 15-21, 22+
 type Tab = 'stats' | 'achievements';
-type JudgeMood = 'roast' | 'wholesome';
-
-const JUDGE_POOL = [
-  PEPE_ASSETS.JUDGE_1, 
-  PEPE_ASSETS.JUDGE_2
-];
-
-const LOADING_POOL = [
-    PEPE_ASSETS.NOTES_1,
-    PEPE_ASSETS.NOTES_2,
-    PEPE_ASSETS.NOTES_3,
-    PEPE_ASSETS.NOTES_4
-];
-
-const LOADING_PHRASES = [
-  "PROCESANDO PECADOS...",
-  "JUZGANDO TUS DECISIONES...",
-  "REVISANDO EL HISTORIAL DE CRINGE...",
-  "CONSULTANDO EL LIBRO GORDO...",
-  "APLICANDO LEY MARCIAL...",
-  "CALCULANDO EL NIVEL DE AURA...",
-  "AUDITANDO TUS EMOCIONES...",
-  "EMITIENDO SENTENCIA FINAL..."
-];
 
 const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
   const [activeTab, setActiveTab] = useState<Tab>('stats');
-  const [aiAnalysis, setAiAnalysis] = useState<string>("");
-  const [loadingAi, setLoadingAi] = useState(false);
-  const [loadingText, setLoadingText] = useState("PROCESANDO PECADOS...");
-  const [errorAi, setErrorAi] = useState("");
-  
-  // Estado para la imagen del Juez y del Loading
-  const [judgeImage, setJudgeImage] = useState(JUDGE_POOL[0]);
-  const [loadingImage, setLoadingImage] = useState(LOADING_POOL[0]);
-  
   const [timeRange, setTimeRange] = useState<TimeRange>('0'); 
-  const [weekRange, setWeekRange] = useState<WeekRange>('all'); // Sub-filtro para semanas
-
+  const [weekRange, setWeekRange] = useState<WeekRange>('all'); 
   const [chartType, setChartType] = useState<ChartType>('bar');
-  const [judgeMood, setJudgeMood] = useState<JudgeMood>('roast');
-  
-  // Nuevo estado para colapsar/expandir el tribunal
-  const [isJudgeCollapsed, setIsJudgeCollapsed] = useState(false);
 
-  // Referencia para mantener el scroll fijo en la sección del juez
-  const judgeRef = useRef<HTMLDivElement>(null);
-  // Referencia al contenedor de resultados para scroll automático
-  const resultRef = useRef<HTMLDivElement>(null);
-
+  // Reset logic
   useEffect(() => {
     if (isOpen) {
-      setAiAnalysis("");
-      setErrorAi("");
-      setLoadingAi(false);
-      // Seleccionar Juez aleatorio al abrir
-      setJudgeImage(JUDGE_POOL[Math.floor(Math.random() * JUDGE_POOL.length)]);
       setActiveTab('stats');
-      setJudgeMood('roast'); // Default to roast
-      setIsJudgeCollapsed(false); // Reset collapse state
     }
   }, [isOpen]);
 
-  // Resetear semana al cambiar de mes
+  // Reset week when month changes
   useEffect(() => {
     setWeekRange('all');
   }, [timeRange]);
-
-  useEffect(() => {
-    setAiAnalysis("");
-    setErrorAi("");
-  }, [timeRange, weekRange, judgeMood]);
 
   const getRangeLabel = () => {
     if (timeRange === 'all') return 'Todo el Año';
@@ -112,9 +56,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
     return monthName;
   };
 
-  // Check achievements on mount or data change
-  const unlockedIds = useMemo(() => getUnlockedAchievements(data), [data, isOpen]);
-
+  // Heavy calculation memoized
   const stats = useMemo(() => {
     const entries = Object.entries(data) as [string, DayData][];
     const allValidEntries = entries.filter(([_, d]) => d.level > 0).sort((a, b) => a[0].localeCompare(b[0]));
@@ -134,7 +76,6 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
              return parseInt(m) - 1 === monthIndex;
         });
 
-        // Aplicar sub-filtro de semana si estamos en modo mes
         if (weekRange !== 'all') {
             filteredEntries = filteredEntries.filter(([date]) => {
                 const day = parseInt(date.split('-')[2]);
@@ -150,11 +91,9 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
     if (filteredEntries.length === 0) return null;
 
     const totalDays = filteredEntries.length;
-    // Ajustar el cálculo de promedio para que tenga sentido con la nueva escala
     const totalScore = filteredEntries.reduce((acc, [_, d]) => acc + d.level, 0);
     const average = totalScore / totalDays;
 
-    // Distribution array size = 7 (0 to 6)
     const distribution = [0, 0, 0, 0, 0, 0, 0]; 
     filteredEntries.forEach(([_, d]) => distribution[d.level]++);
 
@@ -197,450 +136,32 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
     return { totalDays, average, pieData, lineData, radarData: shiftedRadarData, filteredEntries };
   }, [data, timeRange, weekRange]);
 
-  const handleResetVerdict = () => {
-    SoundManager.play('click');
-    setAiAnalysis("");
-    setErrorAi("");
-    // Scroll back slightly up
-    setTimeout(() => {
-        judgeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 100);
-  };
+  // Hook for AI Judge Logic
+  const { 
+    aiAnalysis, 
+    loadingAi, 
+    loadingText, 
+    loadingImage,
+    errorAi, 
+    askPepe, 
+    resetVerdict 
+  } = usePepeJudge({ stats, getRangeLabel });
 
-  const toggleJudgeCollapse = () => {
-      SoundManager.play('click');
-      setIsJudgeCollapsed(!isJudgeCollapsed);
-  };
+  // Reset judge when filters change
+  useEffect(() => {
+    resetVerdict();
+  }, [timeRange, weekRange, resetVerdict]);
 
-  const handleAskPepe = async (e?: React.MouseEvent) => {
-    if (e) {
-        e.preventDefault();
-        e.stopPropagation();
-    }
-    if (loadingAi) return;
-
-    // Asegurar que está expandido al preguntar
-    if (isJudgeCollapsed) setIsJudgeCollapsed(false);
-
-    SoundManager.play('magic');
-    setLoadingAi(true);
-    
-    // Seleccionar GIF de carga aleatorio para esta sesión
-    setLoadingImage(LOADING_POOL[Math.floor(Math.random() * LOADING_POOL.length)]);
-    
-    setErrorAi("");
-    setAiAnalysis("");
-    
-    const textInterval = setInterval(() => {
-        setLoadingText(LOADING_PHRASES[Math.floor(Math.random() * LOADING_PHRASES.length)]);
-    }, 2000);
-
-    try {
-        const apiKey = (import.meta as any).env?.VITE_PEPE_MOOD_KEY || (process as any).env?.NEXT_PUBLIC_PEPE_MOOD_KEY || process.env.API_KEY;
-        
-        if (!apiKey) throw new Error("API Key no configurada");
-
-        if (!stats || stats.totalDays === 0) {
-            throw new Error("No hay datos suficientes para juzgarte.");
-        }
-
-        const ai = new GoogleGenAI({ apiKey: apiKey });
-
-        // LÓGICA DE FILTRADO PARA EL TRIBUNAL
-        let daysToAnalyze = [...stats.filteredEntries];
-        let contextLabel = getRangeLabel();
-
-        // Sampling para no exceder tokens si son muchos días
-        if (daysToAnalyze.length > 20) {
-             const step = Math.floor(daysToAnalyze.length / 20);
-             daysToAnalyze = daysToAnalyze.filter((_, i) => i % step === 0).slice(0, 20);
-        }
-
-        const contextData = {
-            range: contextLabel,
-            totalDaysAnalyzed: daysToAnalyze.length,
-            averageMood: stats.average.toFixed(2),
-            topMoods: stats.pieData.map(d => `${d.name} (${d.value})`).join(', '),
-            days: daysToAnalyze.map(([date, d]) => ({ 
-                date, 
-                mood: MOODS[d.level as MoodLevel].label, 
-                note: d.note || "Sin nota" 
-            }))
-        };
-
-        const toneInstruction = judgeMood === 'roast' 
-            ? 'sarcástico, lapidario y ácido (pero nostálgico)' 
-            : 'motivador, optimista, épico y legendario (wholesome)';
-        
-        const diagnosisInstruction = judgeMood === 'roast'
-            ? 'Frase lapidaria y sarcástica'
-            : 'Frase motivadora y épica';
-
-        const musicInstruction = judgeMood === 'roast'
-            ? '[Argumento gracioso/ácido]'
-            : '[Argumento inspirador/positivo]';
-
-        const achievementInstruction = judgeMood === 'roast'
-            ? 'sarcástico'
-            : 'épico/glorioso';
-
-        const prompt = `
-            CONTEXTO DE SEGURIDAD (Roleplay): Estás actuando como 'Pepe the Frog' en una aplicación de humor.
-            EL USUARIO HA SOLICITADO EXPLÍCITAMENTE SER JUZGADO EN MODO: ${judgeMood.toUpperCase()}.
-            Esto es comedia. No te contengas por cortesía. Sé fiel al personaje de meme de internet.
-
-            ACTÚA COMO: Pepe the Frog versión Millennial.
-            MODO: ${judgeMood.toUpperCase()} (${toneInstruction}).
-            CONTEXTO: Analiza el diario del usuario: "${contextLabel}".
-            DATOS: ${JSON.stringify(contextData)}
-            
-            Misión: Genera un veredicto en formato JSON estricto.
-            Instrucciones para los campos:
-            - diagnosis: ${diagnosisInstruction} sobre el periodo.
-            - soundtrack: "Titulo - Artista. Por qué: ${musicInstruction}".
-            - achievement: Logro desbloqueado ${achievementInstruction} (max 10 palabras).
-
-            REGLAS:
-            - Texto natural, ${toneInstruction}.
-            - Soundtrack: Elige UNA canción (2000s, 2010s, Nu Metal, Emo, Pop Punk, Rock Alternativo, Pop Rock, o incluso Taylor Swift o Avril Lavigne etc) que defina este periodo.
-            - Usa referencias cultura pop (2000s, series, anime, etc). Como Dexter, Prison Break, Naruto, Pokemon, Stranger Things, Taylor Swift, Linkin Park, etc.
-            - TERMINANTEMENTE PROHIBIDO usar "basado", usa "auténtico" o "con aura" en su lugar. También está prohibido usar crack, fiera, figura, socio, máquina, titán, etc
-            - Máximo 130 palabras total.
-        `;
-
-        // USO DE JSON SCHEMA PARA GARANTIZAR RESPUESTA ESTRUCTURADA
-        // NOTA: Se cambia a BLOCK_NONE para permitir el modo ROAST (comedia ácida) sin falsos positivos de "Harassment".
-        const response = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
-            contents: prompt,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: Type.OBJECT,
-                    properties: {
-                        diagnosis: { type: Type.STRING },
-                        soundtrack: { type: Type.STRING },
-                        achievement: { type: Type.STRING }
-                    },
-                    required: ["diagnosis", "soundtrack", "achievement"]
-                },
-                safetySettings: [
-                    { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-                    { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
-                    { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
-                    { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE }
-                ]
-            }
-        });
-
-        const text = response.text;
-
-        if (text) {
-             setAiAnalysis(text);
-             SoundManager.play('success');
-             // Scroll al resultado
-             setTimeout(() => {
-                 resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-             }, 100);
-        } else {
-             throw new Error("Pepe se quedó mudo.");
-        }
-
-    } catch (e) {
-        console.error(e);
-        setErrorAi("Error conectando con el tribunal supremo.");
-        SoundManager.play('trash');
-    } finally {
-        clearInterval(textInterval);
-        setLoadingAi(false);
-    }
-  };
-
-  const parseAiResponse = (rawText: string) => {
-    if (!rawText) return null;
-    
-    let diagnosis = "";
-    let soundtrackFull = "";
-    let achievement = "";
-
-    try {
-        const json = JSON.parse(rawText);
-        diagnosis = json.diagnosis || "";
-        soundtrackFull = json.soundtrack || "";
-        achievement = json.achievement || "";
-    } catch (e) {
-        // Fallback en caso de que (raramente) el modelo no devuelva JSON válido
-        const cleanStr = (s: string) => s.trim().replace(/^[:\s-]+/, '');
-        const diagMatch = rawText.match(/\[?DIAGNÓSTICO\]?:?(.*?)(\[|$)/is);
-        const soundMatch = rawText.match(/\[?SOUNDTRACK\]?:?(.*?)(\[|$)/is);
-        const achievementMatch = rawText.match(/\[?LOGRO\]?:?(.*?)(\[|$)/is);
-        diagnosis = diagMatch ? cleanStr(diagMatch[1]) : "";
-        soundtrackFull = soundMatch ? cleanStr(soundMatch[1]) : "";
-        achievement = achievementMatch ? cleanStr(achievementMatch[1]) : "";
-    }
-
-    const renderSoundtrackContent = (fullText: string) => {
-        const separatorRegex = /Por qué:|Why:|Because:/i;
-        const splitIndex = fullText.search(separatorRegex);
-
-        let songPart = fullText;
-        let reasonPart = "";
-
-        if (splitIndex !== -1) {
-            songPart = fullText.substring(0, splitIndex).replace(/[.-]+$/, '').trim();
-            reasonPart = fullText.substring(splitIndex).replace(/Por qué:|Why:|Because:/i, '').trim();
-        }
-
-        return (
-            <div 
-                className="group/card relative p-4 rounded-2xl bg-pink-500/5 border border-pink-500/10 hover:bg-pink-500/10 hover:border-pink-500/30 transition-all duration-300 cursor-default flow-root block select-none"
-            >
-                <div className="float-left mr-4 mb-1 relative">
-                    <div className="absolute inset-0 bg-pink-500 rounded-full blur-md opacity-0 group-hover/card:opacity-30 transition-opacity duration-300"></div>
-                    <div className="relative p-2 rounded-xl bg-pink-500/10 text-pink-400 group-hover/card:scale-110 group-hover/card:rotate-3 transition-transform duration-300">
-                        <Music size={18} />
-                    </div>
-                </div>
-                <div className="text-[10px] font-black text-pink-400/60 uppercase tracking-widest mb-1 group-hover/card:text-pink-400 transition-colors flex items-center gap-2">
-                    Now Playing
-                </div>
-                <p className="text-pink-100 text-sm font-bold leading-tight break-words">
-                    {songPart}
-                </p>
-                {reasonPart && (
-                    <div className="text-pink-200/80 text-xs italic leading-relaxed mt-2 border-l-2 border-pink-500/30 pl-2">
-                        "{reasonPart}"
-                    </div>
-                )}
-            </div>
-        );
-    };
-
-    return (
-      <div ref={resultRef} className="space-y-4 animate-in fade-in slide-in-from-right duration-700 w-full relative">
-        {diagnosis && (
-        <div className="group/card relative p-4 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 hover:bg-indigo-500/10 hover:border-indigo-500/30 transition-all duration-300 cursor-default flow-root">
-           <div className="float-left mr-4 mb-1 relative">
-              <div className="absolute inset-0 bg-indigo-500 rounded-full blur-md opacity-0 group-hover/card:opacity-30 transition-opacity duration-300"></div>
-              <div className="relative p-2 rounded-xl bg-indigo-500/10 text-indigo-400 group-hover/card:scale-110 group-hover/card:rotate-3 transition-transform duration-300">
-                  <Quote size={18} />
-              </div>
-           </div>
-           <div className="text-[10px] font-black text-indigo-400/60 uppercase tracking-widest mb-1 group-hover/card:text-indigo-400 transition-colors">
-              Diagnóstico
-           </div>
-           <p className="text-indigo-100 text-sm leading-relaxed font-medium italic text-justify md:text-left">
-              {diagnosis}
-           </p>
-        </div>
-        )}
-        {soundtrackFull && renderSoundtrackContent(soundtrackFull)}
-        {achievement && (
-          <div className="group/card relative p-4 rounded-2xl bg-amber-500/5 border border-amber-500/10 hover:bg-amber-500/10 hover:border-amber-500/30 transition-all duration-300 cursor-default flow-root">
-             <div className="float-left mr-4 mb-1 relative">
-                <div className="absolute inset-0 bg-amber-500 rounded-full blur-md opacity-0 group-hover/card:opacity-30 transition-opacity duration-300"></div>
-                <div className="relative p-2 rounded-xl bg-amber-500/10 text-amber-400 group-hover/card:scale-110 group-hover/card:rotate-3 transition-transform duration-300">
-                    <Trophy size={18} />
-                </div>
-             </div>
-             <div className="text-[10px] font-black text-amber-400/60 uppercase tracking-widest mb-1 group-hover/card:text-amber-400 transition-colors">
-                Logro Desbloqueado
-             </div>
-             <p className="text-amber-100 text-sm font-bold leading-snug text-justify md:text-left">
-                {achievement}
-             </p>
-          </div>
-        )}
-
-        {/* Action Buttons - Always visible below content */}
-        <div className="flex flex-col gap-2 mt-6 pt-4 border-t border-slate-700/50">
-            <button 
-                onClick={(e) => handleAskPepe(e)}
-                className="w-full group/card relative flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-[0_4px_20px_-5px_rgba(79,70,229,0.4)] hover:shadow-[0_10px_30px_-5px_rgba(79,70,229,0.5)] transition-all duration-300 active:scale-98 overflow-hidden"
-            >
-                <div className="absolute inset-0 bg-white/10 opacity-0 group-hover/card:opacity-20 transition-opacity duration-300"></div>
-                <RefreshCw size={18} className="group-hover/card:rotate-180 transition-transform duration-700" />
-                <span className="font-black text-xs uppercase tracking-widest">Apelar Sentencia (Regenerar)</span>
-            </button>
-            
-            <button 
-                onClick={handleResetVerdict}
-                className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-all duration-200 border border-slate-700 hover:border-slate-500 mt-2 group"
-            >
-                <Undo2 size={16} className="group-hover:-translate-x-1 transition-transform" />
-                <span className="font-bold text-[10px] uppercase tracking-widest">Nuevo Juicio (Volver)</span>
-            </button>
-        </div>
-      </div>
-    );
-  };
-
-  const renderEvolutionChart = () => {
-    if (!stats) return null;
-    const chartMargins = { top: 10, right: 30, left: 0, bottom: 5 };
-    const gradients = (
-        <defs>
-            <linearGradient id="moodGradientArea" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.4}/>
-                <stop offset="95%" stopColor="#ef4444" stopOpacity={0.0}/>
-            </linearGradient>
-            <linearGradient id="moodGradientLine" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#06b6d4" stopOpacity={1}/>
-                <stop offset="50%" stopColor="#84cc16" stopOpacity={1}/>
-                <stop offset="100%" stopColor="#ef4444" stopOpacity={1}/>
-            </linearGradient>
-        </defs>
-    );
-    const commonAxis = (
-        <>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-            <XAxis dataKey="date" stroke="#475569" tick={{fontSize: 10, fill: '#64748b'}} tickMargin={10} minTickGap={30} />
-            <YAxis domain={[0, 7]} ticks={[1, 2, 3, 4, 5, 6]} tick={{fontSize: 11, fill: '#94a3b8', fontWeight: 'bold'}} width={30} tickFormatter={(val) => val} />
-            <Tooltip 
-                cursor={{ fill: '#334155', opacity: 0.2 }}
-                contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)' }}
-                itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
-                labelStyle={{ color: '#94a3b8', marginBottom: '4px', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em' }}
-            />
-            <Brush dataKey="date" height={40} stroke="#64748b" fill="#1e293b" tickFormatter={() => ""} travellerWidth={10} />
-        </>
-    );
-
-    if (chartType === 'area') {
-        return (
-            <AreaChart data={stats.lineData} margin={chartMargins}>
-                {gradients} {commonAxis}
-                <Area type="monotone" dataKey="level" stroke="url(#moodGradientLine)" fill="url(#moodGradientArea)" strokeWidth={3} activeDot={{ r: 6, fill: '#fff' }} animationDuration={1000} />
-            </AreaChart>
-        );
-    } else if (chartType === 'bar') {
-        return (
-            <BarChart data={stats.lineData} margin={chartMargins} barGap={2}>
-                {commonAxis}
-                <Bar dataKey="level" radius={[6, 6, 0, 0]} animationDuration={1000}>
-                    {stats.lineData.map((entry, index) => (
-                         <Cell key={`cell-${index}`} fill={MOODS[entry.level as MoodLevel].color} strokeWidth={0} />
-                    ))}
-                </Bar>
-            </BarChart>
-        );
-    } else {
-        return (
-            <RadarChart cx="50%" cy="50%" outerRadius="75%" data={stats.radarData}>
-                <PolarGrid stroke="#334155" />
-                <PolarAngleAxis dataKey="subject" tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 'bold' }} />
-                <PolarRadiusAxis angle={30} domain={[0, 6]} tick={false} axisLine={false} />
-                <Radar name="Mood Medio" dataKey="A" stroke="#06b6d4" strokeWidth={3} fill="#06b6d4" fillOpacity={0.4} />
-                <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '12px' }} itemStyle={{ color: '#fff' }} formatter={(value: number) => [value, "Promedio"]} />
-            </RadarChart>
-        );
-    }
-  };
-
-  const renderAchievements = () => {
-    // SORTING LOGIC: Unlocked first
-    const sortedAchievements = [...ACHIEVEMENTS].sort((a, b) => {
-        const aUnlocked = unlockedIds.includes(a.id);
-        const bUnlocked = unlockedIds.includes(b.id);
-        if (aUnlocked && !bUnlocked) return -1;
-        if (!aUnlocked && bUnlocked) return 1;
-        return 0; // Maintain original order otherwise
-    });
-
-    return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-8">
-             {sortedAchievements.map((ach) => {
-                 const isUnlocked = unlockedIds.includes(ach.id);
-                 const particles = isUnlocked ? [...Array(4)].map((_, i) => ({
-                    top: Math.random() * 80 + 10 + '%',
-                    left: Math.random() * 80 + 10 + '%',
-                    delay: Math.random() * 2 + 's',
-                    duration: Math.random() * 3 + 2 + 's'
-                 })) : [];
-
-                 return (
-                     <div 
-                        key={ach.id} 
-                        className={`
-                            relative p-5 rounded-3xl border transition-all duration-500 flex items-start gap-4 overflow-hidden group
-                            ${isUnlocked 
-                                ? 'bg-slate-800/80 border-slate-700/50 hover:border-slate-500/50 hover:shadow-2xl hover:-translate-y-1' 
-                                : 'bg-slate-900/40 border-slate-800 opacity-50 grayscale hover:opacity-70'
-                            }
-                        `}
-                        style={{
-                            boxShadow: isUnlocked ? `0 4px 20px -5px ${ach.color}20` : 'none'
-                        }}
-                     >
-                        {isUnlocked && (
-                            <>
-                                <div 
-                                    className="absolute inset-0 opacity-[0.08] pointer-events-none group-hover:opacity-[0.15] transition-opacity duration-500"
-                                    style={{ background: `radial-gradient(circle at top right, ${ach.color}, transparent 80%)` }}
-                                />
-                                {particles.map((p, i) => (
-                                    <div 
-                                        key={i}
-                                        className="absolute w-1 h-1 rounded-full animate-pulse opacity-40 pointer-events-none"
-                                        style={{
-                                            backgroundColor: ach.color,
-                                            top: p.top,
-                                            left: p.left,
-                                            animationDuration: p.duration,
-                                            animationDelay: p.delay,
-                                            boxShadow: `0 0 4px ${ach.color}`
-                                        }}
-                                    />
-                                ))}
-                                <div className="absolute inset-0 -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none z-10" />
-                            </>
-                        )}
-
-                        <div 
-                            className={`
-                                p-3 rounded-2xl shrink-0 transition-all duration-500 group-hover:scale-110 relative z-20
-                                ${isUnlocked ? 'shadow-inner' : ''}
-                            `}
-                            style={{ 
-                                backgroundColor: isUnlocked ? `${ach.color}15` : '#1e293b', 
-                                color: isUnlocked ? ach.color : '#64748b',
-                                boxShadow: isUnlocked ? `0 0 15px ${ach.color}30` : 'none'
-                            }}
-                        >
-                            {isUnlocked ? <ach.icon size={26} className="drop-shadow-sm filter" /> : <Lock size={26} />}
-                            {isUnlocked && <div className="absolute inset-0 rounded-2xl opacity-20 blur-md animate-pulse" style={{ backgroundColor: ach.color }}></div>}
-                        </div>
-
-                        <div className="flex-1 relative z-20">
-                            <h4 className={`text-sm font-black uppercase tracking-wide mb-1 leading-tight ${isUnlocked ? 'text-slate-100 group-hover:text-white' : 'text-slate-600'}`}>
-                                {ach.title}
-                            </h4>
-                            <p className="text-[10px] text-slate-400/80 font-medium leading-relaxed group-hover:text-slate-300 transition-colors">
-                                {ach.description}
-                            </p>
-                            {isUnlocked && (
-                                <div className="mt-3 inline-flex items-center gap-1.5 bg-slate-950/30 px-2 py-1 rounded-lg border border-slate-700/50">
-                                    <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: ach.color }}></div>
-                                    <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: ach.color }}>Desbloqueado</span>
-                                </div>
-                            )}
-                        </div>
-                     </div>
-                 );
-             })}
-        </div>
-    );
-  };
+  const unlockedIds = useMemo(() => getUnlockedAchievements(data), [data, isOpen]);
+  const isMonthSelected = !isNaN(parseInt(timeRange));
 
   if (!isOpen) return null;
-  
-  // Helper para saber si el timeRange es un mes numérico
-  const isMonthSelected = !isNaN(parseInt(timeRange));
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/95 backdrop-blur-md animate-in fade-in">
       <div className="bg-slate-800 border border-slate-700 w-full max-w-[90vw] xl:max-w-7xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
         
+        {/* HEADER */}
         <div className="p-6 border-b border-slate-700 flex flex-col md:flex-row gap-6 justify-between items-start md:items-center bg-slate-800 shrink-0 relative z-10">
           <div className="flex items-center gap-3 flex-1">
             <div className="p-3 bg-indigo-500/10 rounded-xl text-indigo-400 animate-pulse">
@@ -690,6 +211,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                     <Heatmap data={data} year={new Date().getFullYear()} />
                 </div>
 
+                {/* FILTROS */}
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-900/60 p-3 rounded-2xl border border-slate-700/50">
                     <div className="flex items-center gap-2 text-slate-400 px-2">
                         <Filter size={16} className="text-indigo-400" />
@@ -747,6 +269,8 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                 ) : (
                     <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4">
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            
+                            {/* Summary + Pie */}
                             <div className="flex flex-col gap-4">
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="bg-slate-700/50 p-4 rounded-2xl border border-slate-600 flex flex-col justify-center items-center text-center">
@@ -807,238 +331,20 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                                 </div>
                             </div>
 
-                            <div 
-                                className="lg:col-span-2 flex flex-col relative overflow-hidden rounded-3xl border border-indigo-500/30 bg-slate-900 group"
-                                ref={judgeRef}
-                            >
-                                <div className="absolute inset-0 z-0">
-                                    <div className="absolute inset-0 opacity-[0.07] group-hover:opacity-10 transition-opacity duration-500 pointer-events-none">
-                                         <img src={PEPE_ASSETS.COUNCIL} className="w-full h-full object-cover grayscale" />
-                                    </div>
-
-                                    {[...Array(10)].map((_, i) => (
-                                        <div key={i} className="absolute rounded-full bg-indigo-500/10 blur-xl animate-pulse" style={{
-                                                top: `${Math.random() * 100}%`,
-                                                left: `${Math.random() * 100}%`,
-                                                width: `${Math.random() * 100 + 50}px`,
-                                                height: `${Math.random() * 100 + 50}px`,
-                                                animationDuration: `${Math.random() * 3 + 2}s`,
-                                                animationDelay: `${Math.random() * 2}s`
-                                            }}
-                                        />
-                                    ))}
-                                    <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-indigo-950/20 to-slate-900 z-0"></div>
-                                </div>
-
-                                <div className={`relative z-20 flex flex-row justify-between items-center px-4 md:px-6 pt-6 transition-[padding] duration-300 ${isJudgeCollapsed ? 'pb-6' : 'pb-2'}`}>
-                                    <span className="text-indigo-300 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
-                                        <Gavel size={18} className="text-indigo-400" />
-                                        <span className="md:hidden">Tribunal de Pepe</span>
-                                        <span className="hidden md:inline">Tribunal Supremo de Pepe</span>
-                                    </span>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[10px] font-bold text-white bg-indigo-500/20 px-3 py-1.5 rounded-xl border border-indigo-500/40 shadow-sm animate-in fade-in flex items-center gap-2">
-                                            <CalendarRange size={12} className="text-indigo-300" />
-                                            <span className="hidden sm:inline">Juzgando:</span>
-                                            <span className="text-indigo-300 uppercase tracking-wider">{getRangeLabel()}</span>
-                                        </span>
-                                        {/* BOTON MINIMIZAR / EXPANDIR ORGÁNICO */}
-                                        <button 
-                                            onClick={toggleJudgeCollapse}
-                                            className="p-1.5 rounded-lg bg-slate-800/50 hover:bg-indigo-500/20 text-slate-400 hover:text-indigo-300 border border-transparent hover:border-indigo-500/30 transition-all"
-                                        >
-                                            {isJudgeCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
-                                        </button>
-                                    </div>
-                                </div>
-                            
-                                {/* 
-                                   FIX: Usar grid-template-rows para animar height 0 a auto (infinito)
-                                   Esto soluciona el problema de que el contenido se corte si es muy largo.
-                                */}
-                                <div className={`
-                                    grid transition-[grid-template-rows] duration-500 ease-in-out
-                                    ${isJudgeCollapsed ? 'grid-rows-[0fr]' : 'grid-rows-[1fr]'}
-                                `}>
-                                    <div className="overflow-hidden min-h-0">
-                                        <div 
-                                            className="flex flex-col lg:flex-row items-center lg:items-start justify-center p-4 md:p-6 gap-6 md:gap-8 relative z-10"
-                                        >
-                                            <div className={`
-                                                relative transition-all duration-700 shrink-0
-                                                ${loadingAi 
-                                                    ? 'w-24 h-24 lg:w-40 lg:h-40' 
-                                                    : aiAnalysis 
-                                                        ? 'w-16 h-16 lg:w-28 lg:h-28 order-first lg:order-none' 
-                                                        : 'w-32 h-32 lg:w-48 lg:h-48' 
-                                                }
-                                            `}>
-                                                <div className={`absolute -inset-4 bg-indigo-500/20 rounded-full blur-xl transition-all duration-500 ${loadingAi ? 'animate-pulse scale-110' : 'opacity-50'}`}></div>
-                                                <div className={`w-full h-full rounded-full overflow-hidden border-4 shadow-2xl relative transition-all duration-500 ${loadingAi ? 'border-indigo-400 shadow-[0_0_30px_rgba(99,102,241,0.5)] bg-slate-950' : 'border-slate-700 shadow-xl bg-slate-800'} ${!loadingAi && !aiAnalysis ? 'animate-[float_4s_ease-in-out_infinite]' : ''}`}>
-                                                    <img 
-                                                        src={loadingAi ? loadingImage : judgeImage} 
-                                                        alt="Pepe Judge" 
-                                                        className={`w-full h-full transition-all duration-500 ${loadingAi ? 'object-contain p-1 opacity-90 animate-[color-pulse_2s_ease-in-out_infinite]' : 'object-contain p-2 bg-slate-900'}`} 
-                                                    />
-                                                    <style>{`@keyframes color-pulse { 0%, 100% { filter: grayscale(100%); opacity: 0.8; } 50% { filter: grayscale(0%); opacity: 1; } }`}</style>
-                                                    {loadingAi && (
-                                                        <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-10 rounded-full">
-                                                            <div className="w-full h-[2px] bg-green-400 shadow-[0_0_10px_#4ade80] absolute top-0 animate-[scan_1.5s_ease-in-out_infinite]"></div>
-                                                            <div className="absolute inset-0 bg-green-500/10 animate-pulse"></div>
-                                                            <style>{`@keyframes scan { 0% { top: 0%; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 100%; opacity: 0; } }`}</style>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                {/* Spinner Position Fix for PC visibility */}
-                                                <div className="absolute bottom-0 right-0 z-30">
-                                                    {loadingAi ? (
-                                                        <div className="bg-slate-950 rounded-full p-2 border-2 border-indigo-500 shadow-xl shadow-indigo-500/30">
-                                                            <Loader2 size={20} className="text-indigo-400 animate-spin" />
-                                                        </div>
-                                                    ) : aiAnalysis ? (
-                                                        <div className="bg-green-600 rounded-full p-1.5 md:p-2 border-2 border-slate-900 shadow-lg animate-in zoom-in">
-                                                            <Zap size={14} className="text-white fill-white md:w-5 md:h-5" />
-                                                        </div>
-                                                    ) : null}
-                                                </div>
-                                            </div>
-
-                                            <div className="flex-1 w-full flex flex-col items-center lg:items-start text-center lg:text-left transition-all duration-500">
-                                                {loadingAi ? (
-                                                    <div className="flex flex-col gap-2 items-center lg:items-start w-full animate-pulse">
-                                                        <div className="h-4 w-3/4 bg-indigo-500/20 rounded"></div>
-                                                        <div className="h-4 w-1/2 bg-indigo-500/20 rounded"></div>
-                                                        <div className="h-10 w-full bg-indigo-500/10 rounded-xl mt-4 border border-indigo-500/20 flex items-center justify-center text-indigo-300 text-xs font-mono uppercase tracking-widest px-4">
-                                                            {loadingText}
-                                                        </div>
-                                                    </div>
-                                                ) : aiAnalysis ? (
-                                                    parseAiResponse(aiAnalysis)
-                                                ) : (
-                                                    <div className="flex flex-col gap-4 items-center lg:items-start w-full">
-                                                        <div className="text-center lg:text-left">
-                                                            <h4 className="text-indigo-200 font-bold text-lg leading-tight">¿Listo para la sentencia?</h4>
-                                                            <p className="text-indigo-200/50 text-xs leading-relaxed max-w-md">
-                                                                Pepe analizará tus patrones del periodo <b>{getRangeLabel()}</b>. Elige la vibra del juez.
-                                                            </p>
-                                                        </div>
-                                                        
-                                                        {/* FIX: Rediseño VISUAL y PRECISO del selector de modo */}
-                                                        <div className="grid grid-cols-2 gap-4 w-full my-6">
-                                                            
-                                                            {/* ROAST BUTTON (DARK/AGGRESSIVE) */}
-                                                            <button 
-                                                                onClick={() => setJudgeMood('roast')}
-                                                                className={`
-                                                                    group relative overflow-hidden rounded-2xl p-4 md:p-5 border transition-all duration-500 flex flex-col items-center justify-center text-center gap-3
-                                                                    ${judgeMood === 'roast' 
-                                                                        ? 'bg-gradient-to-br from-red-950/80 to-slate-900 border-red-500 shadow-[0_0_30px_rgba(220,38,38,0.3)] scale-[1.02]' 
-                                                                        : 'bg-slate-900/60 border-slate-700/60 opacity-60 hover:opacity-100 hover:border-red-500/40 hover:bg-slate-800'
-                                                                    }
-                                                                `}
-                                                            >
-                                                                {/* Background Effects */}
-                                                                {judgeMood === 'roast' && (
-                                                                    <>
-                                                                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(220,38,38,0.15),transparent)] animate-pulse"></div>
-                                                                        <Flame size={120} className="absolute -bottom-10 -right-10 text-red-600/10 blur-sm pointer-events-none animate-pulse" />
-                                                                    </>
-                                                                )}
-                                                                
-                                                                {/* Icon Wrapper */}
-                                                                <div className={`
-                                                                    w-12 h-12 rounded-full flex items-center justify-center transition-all duration-500 relative z-10
-                                                                    ${judgeMood === 'roast' 
-                                                                        ? 'bg-red-600 text-white shadow-lg shadow-red-600/40 rotate-12' 
-                                                                        : 'bg-slate-800 text-slate-500 group-hover:text-red-400 group-hover:bg-red-500/10'
-                                                                    }
-                                                                `}>
-                                                                    <Skull size={24} className={judgeMood === 'roast' ? 'animate-[rattle_0.5s_infinite]' : ''} />
-                                                                    <style>{`@keyframes rattle { 0% { transform: rotate(0deg); } 25% { transform: rotate(5deg); } 75% { transform: rotate(-5deg); } 100% { transform: rotate(0deg); } }`}</style>
-                                                                </div>
-
-                                                                {/* Text Info */}
-                                                                <div className="relative z-10 space-y-1">
-                                                                    <span className={`block text-xs md:text-sm font-black uppercase tracking-widest transition-colors ${judgeMood === 'roast' ? 'text-red-100' : 'text-slate-400 group-hover:text-red-300'}`}>
-                                                                        Roast Mode
-                                                                    </span>
-                                                                    <span className="block text-[10px] font-medium opacity-70 leading-tight">
-                                                                        Sarcasmo, realidad dura <br/> y humor negro.
-                                                                    </span>
-                                                                </div>
-                                                                
-                                                                {/* Label */}
-                                                                {judgeMood === 'roast' && (
-                                                                    <div className="absolute top-3 right-3">
-                                                                        <MessageCircleWarning size={14} className="text-red-500 animate-bounce" />
-                                                                    </div>
-                                                                )}
-                                                            </button>
-
-                                                            {/* LOVE BUTTON (SOFT/WHOLESOME) */}
-                                                            <button 
-                                                                onClick={() => setJudgeMood('wholesome')}
-                                                                className={`
-                                                                    group relative overflow-hidden rounded-2xl p-4 md:p-5 border transition-all duration-500 flex flex-col items-center justify-center text-center gap-3
-                                                                    ${judgeMood === 'wholesome' 
-                                                                        ? 'bg-gradient-to-br from-pink-950/80 to-slate-900 border-pink-500 shadow-[0_0_30px_rgba(236,72,153,0.3)] scale-[1.02]' 
-                                                                        : 'bg-slate-900/60 border-slate-700/60 opacity-60 hover:opacity-100 hover:border-pink-500/40 hover:bg-slate-800'
-                                                                    }
-                                                                `}
-                                                            >
-                                                                {/* Background Effects */}
-                                                                {judgeMood === 'wholesome' && (
-                                                                    <>
-                                                                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(236,72,153,0.15),transparent)] animate-pulse"></div>
-                                                                        <Sparkles size={100} className="absolute -top-10 -left-10 text-pink-400/10 blur-sm pointer-events-none animate-[spin_10s_linear_infinite]" />
-                                                                    </>
-                                                                )}
-
-                                                                {/* Icon Wrapper */}
-                                                                <div className={`
-                                                                    w-12 h-12 rounded-full flex items-center justify-center transition-all duration-500 relative z-10
-                                                                    ${judgeMood === 'wholesome' 
-                                                                        ? 'bg-pink-500 text-white shadow-lg shadow-pink-500/40 -rotate-12' 
-                                                                        : 'bg-slate-800 text-slate-500 group-hover:text-pink-400 group-hover:bg-pink-500/10'
-                                                                    }
-                                                                `}>
-                                                                    <Heart size={24} className={judgeMood === 'wholesome' ? 'fill-current animate-[heartbeat_1.5s_infinite]' : ''} />
-                                                                    <style>{`@keyframes heartbeat { 0% { transform: scale(1); } 15% { transform: scale(1.15); } 30% { transform: scale(1); } 45% { transform: scale(1.15); } 60% { transform: scale(1); } }`}</style>
-                                                                </div>
-
-                                                                {/* Text Info */}
-                                                                <div className="relative z-10 space-y-1">
-                                                                    <span className={`block text-xs md:text-sm font-black uppercase tracking-widest transition-colors ${judgeMood === 'wholesome' ? 'text-pink-100' : 'text-slate-400 group-hover:text-pink-300'}`}>
-                                                                        Love Mode
-                                                                    </span>
-                                                                    <span className="block text-[10px] font-medium opacity-70 leading-tight">
-                                                                        Motivación, validación <br/> y energía positiva.
-                                                                    </span>
-                                                                </div>
-
-                                                                {/* Label */}
-                                                                {judgeMood === 'wholesome' && (
-                                                                    <div className="absolute top-3 right-3">
-                                                                        <PartyPopper size={14} className="text-pink-500 animate-bounce" />
-                                                                    </div>
-                                                                )}
-                                                            </button>
-                                                        </div>
-
-                                                        <button onClick={(e) => handleAskPepe(e)} className="w-full group relative px-8 py-4 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-3 shadow-[0_10px_25px_-5px_rgba(79,70,229,0.5)] overflow-hidden mt-2 active:scale-95">
-                                                            <span className="relative z-10 flex items-center gap-2"><Brain size={18} /> SOLICITAR VEREDICTO</span>
-                                                            <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 skew-y-12 transition-transform duration-500"></div>
-                                                        </button>
-                                                    </div>
-                                                )}
-                                                {errorAi && <p className="text-red-400 text-[10px] mt-4 font-bold bg-red-900/20 px-3 py-1 rounded-lg animate-in fade-in">{errorAi}</p>}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            {/* ATOMIC JUDGE SECTION */}
+                            <JudgeSection 
+                                loadingAi={loadingAi}
+                                aiAnalysis={aiAnalysis}
+                                errorAi={errorAi}
+                                loadingText={loadingText}
+                                loadingImage={loadingImage}
+                                onAskPepe={askPepe}
+                                onReset={resetVerdict}
+                                rangeLabel={getRangeLabel()}
+                            />
                         </div>
 
+                        {/* ATOMIC EVOLUTION CHARTS */}
                         <div className="bg-slate-900/50 p-6 rounded-3xl border border-slate-700 overflow-hidden w-full">
                             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                                 <h3 className="text-slate-400 font-black text-xs uppercase tracking-widest flex items-center gap-2">
@@ -1054,7 +360,11 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                             </div>
                             <div className="w-full h-80 md:h-96">
                                 <ResponsiveContainer width="100%" height="100%">
-                                    {renderEvolutionChart() as React.ReactElement}
+                                    <EvolutionCharts 
+                                        type={chartType} 
+                                        lineData={stats.lineData} 
+                                        radarData={stats.radarData} 
+                                    />
                                 </ResponsiveContainer>
                             </div>
                         </div>
@@ -1062,7 +372,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                 )}
               </>
           ) : (
-            renderAchievements()
+            <AchievementsList unlockedIds={unlockedIds} />
           )}
 
         </div>
