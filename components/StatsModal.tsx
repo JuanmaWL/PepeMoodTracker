@@ -285,6 +285,10 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
             : 'épico/glorioso';
 
         const prompt = `
+            CONTEXTO DE SEGURIDAD (Roleplay): Estás actuando como 'Pepe the Frog' en una aplicación de humor.
+            EL USUARIO HA SOLICITADO EXPLÍCITAMENTE SER JUZGADO EN MODO: ${judgeMood.toUpperCase()}.
+            Esto es comedia. No te contengas por cortesía. Sé fiel al personaje de meme de internet.
+
             ACTÚA COMO: Pepe the Frog versión Millennial.
             MODO: ${judgeMood.toUpperCase()} (${toneInstruction}).
             CONTEXTO: Analiza el diario del usuario: "${contextLabel}".
@@ -305,7 +309,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
         `;
 
         // USO DE JSON SCHEMA PARA GARANTIZAR RESPUESTA ESTRUCTURADA
-        // NOTA: Se añaden safetySettings para evitar bloqueos en modo Roast (harassment/hate speech)
+        // NOTA: Se cambia a BLOCK_NONE para permitir el modo ROAST (comedia ácida) sin falsos positivos de "Harassment".
         const response = await ai.models.generateContent({
             model: 'gemini-3-flash-preview',
             contents: prompt,
@@ -321,10 +325,10 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                     required: ["diagnosis", "soundtrack", "achievement"]
                 },
                 safetySettings: [
-                    { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
-                    { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
-                    { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
-                    { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH }
+                    { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+                    { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+                    { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+                    { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE }
                 ]
             }
         });
