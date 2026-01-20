@@ -16,7 +16,7 @@
 
 ---
 
-## 🧐 ¿Qué es esto?
+## 🧐 ¿Qué diantres es esto?
 
 **Pepe Pixel Year** no es el típico tracker anual de "querido diario, hoy estoy triste". Es una aplicación web progresiva (PWA) diseñada para registrar el **LORE** de tu vida diaria con la estética de internet que mereces y en **español**.
 
@@ -28,7 +28,7 @@ Olvídate de las caritas sonrientes aburridas. Aquí medimos la vida en niveles 
 
 * **📅 Calendario de Lore:** Visualización anual completa con mapa de calor estilo GitHub.
 * **🐸 Niveles de Mood:** 6 niveles de estado de ánimo con GIFs animados de Pepe (desde Rage hasta Legendario).
-* **✨ Pepe Magic Studio:** ¿No tienes foto? La IA **genera un meme de Pepe único** basado en tu nota del día usando `Gemini 2.5 Flash Image`.
+* **✨ Pepe Magic Studio:** ¿No tienes foto? La IA **genera un meme de Pepe único** basado en tu nota del día usando `Gemini 2.5 Flash Image`. (No va, sorry jaja)
 * **☁️ Pepe Mindset:** Una **nube de palabras interactiva** que analiza tus obsesiones y temas recurrentes del año.
 * **🤖 El Oráculo de Pepe (IA):** Conectado a **Google AI Studio** para juzgar tus notas. Te dará:
     * Diagnósticos sarcásticos de "Pepe Millennial".
@@ -102,7 +102,7 @@ Si lo subes a **Vercel** o **Netlify**, asegúrate de configurar las variables d
 ### 2. Registro de Lore (Día a Día)
 *Elige tu mood, escribe tu historia o genera un meme mágico.*
 <div align="center">
-  <img src="https://github.com/user-attachments/assets/9f15e927-d7db-4d5a-bad4-f8383882ba98" width="60%" style="border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);" />
+  <img src="https://github.com/user-attachments/assets/9f15e927-d7db-4d5a-bad4-f8383882ba98" width="100%" style="border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);" />
 </div>
 
 <br/>
