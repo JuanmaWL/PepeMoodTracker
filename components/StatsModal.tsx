@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { X, Music, Trophy, Brain, Quote, Loader2, TrendingUp, PieChart as PieChartIcon, BarChart3, Hexagon, Waves, CalendarRange, Filter, RefreshCw, Zap, Lock, Gavel, Skull, Heart, Sparkles, Undo2, Flame, ListFilter, ExternalLink, ChevronUp, ChevronDown } from 'lucide-react';
+import { X, Music, Trophy, Brain, Quote, Loader2, TrendingUp, PieChart as PieChartIcon, BarChart3, Hexagon, Waves, CalendarRange, Filter, RefreshCw, Zap, Lock, Gavel, Skull, Heart, Sparkles, Undo2, Flame, ListFilter, ChevronDown, MessageCircleWarning, PartyPopper } from 'lucide-react';
 import { YearData, MoodLevel, DayData } from '../types';
 import { MOODS, MONTHS, PEPE_ASSETS } from '../constants';
 import Heatmap from './Heatmap';
@@ -70,6 +70,8 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
 
   // Referencia para mantener el scroll fijo en la sección del juez
   const judgeRef = useRef<HTMLDivElement>(null);
+  // Referencia al contenedor de resultados para scroll automático
+  const resultRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -199,7 +201,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
     SoundManager.play('click');
     setAiAnalysis("");
     setErrorAi("");
-    // Scroll back to top of judge section gently
+    // Scroll back slightly up
     setTimeout(() => {
         judgeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 100);
@@ -220,11 +222,6 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
     // Asegurar que está expandido al preguntar
     if (isJudgeCollapsed) setIsJudgeCollapsed(false);
 
-    // SCROLL FIX: Ensure we stay on the judge section
-    if (judgeRef.current) {
-        judgeRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-    
     SoundManager.play('magic');
     setLoadingAi(true);
     
@@ -330,9 +327,9 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
         if (text) {
              setAiAnalysis(text);
              SoundManager.play('success');
-             // Asegurar que seguimos viendo al juez tras la carga
+             // Scroll al resultado
              setTimeout(() => {
-                 judgeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                 resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
              }, 100);
         } else {
              throw new Error("Pepe se quedó mudo.");
@@ -383,7 +380,6 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
             reasonPart = fullText.substring(splitIndex).replace(/Por qué:|Why:|Because:/i, '').trim();
         }
 
-        // --- CHANGE: MADE VISUAL ONLY (No Link) ---
         return (
             <div 
                 className="group/card relative p-4 rounded-2xl bg-pink-500/5 border border-pink-500/10 hover:bg-pink-500/10 hover:border-pink-500/30 transition-all duration-300 cursor-default flow-root block select-none"
@@ -410,7 +406,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
     };
 
     return (
-      <div className="space-y-4 animate-in fade-in slide-in-from-right duration-700 w-full relative">
+      <div ref={resultRef} className="space-y-4 animate-in fade-in slide-in-from-right duration-700 w-full relative">
         {diagnosis && (
         <div className="group/card relative p-4 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 hover:bg-indigo-500/10 hover:border-indigo-500/30 transition-all duration-300 cursor-default flow-root">
            <div className="float-left mr-4 mb-1 relative">
@@ -445,7 +441,8 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
           </div>
         )}
 
-        <div className="flex flex-col gap-2 mt-6">
+        {/* Action Buttons - Always visible below content */}
+        <div className="flex flex-col gap-2 mt-6 pt-4 border-t border-slate-700/50">
             <button 
                 onClick={(e) => handleAskPepe(e)}
                 className="w-full group/card relative flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-[0_4px_20px_-5px_rgba(79,70,229,0.4)] hover:shadow-[0_10px_30px_-5px_rgba(79,70,229,0.5)] transition-all duration-300 active:scale-98 overflow-hidden"
@@ -844,143 +841,187 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                                     </div>
                                 </div>
                             
-                                {/* Contenedor Colapsable para el cuerpo del tribunal */}
-                                <div 
-                                    className={`
-                                        flex-1 flex flex-col lg:flex-row items-center justify-center p-4 md:p-6 gap-4 md:gap-8 relative z-10 
-                                        transition-all duration-500 ease-in-out overflow-hidden
-                                        ${isJudgeCollapsed ? 'max-h-0 opacity-0 py-0' : 'max-h-[800px] opacity-100'}
-                                    `}
-                                >
-                                    <div className={`
-                                        relative transition-all duration-700 
-                                        ${loadingAi 
-                                            ? 'w-24 h-24 lg:w-40 lg:h-40' // Smaller on mobile when loading
-                                            : aiAnalysis 
-                                                ? 'w-16 h-16 lg:w-32 lg:h-32 order-first lg:order-none' // Mini avatar on mobile when done to save space
-                                                : 'w-32 h-32 lg:w-48 lg:h-48' // Default size
-                                        }
-                                    `}>
-                                        <div className={`absolute -inset-4 bg-indigo-500/20 rounded-full blur-xl transition-all duration-500 ${loadingAi ? 'animate-pulse scale-110' : 'opacity-50'}`}></div>
-                                        <div className={`w-full h-full rounded-full overflow-hidden border-4 shadow-2xl relative transition-all duration-500 ${loadingAi ? 'border-indigo-400 shadow-[0_0_30px_rgba(99,102,241,0.5)] bg-slate-950' : 'border-slate-700 shadow-xl bg-slate-800'} ${!loadingAi && !aiAnalysis ? 'animate-[float_4s_ease-in-out_infinite]' : ''}`}>
-                                            <img 
-                                                src={loadingAi ? loadingImage : judgeImage} 
-                                                alt="Pepe Judge" 
-                                                className={`w-full h-full transition-all duration-500 ${loadingAi ? 'object-contain p-1 opacity-90 animate-[color-pulse_2s_ease-in-out_infinite]' : 'object-contain p-2 bg-slate-900'}`} 
-                                            />
-                                            <style>{`@keyframes color-pulse { 0%, 100% { filter: grayscale(100%); opacity: 0.8; } 50% { filter: grayscale(0%); opacity: 1; } }`}</style>
-                                            {loadingAi && (
-                                                <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-10 rounded-full">
-                                                    <div className="w-full h-[2px] bg-green-400 shadow-[0_0_10px_#4ade80] absolute top-0 animate-[scan_1.5s_ease-in-out_infinite]"></div>
-                                                    <div className="absolute inset-0 bg-green-500/10 animate-pulse"></div>
-                                                    <style>{`@keyframes scan { 0% { top: 0%; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 100%; opacity: 0; } }`}</style>
+                                {/* 
+                                   FIX: Usar grid-template-rows para animar height 0 a auto (infinito)
+                                   Esto soluciona el problema de que el contenido se corte si es muy largo.
+                                */}
+                                <div className={`
+                                    grid transition-[grid-template-rows] duration-500 ease-in-out
+                                    ${isJudgeCollapsed ? 'grid-rows-[0fr]' : 'grid-rows-[1fr]'}
+                                `}>
+                                    <div className="overflow-hidden min-h-0">
+                                        <div 
+                                            className="flex flex-col lg:flex-row items-center lg:items-start justify-center p-4 md:p-6 gap-6 md:gap-8 relative z-10"
+                                        >
+                                            <div className={`
+                                                relative transition-all duration-700 shrink-0
+                                                ${loadingAi 
+                                                    ? 'w-24 h-24 lg:w-40 lg:h-40' 
+                                                    : aiAnalysis 
+                                                        ? 'w-16 h-16 lg:w-28 lg:h-28 order-first lg:order-none' 
+                                                        : 'w-32 h-32 lg:w-48 lg:h-48' 
+                                                }
+                                            `}>
+                                                <div className={`absolute -inset-4 bg-indigo-500/20 rounded-full blur-xl transition-all duration-500 ${loadingAi ? 'animate-pulse scale-110' : 'opacity-50'}`}></div>
+                                                <div className={`w-full h-full rounded-full overflow-hidden border-4 shadow-2xl relative transition-all duration-500 ${loadingAi ? 'border-indigo-400 shadow-[0_0_30px_rgba(99,102,241,0.5)] bg-slate-950' : 'border-slate-700 shadow-xl bg-slate-800'} ${!loadingAi && !aiAnalysis ? 'animate-[float_4s_ease-in-out_infinite]' : ''}`}>
+                                                    <img 
+                                                        src={loadingAi ? loadingImage : judgeImage} 
+                                                        alt="Pepe Judge" 
+                                                        className={`w-full h-full transition-all duration-500 ${loadingAi ? 'object-contain p-1 opacity-90 animate-[color-pulse_2s_ease-in-out_infinite]' : 'object-contain p-2 bg-slate-900'}`} 
+                                                    />
+                                                    <style>{`@keyframes color-pulse { 0%, 100% { filter: grayscale(100%); opacity: 0.8; } 50% { filter: grayscale(0%); opacity: 1; } }`}</style>
+                                                    {loadingAi && (
+                                                        <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-10 rounded-full">
+                                                            <div className="w-full h-[2px] bg-green-400 shadow-[0_0_10px_#4ade80] absolute top-0 animate-[scan_1.5s_ease-in-out_infinite]"></div>
+                                                            <div className="absolute inset-0 bg-green-500/10 animate-pulse"></div>
+                                                            <style>{`@keyframes scan { 0% { top: 0%; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 100%; opacity: 0; } }`}</style>
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            )}
-                                        </div>
-                                        <div className="absolute -bottom-2 -right-2 z-20">
-                                            {loadingAi ? (
-                                                <div className="bg-slate-900 rounded-full p-2 border border-indigo-500 shadow-lg animate-spin">
-                                                    <Loader2 size={20} className="text-indigo-400" />
-                                                </div>
-                                            ) : aiAnalysis ? (
-                                                <div className="bg-green-600 rounded-full p-1.5 md:p-2 border-2 border-slate-900 shadow-lg animate-in zoom-in">
-                                                    <Zap size={14} className="text-white fill-white md:w-5 md:h-5" />
-                                                </div>
-                                            ) : null}
-                                        </div>
-                                    </div>
-
-                                    <div className="flex-1 w-full flex flex-col items-center lg:items-start text-center lg:text-left transition-all duration-500">
-                                        {loadingAi ? (
-                                            <div className="flex flex-col gap-2 items-center lg:items-start w-full animate-pulse">
-                                                <div className="h-4 w-3/4 bg-indigo-500/20 rounded"></div>
-                                                <div className="h-4 w-1/2 bg-indigo-500/20 rounded"></div>
-                                                <div className="h-10 w-full bg-indigo-500/10 rounded-xl mt-4 border border-indigo-500/20 flex items-center justify-center text-indigo-300 text-xs font-mono uppercase tracking-widest px-4">
-                                                    {loadingText}
+                                                <div className="absolute -bottom-2 -right-2 z-20">
+                                                    {loadingAi ? (
+                                                        <div className="bg-slate-900 rounded-full p-2 border border-indigo-500 shadow-lg animate-spin">
+                                                            <Loader2 size={20} className="text-indigo-400" />
+                                                        </div>
+                                                    ) : aiAnalysis ? (
+                                                        <div className="bg-green-600 rounded-full p-1.5 md:p-2 border-2 border-slate-900 shadow-lg animate-in zoom-in">
+                                                            <Zap size={14} className="text-white fill-white md:w-5 md:h-5" />
+                                                        </div>
+                                                    ) : null}
                                                 </div>
                                             </div>
-                                        ) : aiAnalysis ? (
-                                            parseAiResponse(aiAnalysis)
-                                        ) : (
-                                            <div className="flex flex-col gap-4 items-center lg:items-start max-w-md w-full">
-                                                <h4 className="text-indigo-200 font-bold text-lg leading-tight">¿Listo para la sentencia?</h4>
-                                                <p className="text-indigo-200/50 text-xs leading-relaxed">
-                                                    Pepe analizará tus patrones del periodo <b>{getRangeLabel()}</b>. Elige la vibra del juez.
-                                                </p>
-                                                
-                                                {/* NEW REDESIGNED JUDGE MOOD SELECTOR */}
-                                                <div className="w-full grid grid-cols-2 gap-4 my-2">
-                                                    <button 
-                                                        onClick={() => setJudgeMood('roast')}
-                                                        className={`
-                                                            group relative overflow-hidden rounded-2xl p-4 border-2 transition-all duration-300 flex flex-col items-center justify-center gap-3
-                                                            ${judgeMood === 'roast' 
-                                                                ? 'bg-gradient-to-br from-red-950/40 to-red-600/10 border-red-500 text-red-100 shadow-[0_0_25px_rgba(239,68,68,0.25)] scale-[1.02]' 
-                                                                : 'bg-slate-900/40 border-slate-700 text-slate-500 hover:border-red-500/50 hover:text-red-300 hover:bg-red-900/10'
-                                                            }
-                                                        `}
-                                                    >
-                                                        <div className={`
-                                                            p-3 rounded-full transition-transform duration-300 shadow-lg
-                                                            ${judgeMood === 'roast' 
-                                                                ? 'bg-red-500 text-white scale-110 shadow-red-500/30' 
-                                                                : 'bg-slate-800 group-hover:bg-red-500/20 group-hover:scale-110'
-                                                            }
-                                                        `}>
-                                                            <Skull size={24} className={judgeMood === 'roast' ? 'animate-[tada_1.5s_infinite]' : 'group-hover:text-red-400'} />
-                                                        </div>
-                                                        <div className="flex flex-col items-center gap-0.5 z-10">
-                                                            <span className="text-[11px] font-black uppercase tracking-widest group-hover:text-red-200 transition-colors">Roast Mode</span>
-                                                            <span className="text-[9px] font-medium opacity-60">Sin piedad</span>
-                                                        </div>
-                                                        {judgeMood === 'roast' && (
-                                                            <>
-                                                                <div className="absolute inset-0 bg-red-500/5 animate-pulse pointer-events-none"></div>
-                                                                <Flame size={100} className="absolute -bottom-8 -right-8 text-red-500/10 blur-sm animate-pulse pointer-events-none" />
-                                                            </>
-                                                        )}
-                                                    </button>
 
-                                                    <button 
-                                                        onClick={() => setJudgeMood('wholesome')}
-                                                        className={`
-                                                            group relative overflow-hidden rounded-2xl p-4 border-2 transition-all duration-300 flex flex-col items-center justify-center gap-3
-                                                            ${judgeMood === 'wholesome' 
-                                                                ? 'bg-gradient-to-br from-pink-950/40 to-pink-600/10 border-pink-500 text-pink-100 shadow-[0_0_25px_rgba(236,72,153,0.25)] scale-[1.02]' 
-                                                                : 'bg-slate-900/40 border-slate-700 text-slate-500 hover:border-pink-500/50 hover:text-pink-300 hover:bg-pink-900/10'
-                                                            }
-                                                        `}
-                                                    >
-                                                        <div className={`
-                                                            p-3 rounded-full transition-transform duration-300 shadow-lg
-                                                            ${judgeMood === 'wholesome' 
-                                                                ? 'bg-pink-500 text-white scale-110 shadow-pink-500/30' 
-                                                                : 'bg-slate-800 group-hover:bg-pink-500/20 group-hover:scale-110'
-                                                            }
-                                                        `}>
-                                                            <Heart size={24} className={judgeMood === 'wholesome' ? 'animate-[bounce_2s_infinite]' : 'group-hover:text-pink-400'} />
+                                            <div className="flex-1 w-full flex flex-col items-center lg:items-start text-center lg:text-left transition-all duration-500">
+                                                {loadingAi ? (
+                                                    <div className="flex flex-col gap-2 items-center lg:items-start w-full animate-pulse">
+                                                        <div className="h-4 w-3/4 bg-indigo-500/20 rounded"></div>
+                                                        <div className="h-4 w-1/2 bg-indigo-500/20 rounded"></div>
+                                                        <div className="h-10 w-full bg-indigo-500/10 rounded-xl mt-4 border border-indigo-500/20 flex items-center justify-center text-indigo-300 text-xs font-mono uppercase tracking-widest px-4">
+                                                            {loadingText}
                                                         </div>
-                                                        <div className="flex flex-col items-center gap-0.5 z-10">
-                                                            <span className="text-[11px] font-black uppercase tracking-widest group-hover:text-pink-200 transition-colors">Love Mode</span>
-                                                            <span className="text-[9px] font-medium opacity-60">Amor duro</span>
+                                                    </div>
+                                                ) : aiAnalysis ? (
+                                                    parseAiResponse(aiAnalysis)
+                                                ) : (
+                                                    <div className="flex flex-col gap-4 items-center lg:items-start w-full">
+                                                        <div className="text-center lg:text-left">
+                                                            <h4 className="text-indigo-200 font-bold text-lg leading-tight">¿Listo para la sentencia?</h4>
+                                                            <p className="text-indigo-200/50 text-xs leading-relaxed max-w-md">
+                                                                Pepe analizará tus patrones del periodo <b>{getRangeLabel()}</b>. Elige la vibra del juez.
+                                                            </p>
                                                         </div>
-                                                        {judgeMood === 'wholesome' && (
-                                                            <>
-                                                                <div className="absolute inset-0 bg-pink-500/5 animate-pulse pointer-events-none"></div>
-                                                                <Sparkles size={16} className="absolute top-3 right-3 text-yellow-300 animate-[spin_3s_linear_infinite]" />
-                                                                <Sparkles size={10} className="absolute bottom-4 left-4 text-pink-300 animate-pulse" />
-                                                            </>
-                                                        )}
-                                                    </button>
-                                                </div>
+                                                        
+                                                        {/* FIX: Rediseño VISUAL y PRECISO del selector de modo */}
+                                                        <div className="grid grid-cols-2 gap-4 w-full my-6">
+                                                            
+                                                            {/* ROAST BUTTON (DARK/AGGRESSIVE) */}
+                                                            <button 
+                                                                onClick={() => setJudgeMood('roast')}
+                                                                className={`
+                                                                    group relative overflow-hidden rounded-2xl p-4 md:p-5 border transition-all duration-500 flex flex-col items-center justify-center text-center gap-3
+                                                                    ${judgeMood === 'roast' 
+                                                                        ? 'bg-gradient-to-br from-red-950/80 to-slate-900 border-red-500 shadow-[0_0_30px_rgba(220,38,38,0.3)] scale-[1.02]' 
+                                                                        : 'bg-slate-900/60 border-slate-700/60 opacity-60 hover:opacity-100 hover:border-red-500/40 hover:bg-slate-800'
+                                                                    }
+                                                                `}
+                                                            >
+                                                                {/* Background Effects */}
+                                                                {judgeMood === 'roast' && (
+                                                                    <>
+                                                                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(220,38,38,0.15),transparent)] animate-pulse"></div>
+                                                                        <Flame size={120} className="absolute -bottom-10 -right-10 text-red-600/10 blur-sm pointer-events-none animate-pulse" />
+                                                                    </>
+                                                                )}
+                                                                
+                                                                {/* Icon Wrapper */}
+                                                                <div className={`
+                                                                    w-12 h-12 rounded-full flex items-center justify-center transition-all duration-500 relative z-10
+                                                                    ${judgeMood === 'roast' 
+                                                                        ? 'bg-red-600 text-white shadow-lg shadow-red-600/40 rotate-12' 
+                                                                        : 'bg-slate-800 text-slate-500 group-hover:text-red-400 group-hover:bg-red-500/10'
+                                                                    }
+                                                                `}>
+                                                                    <Skull size={24} className={judgeMood === 'roast' ? 'animate-[rattle_0.5s_infinite]' : ''} />
+                                                                    <style>{`@keyframes rattle { 0% { transform: rotate(0deg); } 25% { transform: rotate(5deg); } 75% { transform: rotate(-5deg); } 100% { transform: rotate(0deg); } }`}</style>
+                                                                </div>
 
-                                                <button onClick={(e) => handleAskPepe(e)} className="w-full group relative px-8 py-4 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-3 shadow-[0_10px_25px_-5px_rgba(79,70,229,0.5)] overflow-hidden mt-2 active:scale-95">
-                                                    <span className="relative z-10 flex items-center gap-2"><Brain size={18} /> SOLICITAR VEREDICTO</span>
-                                                    <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 skew-y-12 transition-transform duration-500"></div>
-                                                </button>
+                                                                {/* Text Info */}
+                                                                <div className="relative z-10 space-y-1">
+                                                                    <span className={`block text-xs md:text-sm font-black uppercase tracking-widest transition-colors ${judgeMood === 'roast' ? 'text-red-100' : 'text-slate-400 group-hover:text-red-300'}`}>
+                                                                        Roast Mode
+                                                                    </span>
+                                                                    <span className="block text-[10px] font-medium opacity-70 leading-tight">
+                                                                        Sarcasmo, realidad dura <br/> y humor negro.
+                                                                    </span>
+                                                                </div>
+                                                                
+                                                                {/* Label */}
+                                                                {judgeMood === 'roast' && (
+                                                                    <div className="absolute top-3 right-3">
+                                                                        <MessageCircleWarning size={14} className="text-red-500 animate-bounce" />
+                                                                    </div>
+                                                                )}
+                                                            </button>
+
+                                                            {/* LOVE BUTTON (SOFT/WHOLESOME) */}
+                                                            <button 
+                                                                onClick={() => setJudgeMood('wholesome')}
+                                                                className={`
+                                                                    group relative overflow-hidden rounded-2xl p-4 md:p-5 border transition-all duration-500 flex flex-col items-center justify-center text-center gap-3
+                                                                    ${judgeMood === 'wholesome' 
+                                                                        ? 'bg-gradient-to-br from-pink-950/80 to-slate-900 border-pink-500 shadow-[0_0_30px_rgba(236,72,153,0.3)] scale-[1.02]' 
+                                                                        : 'bg-slate-900/60 border-slate-700/60 opacity-60 hover:opacity-100 hover:border-pink-500/40 hover:bg-slate-800'
+                                                                    }
+                                                                `}
+                                                            >
+                                                                {/* Background Effects */}
+                                                                {judgeMood === 'wholesome' && (
+                                                                    <>
+                                                                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(236,72,153,0.15),transparent)] animate-pulse"></div>
+                                                                        <Sparkles size={100} className="absolute -top-10 -left-10 text-pink-400/10 blur-sm pointer-events-none animate-[spin_10s_linear_infinite]" />
+                                                                    </>
+                                                                )}
+
+                                                                {/* Icon Wrapper */}
+                                                                <div className={`
+                                                                    w-12 h-12 rounded-full flex items-center justify-center transition-all duration-500 relative z-10
+                                                                    ${judgeMood === 'wholesome' 
+                                                                        ? 'bg-pink-500 text-white shadow-lg shadow-pink-500/40 -rotate-12' 
+                                                                        : 'bg-slate-800 text-slate-500 group-hover:text-pink-400 group-hover:bg-pink-500/10'
+                                                                    }
+                                                                `}>
+                                                                    <Heart size={24} className={judgeMood === 'wholesome' ? 'fill-current animate-[heartbeat_1.5s_infinite]' : ''} />
+                                                                    <style>{`@keyframes heartbeat { 0% { transform: scale(1); } 15% { transform: scale(1.15); } 30% { transform: scale(1); } 45% { transform: scale(1.15); } 60% { transform: scale(1); } }`}</style>
+                                                                </div>
+
+                                                                {/* Text Info */}
+                                                                <div className="relative z-10 space-y-1">
+                                                                    <span className={`block text-xs md:text-sm font-black uppercase tracking-widest transition-colors ${judgeMood === 'wholesome' ? 'text-pink-100' : 'text-slate-400 group-hover:text-pink-300'}`}>
+                                                                        Love Mode
+                                                                    </span>
+                                                                    <span className="block text-[10px] font-medium opacity-70 leading-tight">
+                                                                        Motivación, validación <br/> y energía positiva.
+                                                                    </span>
+                                                                </div>
+
+                                                                {/* Label */}
+                                                                {judgeMood === 'wholesome' && (
+                                                                    <div className="absolute top-3 right-3">
+                                                                        <PartyPopper size={14} className="text-pink-500 animate-bounce" />
+                                                                    </div>
+                                                                )}
+                                                            </button>
+                                                        </div>
+
+                                                        <button onClick={(e) => handleAskPepe(e)} className="w-full group relative px-8 py-4 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-3 shadow-[0_10px_25px_-5px_rgba(79,70,229,0.5)] overflow-hidden mt-2 active:scale-95">
+                                                            <span className="relative z-10 flex items-center gap-2"><Brain size={18} /> SOLICITAR VEREDICTO</span>
+                                                            <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 skew-y-12 transition-transform duration-500"></div>
+                                                        </button>
+                                                    </div>
+                                                )}
+                                                {errorAi && <p className="text-red-400 text-[10px] mt-4 font-bold bg-red-900/20 px-3 py-1 rounded-lg animate-in fade-in">{errorAi}</p>}
                                             </div>
-                                        )}
-                                        {errorAi && <p className="text-red-400 text-[10px] mt-4 font-bold bg-red-900/20 px-3 py-1 rounded-lg animate-in fade-in">{errorAi}</p>}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
