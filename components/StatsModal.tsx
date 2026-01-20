@@ -9,7 +9,7 @@ import {
   PieChart, Pie, Cell, Brush, CartesianGrid, AreaChart, Area, BarChart, Bar,
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis
 } from 'recharts';
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, HarmCategory, HarmBlockThreshold } from "@google/genai";
 import SoundManager from '../utils/sounds';
 import { ACHIEVEMENTS, getUnlockedAchievements } from '../utils/gamification';
 
@@ -305,6 +305,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
         `;
 
         // USO DE JSON SCHEMA PARA GARANTIZAR RESPUESTA ESTRUCTURADA
+        // NOTA: Se añaden safetySettings para evitar bloqueos en modo Roast (harassment/hate speech)
         const response = await ai.models.generateContent({
             model: 'gemini-3-flash-preview',
             contents: prompt,
@@ -318,7 +319,13 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                         achievement: { type: Type.STRING }
                     },
                     required: ["diagnosis", "soundtrack", "achievement"]
-                }
+                },
+                safetySettings: [
+                    { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+                    { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+                    { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+                    { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH }
+                ]
             }
         });
 
@@ -878,9 +885,10 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                                                         </div>
                                                     )}
                                                 </div>
-                                                <div className="absolute -bottom-2 -right-2 z-20">
+                                                {/* Spinner Position Fix for PC visibility */}
+                                                <div className="absolute bottom-0 right-0 z-30">
                                                     {loadingAi ? (
-                                                        <div className="bg-slate-900 rounded-full p-2 border border-indigo-500 shadow-lg animate-spin">
+                                                        <div className="bg-slate-950 rounded-full p-2 border-2 border-indigo-500 shadow-xl shadow-indigo-500/30 animate-spin">
                                                             <Loader2 size={20} className="text-indigo-400" />
                                                         </div>
                                                     ) : aiAnalysis ? (
