@@ -173,13 +173,19 @@ const DayCell = memo(({
         {isToday ? "¡HOY!" : `Día ${day}`}
       </div>
       
-      {/* Indicador de Nota (Estilo Actualizado: Blanco Puro) */}
+      {/* Indicador de Nota (Glassmorphism de Alto Contraste) */}
       {hasNote && (
         <div className={`
-            absolute top-0 right-0 w-2.5 h-2.5 md:w-3 md:h-3 
-            bg-white
-            rounded-bl-lg 
-            shadow-[0_0_5px_rgba(255,255,255,0.5)] 
+            absolute top-0 right-0 
+            w-3 h-3 md:w-3.5 md:h-3.5
+            /* Gradiente más fuerte: Blanco sólido en la esquina a semi-transparente */
+            bg-gradient-to-bl from-white/95 via-white/40 to-white/10
+            backdrop-blur-sm
+            /* Borde inferior e izquierdo más opacos para definir el corte contra amarillo */
+            border-b-[1.5px] border-l-[1.5px] border-white/80
+            rounded-bl-lg
+            /* Sombra oscura para despegarlo del fondo brillante */
+            shadow-[-1px_1px_3px_rgba(0,0,0,0.15)]
             z-20 pointer-events-none
         `} />
       )}

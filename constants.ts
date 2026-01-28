@@ -56,7 +56,7 @@ export const MOODS: Record<MoodLevel, MoodConfig> = {
     label: "Legendario",
     subLabel: "GOD TIER",
     description: "Un día absolutamente épico. Todo salió perfecto, te sentiste invencible o ocurrió algo memorable. Éxtasis puro.",
-    color: "#A855F7", // Purple-500
+    color: "#A855F7", // Legendary Purple
     twColor: "bg-purple-500",
     image: PEPE_MOOD_IMAGES.LEVEL_6,
   },
@@ -65,7 +65,7 @@ export const MOODS: Record<MoodLevel, MoodConfig> = {
     label: "Moi Biens",
     subLabel: "FEELS GOOD",
     description: "Un buen día. Productivo, alegre o simplemente satisfactorio. Te vas a dormir con una sonrisa genuina.",
-    color: "#2ECC71", // New Vibrant Green
+    color: "#2ECC71", // Vibrant Green
     twColor: "bg-emerald-500",
     image: PEPE_MOOD_IMAGES.LEVEL_5,
   },
@@ -74,7 +74,7 @@ export const MOODS: Record<MoodLevel, MoodConfig> = {
     label: "Normal",
     subLabel: "STABLE",
     description: "Estándar. Ni fu ni fa, pero tirando a bien. Un día tranquilo, equilibrado y sin sobresaltos.",
-    color: "#FFD93D", // New Vibrant Yellow
+    color: "#FFD93D", // Vibrant Yellow
     twColor: "bg-yellow-400",
     image: PEPE_MOOD_IMAGES.LEVEL_4,
   },
@@ -83,7 +83,7 @@ export const MOODS: Record<MoodLevel, MoodConfig> = {
     label: "Meh",
     subLabel: "NPC MODE",
     description: "Un día gris, aburrido o apático. Modo automático activado. Nada relevante, o una ligera molestia constante.",
-    color: "#F97316", // New Vibrant Orange
+    color: "#F97316", // Vibrant Orange
     twColor: "bg-orange-500",
     image: PEPE_MOOD_IMAGES.LEVEL_3,
   },
@@ -92,7 +92,7 @@ export const MOODS: Record<MoodLevel, MoodConfig> = {
     label: "Sadge",
     subLabel: "THE BLUES",
     description: "Baja energía, melancolía, decepción o tristeza profunda. Un día para olvidar o para escuchar música lenta.",
-    color: "#14CAEB", // New Vibrant Cyan/Blue
+    color: "#14CAEB", // Vibrant Cyan/Blue
     twColor: "bg-cyan-500",
     image: PEPE_MOOD_IMAGES.LEVEL_2,
   },
@@ -101,7 +101,7 @@ export const MOODS: Record<MoodLevel, MoodConfig> = {
     label: "Rage",
     subLabel: "TRIGGERED",
     description: "Furia, estrés máximo o caos total. El mundo conspiró en tu contra. Necesitas golpear una almohada.",
-    color: "#FF4B4B", // New Powerful Red
+    color: "#FF4B4B", // Powerful Red
     twColor: "bg-red-500",
     image: PEPE_MOOD_IMAGES.LEVEL_1,
   },
