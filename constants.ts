@@ -54,17 +54,17 @@ export const MOODS: Record<MoodLevel, MoodConfig> = {
   [MoodLevel.Legendary]: {
     level: MoodLevel.Legendary,
     label: "Legendario",
-    subLabel: "SUPREME",
-    description: "Un día absolutamente épico. Todo salió perfecto, te sentiste invencible o ocurrió algo memorable. God Tier.",
-    color: "#06b6d4", // Cyan-500
-    twColor: "bg-cyan-500",
+    subLabel: "GOD TIER",
+    description: "Un día absolutamente épico. Todo salió perfecto, te sentiste invencible o ocurrió algo memorable. Éxtasis puro.",
+    color: "#a855f7", // Purple-500
+    twColor: "bg-purple-500",
     image: PEPE_MOOD_IMAGES.LEVEL_6,
   },
   [MoodLevel.MoiBiens]: {
     level: MoodLevel.MoiBiens,
     label: "Moi Biens",
     subLabel: "FEELS GOOD",
-    description: "Un buen día. Productivo, alegre o simplemente satisfactorio. Te vas a dormir con una sonrisa.",
+    description: "Un buen día. Productivo, alegre o simplemente satisfactorio. Te vas a dormir con una sonrisa genuina.",
     color: "#22c55e", // Green-500
     twColor: "bg-green-500",
     image: PEPE_MOOD_IMAGES.LEVEL_5,
@@ -72,33 +72,33 @@ export const MOODS: Record<MoodLevel, MoodConfig> = {
   [MoodLevel.Normal]: {
     level: MoodLevel.Normal,
     label: "Normal",
-    subLabel: "NOT BAD",
-    description: "Estándar. Ni fu ni fa, pero tirando a bien. Un día tranquilo sin sobresaltos.",
-    color: "#84cc16", // Lime-500
-    twColor: "bg-lime-500",
+    subLabel: "STABLE",
+    description: "Estándar. Ni fu ni fa, pero tirando a bien. Un día tranquilo, equilibrado y sin sobresaltos.",
+    color: "#eab308", // Yellow-500
+    twColor: "bg-yellow-500",
     image: PEPE_MOOD_IMAGES.LEVEL_4,
   },
   [MoodLevel.Regular]: {
     level: MoodLevel.Regular,
     label: "Meh",
-    subLabel: "NPC Mode",
-    description: "Un día gris, aburrido o apático. Modo automático activado. Nada relevante, o ligera molestia.",
-    color: "#eab308", // Yellow-500
-    twColor: "bg-yellow-500",
+    subLabel: "NPC MODE",
+    description: "Un día gris, aburrido o apático. Modo automático activado. Nada relevante, o una ligera molestia constante.",
+    color: "#f97316", // Orange-500
+    twColor: "bg-orange-500",
     image: PEPE_MOOD_IMAGES.LEVEL_3,
   },
   [MoodLevel.Sadge]: {
     level: MoodLevel.Sadge,
-    label: "Triste",
-    subLabel: "FEELS BAD",
-    description: "Baja energía, melancolía, decepción o tristeza. Un día para olvidar o para escuchar música lenta.",
-    color: "#f97316", // Orange-500
-    twColor: "bg-orange-500",
+    label: "Sadge",
+    subLabel: "THE BLUES",
+    description: "Baja energía, melancolía, decepción o tristeza profunda. Un día para olvidar o para escuchar música lenta.",
+    color: "#3b82f6", // Blue-500
+    twColor: "bg-blue-500",
     image: PEPE_MOOD_IMAGES.LEVEL_2,
   },
   [MoodLevel.Rage]: {
     level: MoodLevel.Rage,
-    label: "Enfadado",
+    label: "Rage",
     subLabel: "TRIGGERED",
     description: "Furia, estrés máximo o caos total. El mundo conspiró en tu contra. Necesitas golpear una almohada.",
     color: "#ef4444", // Red-500
