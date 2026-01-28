@@ -83,7 +83,7 @@ export const MOODS: Record<MoodLevel, MoodConfig> = {
     label: "Meh",
     subLabel: "NPC MODE",
     description: "Un día gris, aburrido o apático. Modo automático activado. Nada relevante, o una ligera molestia constante.",
-    color: "#F97316", // Vibrant Orange
+    color: "#FF9F1C", // Vibrant Orange
     twColor: "bg-orange-500",
     image: PEPE_MOOD_IMAGES.LEVEL_3,
   },
