@@ -173,13 +173,13 @@ const DayCell = memo(({
         {isToday ? "¡HOY!" : `Día ${day}`}
       </div>
       
-      {/* Indicador de Nota (Estilo Actualizado) */}
+      {/* Indicador de Nota (Estilo Actualizado: Blanco Puro) */}
       {hasNote && (
         <div className={`
             absolute top-0 right-0 w-2.5 h-2.5 md:w-3 md:h-3 
-            bg-gradient-to-bl from-indigo-400 to-purple-600
+            bg-white
             rounded-bl-lg 
-            shadow-[0_0_6px_rgba(139,92,246,0.8)] 
+            shadow-[0_0_5px_rgba(255,255,255,0.5)] 
             z-20 pointer-events-none
         `} />
       )}

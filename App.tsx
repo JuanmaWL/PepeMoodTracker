@@ -276,16 +276,24 @@ const App: React.FC = () => {
     const state = quickLogStateRef.current;
     
     if (state.startPos && state.currentPos && state.dateStr) {
-        const SAFE_MARGIN = 110;
-        const clampedX = Math.max(SAFE_MARGIN, Math.min(state.startPos.x, window.innerWidth - SAFE_MARGIN));
-        const menuCenter = { x: clampedX, y: state.startPos.y };
+        // ACTUALIZACIÓN DE LÓGICA DE DETECCIÓN PARA COINCIDIR CON QUICKLOGMENU.TSX
+        const SAFE_MARGIN_X = 160;
+        const SAFE_MARGIN_TOP = 190;
+        const SAFE_MARGIN_BOTTOM = 140;
+
+        const clampedX = Math.min(Math.max(state.startPos.x, SAFE_MARGIN_X), window.innerWidth - SAFE_MARGIN_X);
+        const clampedY = Math.min(Math.max(state.startPos.y, SAFE_MARGIN_TOP), window.innerHeight - SAFE_MARGIN_BOTTOM);
+        
+        const menuCenter = { x: clampedX, y: clampedY };
 
         const dx = state.currentPos.x - menuCenter.x;
         const dy = state.currentPos.y - menuCenter.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
         
+        // Zona muerta central de 15px para evitar clicks accidentales
         if (dist >= 15) { 
-            if (dy > 30) {
+            // DELETE ZONE CHECK
+            if (dy > 40 && Math.abs(dx) < 60) {
                  SoundManager.play('trash');
                  triggerHaptic('heavy');
                  setYearData(prev => {
@@ -303,7 +311,7 @@ const App: React.FC = () => {
                 ];
                 let closestMood: MoodLevel | null = null;
                 let minDist = Number.MAX_VALUE;
-                const RADIUS = 85; 
+                const RADIUS = 110; // Sincronizado con QuickLogMenu
                 const totalSpan = 180;
                 const step = totalSpan / (orderedMoods.length - 1);
                 
@@ -314,13 +322,14 @@ const App: React.FC = () => {
                      const iy = -Math.sin(rad) * RADIUS;
                      const distToIcon = Math.sqrt(Math.pow(dx - ix, 2) + Math.pow(dy - iy, 2));
                      
-                     if (distToIcon < minDist) {
+                     // Umbral de detección aumentado a 60 para coincidir con QuickLogMenu
+                     if (distToIcon < 60 && distToIcon < minDist) {
                          minDist = distToIcon;
                          closestMood = mood;
                      }
                 });
     
-                if (closestMood && minDist < 50) {
+                if (closestMood) {
                     SoundManager.play('success');
                     triggerHaptic('medium');
                     
