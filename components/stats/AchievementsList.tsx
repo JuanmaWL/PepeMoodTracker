@@ -1,100 +1,121 @@
 
-import React, { memo } from 'react';
-import { Lock, Trophy } from 'lucide-react';
+import React, { memo, useMemo } from 'react';
+import { Lock, CalendarCheck } from 'lucide-react';
 import { ACHIEVEMENTS } from '../../utils/gamification';
+import { UnlockedAchievement } from '../../types';
 
 interface AchievementsListProps {
-  unlockedIds: string[];
+  unlockedItems: UnlockedAchievement[];
 }
 
-const AchievementsList: React.FC<AchievementsListProps> = ({ unlockedIds }) => {
-    // SORTING LOGIC: Unlocked first
-    const sortedAchievements = [...ACHIEVEMENTS].sort((a, b) => {
-        const aUnlocked = unlockedIds.includes(a.id);
-        const bUnlocked = unlockedIds.includes(b.id);
-        if (aUnlocked && !bUnlocked) return -1;
-        if (!aUnlocked && bUnlocked) return 1;
-        return 0; // Maintain original order otherwise
-    });
+const AchievementsList: React.FC<AchievementsListProps> = ({ unlockedItems }) => {
+    
+    // Sort logic: 
+    // 1. Unlocked vs Locked
+    // 2. Unlocked: Date Descending (Newest first)
+    // 3. Locked: Default Order
+    const sortedAchievements = useMemo(() => {
+        return [...ACHIEVEMENTS].sort((a, b) => {
+            const unlockA = unlockedItems.find(u => u.id === a.id);
+            const unlockB = unlockedItems.find(u => u.id === b.id);
+            
+            // Si ambos están desbloqueados, ordenar por fecha (más reciente primero)
+            if (unlockA && unlockB) {
+                // Manejar Legacy (null) -> ponerlos al final de los desbloqueados
+                if (unlockA.unlockedAt && unlockB.unlockedAt) {
+                    return unlockB.unlockedAt - unlockA.unlockedAt;
+                }
+                if (unlockA.unlockedAt && !unlockB.unlockedAt) return -1;
+                if (!unlockA.unlockedAt && unlockB.unlockedAt) return 1;
+                return 0; // Ambos legacy
+            }
+            
+            if (unlockA && !unlockB) return -1; // A primero
+            if (!unlockA && unlockB) return 1;  // B primero
+            
+            return 0; // Mantener orden original si ambos bloqueados
+        });
+    }, [unlockedItems]);
+
+    const formatDate = (timestamp: number | null) => {
+        if (!timestamp) return 'Legado (Pre-2024)'; // Migrados sin fecha
+        return new Date(timestamp).toLocaleDateString('es-ES', { 
+            day: 'numeric', 
+            month: 'short', 
+            year: 'numeric' 
+        });
+    };
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-8">
              {sortedAchievements.map((ach) => {
-                 const isUnlocked = unlockedIds.includes(ach.id);
-                 const particles = isUnlocked ? [...Array(4)].map((_, i) => ({
-                    top: Math.random() * 80 + 10 + '%',
-                    left: Math.random() * 80 + 10 + '%',
-                    delay: Math.random() * 2 + 's',
-                    duration: Math.random() * 3 + 2 + 's'
-                 })) : [];
-
+                 const unlockInfo = unlockedItems.find(u => u.id === ach.id);
+                 const isUnlocked = !!unlockInfo;
+                 
                  return (
                      <div 
                         key={ach.id} 
                         className={`
-                            relative p-5 rounded-3xl border transition-all duration-500 flex items-start gap-4 overflow-hidden group
+                            relative p-5 rounded-3xl border transition-all duration-500 flex flex-col gap-4 overflow-hidden group
                             ${isUnlocked 
-                                ? 'bg-slate-800/80 border-slate-700/50 hover:border-slate-500/50 hover:shadow-2xl hover:-translate-y-1' 
-                                : 'bg-slate-900/40 border-slate-800 opacity-50 grayscale hover:opacity-70'
+                                ? 'bg-slate-800/40 border-slate-700/50 hover:border-slate-500/50 hover:bg-slate-800/60 hover:-translate-y-1' 
+                                : 'bg-slate-900/20 border-slate-800/50 opacity-50 grayscale hover:opacity-70'
                             }
                         `}
                         style={{
-                            boxShadow: isUnlocked ? `0 4px 20px -5px ${ach.color}20` : 'none'
+                            boxShadow: isUnlocked ? `0 10px 30px -10px ${ach.color}15` : 'none'
                         }}
                      >
+                        {/* Background Effects for Unlocked */}
                         {isUnlocked && (
                             <>
                                 <div 
-                                    className="absolute inset-0 opacity-[0.08] pointer-events-none group-hover:opacity-[0.15] transition-opacity duration-500"
-                                    style={{ background: `radial-gradient(circle at top right, ${ach.color}, transparent 80%)` }}
+                                    className="absolute inset-0 opacity-[0.05] pointer-events-none group-hover:opacity-[0.1] transition-opacity duration-500"
+                                    style={{ background: `radial-gradient(circle at top right, ${ach.color}, transparent 70%)` }}
                                 />
-                                {particles.map((p, i) => (
-                                    <div 
-                                        key={i}
-                                        className="absolute w-1 h-1 rounded-full animate-pulse opacity-40 pointer-events-none"
-                                        style={{
-                                            backgroundColor: ach.color,
-                                            top: p.top,
-                                            left: p.left,
-                                            animationDuration: p.duration,
-                                            animationDelay: p.delay,
-                                            boxShadow: `0 0 4px ${ach.color}`
-                                        }}
-                                    />
-                                ))}
-                                <div className="absolute inset-0 -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none z-10" />
+                                <div className="absolute inset-0 -translate-x-full group-hover:animate-[shimmer_1.5s_linear] bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none z-10" />
                             </>
                         )}
 
-                        <div 
-                            className={`
-                                p-3 rounded-2xl shrink-0 transition-all duration-500 group-hover:scale-110 relative z-20
-                                ${isUnlocked ? 'shadow-inner' : ''}
-                            `}
-                            style={{ 
-                                backgroundColor: isUnlocked ? `${ach.color}15` : '#1e293b', 
-                                color: isUnlocked ? ach.color : '#64748b',
-                                boxShadow: isUnlocked ? `0 0 15px ${ach.color}30` : 'none'
-                            }}
-                        >
-                            {isUnlocked ? <ach.icon size={26} className="drop-shadow-sm filter" /> : <Lock size={26} />}
-                            {isUnlocked && <div className="absolute inset-0 rounded-2xl opacity-20 blur-md animate-pulse" style={{ backgroundColor: ach.color }}></div>}
+                        <div className="flex items-start gap-4 relative z-20">
+                            {/* Icon Box */}
+                            <div 
+                                className={`
+                                    w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-500 group-hover:scale-105 group-hover:rotate-3
+                                    ${isUnlocked ? 'shadow-inner' : ''}
+                                `}
+                                style={{ 
+                                    backgroundColor: isUnlocked ? `${ach.color}15` : '#0f172a', 
+                                    color: isUnlocked ? ach.color : '#475569',
+                                    boxShadow: isUnlocked ? `0 0 15px ${ach.color}25` : 'none',
+                                    border: isUnlocked ? `1px solid ${ach.color}30` : '1px solid #1e293b'
+                                }}
+                            >
+                                {isUnlocked ? <ach.icon size={28} className="drop-shadow-sm filter" /> : <Lock size={24} />}
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                                <h4 className={`text-sm font-black uppercase tracking-wide leading-tight mb-1.5 ${isUnlocked ? 'text-slate-200 group-hover:text-white' : 'text-slate-600'}`}>
+                                    {ach.title}
+                                </h4>
+                                <p className="text-[11px] text-slate-400 font-medium leading-relaxed group-hover:text-slate-300 transition-colors line-clamp-3">
+                                    {ach.description}
+                                </p>
+                            </div>
                         </div>
 
-                        <div className="flex-1 relative z-20">
-                            <h4 className={`text-sm font-black uppercase tracking-wide mb-1 leading-tight ${isUnlocked ? 'text-slate-100 group-hover:text-white' : 'text-slate-600'}`}>
-                                {ach.title}
-                            </h4>
-                            <p className="text-[10px] text-slate-400/80 font-medium leading-relaxed group-hover:text-slate-300 transition-colors">
-                                {ach.description}
-                            </p>
-                            {isUnlocked && (
-                                <div className="mt-3 inline-flex items-center gap-1.5 bg-slate-950/30 px-2 py-1 rounded-lg border border-slate-700/50">
-                                    <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: ach.color }}></div>
-                                    <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: ach.color }}>Desbloqueado</span>
+                        {/* Footer: Date & Status */}
+                        {isUnlocked && (
+                            <div className="mt-auto pt-3 border-t border-slate-700/30 flex justify-between items-center relative z-20">
+                                <div className="flex items-center gap-1.5 opacity-70 group-hover:opacity-100 transition-opacity">
+                                    <CalendarCheck size={12} className="text-slate-500" />
+                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                        {formatDate(unlockInfo.unlockedAt)}
+                                    </span>
                                 </div>
-                            )}
-                        </div>
+                                <div className="w-2 h-2 rounded-full animate-pulse shadow-[0_0_8px_currentColor]" style={{ color: ach.color, backgroundColor: ach.color }}></div>
+                            </div>
+                        )}
                      </div>
                  );
              })}

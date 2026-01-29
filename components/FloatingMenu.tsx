@@ -1,6 +1,6 @@
 
 import React, { useRef } from 'react';
-import { BarChart2, RotateCcw, Search, Cloud, Settings } from 'lucide-react';
+import { BarChart2, RotateCcw, Search, Cloud, Settings, Trophy } from 'lucide-react';
 import SoundManager from '../utils/sounds';
 
 interface FloatingMenuProps {
@@ -9,9 +9,10 @@ interface FloatingMenuProps {
   onSearch: () => void;
   onCloud: () => void;
   onSettings: () => void;
+  onAchievements: () => void;
 }
 
-const FloatingMenu: React.FC<FloatingMenuProps> = ({ onStats, onReset, onSearch, onCloud, onSettings }) => {
+const FloatingMenu: React.FC<FloatingMenuProps> = ({ onStats, onReset, onSearch, onCloud, onSettings, onAchievements }) => {
   
   const handleClick = (action: () => void) => {
     SoundManager.play('click');
@@ -64,7 +65,7 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({ onStats, onReset, onSearch,
       
       {/* Contenedor Dock */}
       <div className="
-        flex items-center gap-1 md:gap-6 px-2 py-2 md:px-8 md:py-4
+        flex items-center gap-1 md:gap-4 px-2 py-2 md:px-8 md:py-4
         bg-slate-900/90 backdrop-blur-xl 
         border border-slate-700/60 ring-1 ring-white/5
         rounded-[2rem] shadow-[0_10px_40px_-10px_rgba(0,0,0,0.6)]
@@ -77,6 +78,13 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({ onStats, onReset, onSearch,
           label="Stats" 
           onClick={() => handleClick(onStats)} 
           colorClass="hover:text-blue-400"
+        />
+
+        <MenuButton 
+          icon={Trophy} 
+          label="Logros" 
+          onClick={() => handleClick(onAchievements)} 
+          colorClass="hover:text-amber-400"
         />
 
         <MenuButton 

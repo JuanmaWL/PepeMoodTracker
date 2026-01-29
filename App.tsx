@@ -6,7 +6,7 @@ import PepeOracle from './components/PepeOracle';
 import Particles from './components/Particles';
 import QuickLogMenu from './components/QuickLogMenu'; 
 import WelcomeModal from './components/WelcomeModal'; 
-import { YearData, DayData, MoodLevel, Achievement } from './types';
+import { YearData, DayData, MoodLevel, Achievement, UnlockedAchievement } from './types';
 import { STORAGE_KEY, BANNER_SLIDES, PEPE_ASSETS } from './constants';
 import { Plus, Trash2, AlertTriangle, Sliders, Loader2, BatteryCharging, FileJson, Save, Trophy, HelpCircle, BookOpen, BoxSelect } from 'lucide-react';
 import SoundManager from './utils/sounds';
@@ -16,6 +16,7 @@ const MoodModal = React.lazy(() => import('./components/MoodModal'));
 const StatsModal = React.lazy(() => import('./components/StatsModal'));
 const SearchModal = React.lazy(() => import('./components/SearchModal'));
 const CloudModal = React.lazy(() => import('./components/CloudModal'));
+const AchievementsModal = React.lazy(() => import('./components/AchievementsModal'));
 
 const ModalLoader = () => {
   const gif = useMemo(() => {
@@ -53,7 +54,8 @@ const ModalLoader = () => {
 };
 
 const TUTORIAL_KEY = 'pepe_tutorial_seen_v1';
-const ACHIEVEMENTS_STORAGE_KEY = 'pepe_achievements_unlocked_v1';
+const ACHIEVEMENTS_STORAGE_KEY_V1 = 'pepe_achievements_unlocked_v1';
+const ACHIEVEMENTS_STORAGE_KEY_V2 = 'pepe_achievements_unlocked_v2'; // Nuevo storage con fechas
 
 const App: React.FC = () => {
   const currentYear = new Date().getFullYear();
@@ -67,17 +69,18 @@ const App: React.FC = () => {
   const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [isCloudModalOpen, setIsCloudModalOpen] = useState(false);
+  const [isAchievementsModalOpen, setIsAchievementsModalOpen] = useState(false); // Nuevo Modal
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false); // Estado elevado
+  
+  // Achievements State (V2 with Dates)
+  const [unlockedAchievements, setUnlockedAchievements] = useState<UnlockedAchievement[]>([]);
   
   // Real-time achievement notifications
   const [newlyUnlocked, setNewlyUnlocked] = useState<Achievement | null>(null);
   const [isClosingToast, setIsClosingToast] = useState(false); 
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const prevUnlockedRef = useRef<string[]>([]);
-  const notifiedAchievementsRef = useRef<Set<string>>(new Set());
   const isFirstLoad = useRef(true);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -135,7 +138,7 @@ const App: React.FC = () => {
   const [highlightedDates, setHighlightedDates] = useState<string[]>([]);
 
   // OPTIMIZACIÓN: Detectar si hay modales abiertos para pausar animaciones de fondo
-  const isAnyModalOpen = isMoodModalOpen || isStatsModalOpen || isSearchModalOpen || isCloudModalOpen || isSettingsOpen || showResetConfirm || quickLogState.isActive || isWelcomeModalOpen;
+  const isAnyModalOpen = isMoodModalOpen || isStatsModalOpen || isSearchModalOpen || isCloudModalOpen || isSettingsOpen || showResetConfirm || quickLogState.isActive || isWelcomeModalOpen || isAchievementsModalOpen;
 
   // Fix for infinite loop: Stable callback for highlighting results
   const handleHighlightResults = useCallback((dates: string[]) => {
@@ -182,13 +185,23 @@ const App: React.FC = () => {
         setTimeout(() => setIsWelcomeModalOpen(true), 1000);
     }
 
-    // Load persisted achievements
+    // --- MIGRATION LOGIC (V1 String[] -> V2 UnlockedAchievement[]) ---
     try {
-        const storedAchievements = localStorage.getItem(ACHIEVEMENTS_STORAGE_KEY);
-        if (storedAchievements) {
-            const parsed = JSON.parse(storedAchievements);
-            if (Array.isArray(parsed)) {
-                notifiedAchievementsRef.current = new Set(parsed);
+        const storedV2 = localStorage.getItem(ACHIEVEMENTS_STORAGE_KEY_V2);
+        
+        if (storedV2) {
+            setUnlockedAchievements(JSON.parse(storedV2));
+        } else {
+            // Check for V1 data
+            const storedV1 = localStorage.getItem(ACHIEVEMENTS_STORAGE_KEY_V1);
+            if (storedV1) {
+                const parsedV1 = JSON.parse(storedV1) as string[];
+                const migrated: UnlockedAchievement[] = parsedV1.map(id => ({
+                    id,
+                    unlockedAt: null // Legacy marker
+                }));
+                setUnlockedAchievements(migrated);
+                localStorage.setItem(ACHIEVEMENTS_STORAGE_KEY_V2, JSON.stringify(migrated));
             }
         }
     } catch (e) {
@@ -206,49 +219,51 @@ const App: React.FC = () => {
       }, 700);
   }, []);
 
-  // Achievement Logic
+  // --- MAIN ACHIEVEMENT LOGIC ---
   useEffect(() => {
-    const currentUnlocked = getUnlockedAchievements(yearData);
-    
     if (isFirstLoad.current) {
-        prevUnlockedRef.current = currentUnlocked;
         isFirstLoad.current = false;
         return;
     }
 
-    // Identificar nuevos logros que NO hayan sido notificados previamente
-    const newIds = currentUnlocked.filter(id => 
-        !prevUnlockedRef.current.includes(id) && 
-        !notifiedAchievementsRef.current.has(id)
-    );
+    // 1. Calculate current valid IDs based on YearData
+    const currentValidIDs = getUnlockedAchievements(yearData);
+    
+    // 2. Identify newly unlocked items (present in validIDs but NOT in state)
+    const existingIDs = new Set(unlockedAchievements.map(ua => ua.id));
+    const newUnlockIDs = currentValidIDs.filter(id => !existingIDs.has(id));
 
-    if (newIds.length > 0) {
-        // Find the full achievement object for the first new one
-        const achievement = ACHIEVEMENTS.find(ach => ach.id === newIds[0]);
-        if (achievement) {
-            // Si ya hay uno mostrándose, lo reemplazamos inmediatamente (o podríamos ponerlo en cola)
+    if (newUnlockIDs.length > 0) {
+        const timestamp = Date.now();
+        const newUnlocksData: UnlockedAchievement[] = newUnlockIDs.map(id => ({
+            id,
+            unlockedAt: timestamp
+        }));
+
+        // 3. Update State & Storage
+        const updatedList = [...unlockedAchievements, ...newUnlocksData];
+        setUnlockedAchievements(updatedList);
+        localStorage.setItem(ACHIEVEMENTS_STORAGE_KEY_V2, JSON.stringify(updatedList));
+
+        // 4. Trigger Toast for the FIRST new achievement found
+        const firstNewId = newUnlockIDs[0];
+        const achievementDef = ACHIEVEMENTS.find(ach => ach.id === firstNewId);
+        
+        if (achievementDef) {
             if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
-            
-            setNewlyUnlocked(achievement);
+            setNewlyUnlocked(achievementDef);
             setIsClosingToast(false);
-            
-            // Play the new EPIC achievement sound
             SoundManager.play('achievement'); 
             triggerHaptic('heavy');
-            
-            // Auto-hide after 6 seconds (longer duration for better visibility)
             toastTimeoutRef.current = setTimeout(() => {
                 closeAchievementToast();
             }, 6000);
-
-            // Persistir los logros notificados
-            newIds.forEach(id => notifiedAchievementsRef.current.add(id));
-            localStorage.setItem(ACHIEVEMENTS_STORAGE_KEY, JSON.stringify(Array.from(notifiedAchievementsRef.current)));
         }
     }
     
-    prevUnlockedRef.current = currentUnlocked;
-  }, [yearData, triggerHaptic, closeAchievementToast]);
+    // Note: We deliberately do NOT remove achievements if conditions are lost.
+    // "Once unlocked, always unlocked".
+  }, [yearData, unlockedAchievements, triggerHaptic, closeAchievementToast]);
 
 
   const handleGlobalMove = useCallback((e: TouchEvent | MouseEvent) => {
@@ -391,6 +406,7 @@ const App: React.FC = () => {
             if (isStatsModalOpen) setIsStatsModalOpen(false);
             if (isSearchModalOpen) setIsSearchModalOpen(false);
             if (isCloudModalOpen) setIsCloudModalOpen(false);
+            if (isAchievementsModalOpen) setIsAchievementsModalOpen(false);
             if (isSettingsOpen) setIsSettingsOpen(false);
             if (showResetConfirm) setShowResetConfirm(false);
             if (isWelcomeModalOpen) setIsWelcomeModalOpen(false);
@@ -399,7 +415,7 @@ const App: React.FC = () => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isMoodModalOpen, isStatsModalOpen, isSearchModalOpen, isCloudModalOpen, isSettingsOpen, showResetConfirm, newlyUnlocked, closeAchievementToast, isWelcomeModalOpen]);
+  }, [isMoodModalOpen, isStatsModalOpen, isSearchModalOpen, isCloudModalOpen, isAchievementsModalOpen, isSettingsOpen, showResetConfirm, newlyUnlocked, closeAchievementToast, isWelcomeModalOpen]);
 
   useEffect(() => {
     if (isAnyModalOpen) {
@@ -531,7 +547,7 @@ const App: React.FC = () => {
         currentPos={quickLogState.currentPos}
       />
 
-      {/* ENHANCED ACHIEVEMENT TOAST NOTIFICATION (ULTIMATE VERSION) */}
+      {/* ENHANCED ACHIEVEMENT TOAST NOTIFICATION */}
       {newlyUnlocked && (
           <div className="fixed top-0 left-0 right-0 z-[100] flex justify-center pt-8 pointer-events-none px-4">
               <style>{`
@@ -575,12 +591,12 @@ const App: React.FC = () => {
                   onClick={() => {
                       if (!isClosingToast) {
                           closeAchievementToast();
-                          setTimeout(() => setIsStatsModalOpen(true), 700);
+                          setTimeout(() => setIsAchievementsModalOpen(true), 700);
                       }
                   }}
               >
                  
-                 {/* God Rays Background - Fixed to be soft and circular */}
+                 {/* God Rays Background */}
                  <div className="absolute inset-0 z-0 flex items-center justify-center opacity-30 pointer-events-none">
                       <div 
                           className="w-[500px] h-[500px] bg-[conic-gradient(from_0deg,transparent,rgba(255,255,255,0.2),transparent)] rounded-full"
@@ -683,19 +699,17 @@ const App: React.FC = () => {
             <div 
                 className="relative w-48 h-48 md:w-64 md:h-64 rounded-[3rem] overflow-hidden pepe-float z-10 transition-all duration-500 hover:scale-105 group-hover:shadow-[0_30px_70px_-10px_rgba(34,197,94,0.4)] border-4 border-slate-800/80 shadow-[0_20px_50px_rgba(0,0,0,0.5)] bg-slate-900"
             >
-                {/* 1. Pixel Grid Background (Fixed: No rotating square) */}
+                {/* 1. Pixel Grid Background */}
                 <div 
                     className="absolute inset-0 z-0 pointer-events-none" 
                     style={{
                         backgroundImage: `linear-gradient(rgba(34, 197, 94, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(34, 197, 94, 0.2) 1px, transparent 1px)`,
                         backgroundSize: '14px 14px',
                         imageRendering: 'pixelated',
-                        // MASCARA RADIAL: Evita el efecto de bordes duros/cuadrados
                         maskImage: 'radial-gradient(circle at center, black 40%, transparent 100%)',
                         WebkitMaskImage: 'radial-gradient(circle at center, black 40%, transparent 100%)'
                     }}
                 >
-                    {/* NEW: Pixel Breathing Animation (By Parts) */}
                     {!ecoMode && activePixels.map((p) => (
                         <div
                             key={p.id}
@@ -790,6 +804,7 @@ const App: React.FC = () => {
         onReset={() => { triggerHaptic('medium'); setShowResetConfirm(true); }}
         onSearch={() => { triggerHaptic('light'); setIsSearchModalOpen(true); }}
         onCloud={() => { triggerHaptic('light'); setIsCloudModalOpen(true); }}
+        onAchievements={() => { triggerHaptic('light'); setIsAchievementsModalOpen(true); }}
         onSettings={() => { triggerHaptic('light'); setIsSettingsOpen(true); }}
       />
 
@@ -807,14 +822,17 @@ const App: React.FC = () => {
         {isStatsModalOpen && <StatsModal isOpen={isStatsModalOpen} onClose={() => setIsStatsModalOpen(false)} data={yearData} />}
         {isSearchModalOpen && <SearchModal isOpen={isSearchModalOpen} onClose={() => setIsSearchModalOpen(false)} data={yearData} onJumpToDate={(date) => { setSelectedDate(date); setIsMoodModalOpen(true); }} onHighlightResults={handleHighlightResults} />}
         {isCloudModalOpen && <CloudModal isOpen={isCloudModalOpen} onClose={() => setIsCloudModalOpen(false)} data={yearData} />}
+        {isAchievementsModalOpen && <AchievementsModal isOpen={isAchievementsModalOpen} onClose={() => setIsAchievementsModalOpen(false)} unlockedItems={unlockedAchievements} />}
       </Suspense>
 
-      {isSettingsOpen && (
+      {/* Settings & other modals logic remains same ... (omitted for brevity, assume content is preserved) */}
+       {isSettingsOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300" onClick={() => setIsSettingsOpen(false)}>
            <div 
             className="bg-slate-900 border border-slate-700 w-full max-w-sm rounded-[2rem] shadow-2xl overflow-hidden p-6 relative" 
             onClick={(e) => e.stopPropagation()}
            >
+              {/* Settings content... */}
               <div className="flex items-center gap-3 mb-6">
                  <div className="p-3 bg-slate-800 rounded-xl text-slate-300">
                     <Sliders size={20} />
@@ -826,7 +844,7 @@ const App: React.FC = () => {
               </div>
 
               <div className="space-y-6">
-                  {/* TUTORIAL RELOAD BUTTON - NEW */}
+                  {/* TUTORIAL RELOAD BUTTON */}
                   <button 
                     onClick={() => {
                         SoundManager.play('click');
@@ -866,7 +884,7 @@ const App: React.FC = () => {
                       </button>
                   </div>
                   
-                  {/* PIXEL MODE TOGGLE - NEW */}
+                  {/* PIXEL MODE TOGGLE */}
                   {!ecoMode && (
                       <div className="flex items-center justify-between p-3 bg-slate-800/50 rounded-xl border border-slate-700">
                           <div className="flex items-center gap-3">
@@ -968,9 +986,8 @@ const App: React.FC = () => {
                     // 1. Clear Data
                     setYearData({}); 
                     // 2. Clear Achievement Memory
-                    localStorage.removeItem(ACHIEVEMENTS_STORAGE_KEY);
-                    notifiedAchievementsRef.current = new Set();
-                    prevUnlockedRef.current = [];
+                    localStorage.removeItem(ACHIEVEMENTS_STORAGE_KEY_V2);
+                    setUnlockedAchievements([]); // Clear state
                     // 3. Optional: Clear specific achievements if needed
                     localStorage.removeItem('pepe_ach_dark_knight_unlocked');
                     

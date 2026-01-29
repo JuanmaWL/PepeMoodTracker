@@ -1,16 +1,13 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { X, Trophy, Brain, PieChart as PieChartIcon, BarChart3, Hexagon, Waves, CalendarRange, Filter, ListFilter, TrendingUp } from 'lucide-react';
+import { X, Brain, PieChart as PieChartIcon, BarChart3, Hexagon, Waves, CalendarRange, Filter, ListFilter, TrendingUp } from 'lucide-react';
 import { YearData, MoodLevel, DayData } from '../types';
 import { MOODS, MONTHS, PEPE_ASSETS } from '../constants';
 import Heatmap from './Heatmap';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
-import SoundManager from '../utils/sounds';
-import { getUnlockedAchievements } from '../utils/gamification';
 import { usePepeJudge } from '../hooks/usePepeJudge';
 import JudgeSection from './stats/JudgeSection';
 import EvolutionCharts, { ChartType } from './stats/EvolutionCharts';
-import AchievementsList from './stats/AchievementsList';
 
 interface StatsModalProps {
   isOpen: boolean;
@@ -20,20 +17,11 @@ interface StatsModalProps {
 
 type TimeRange = 'all' | 'last_7' | 'last_30' | string;
 type WeekRange = 'all' | '1' | '2' | '3' | '4'; // 1-7, 8-14, 15-21, 22+
-type Tab = 'stats' | 'achievements';
 
 const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
-  const [activeTab, setActiveTab] = useState<Tab>('stats');
   const [timeRange, setTimeRange] = useState<TimeRange>('0'); 
   const [weekRange, setWeekRange] = useState<WeekRange>('all'); 
   const [chartType, setChartType] = useState<ChartType>('bar');
-
-  // Reset logic
-  useEffect(() => {
-    if (isOpen) {
-      setActiveTab('stats');
-    }
-  }, [isOpen]);
 
   // Reset week when month changes
   useEffect(() => {
@@ -152,7 +140,6 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
     resetVerdict();
   }, [timeRange, weekRange, resetVerdict]);
 
-  const unlockedIds = useMemo(() => getUnlockedAchievements(data), [data, isOpen]);
   const isMonthSelected = !isNaN(parseInt(timeRange));
 
   if (!isOpen) return null;
@@ -165,214 +152,190 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
         <div className="p-6 border-b border-slate-700 flex flex-col md:flex-row gap-6 justify-between items-start md:items-center bg-slate-800 shrink-0 relative z-10">
           <div className="flex items-center gap-3 flex-1">
             <div className="p-3 bg-indigo-500/10 rounded-xl text-indigo-400 animate-pulse">
-                {activeTab === 'stats' ? <BarChart3 size={24} /> : <Trophy size={24} />}
+                <BarChart3 size={24} />
             </div>
             <div>
                 <h2 className="text-2xl font-black text-white uppercase tracking-tight leading-none">
-                    {activeTab === 'stats' ? 'Estadísticas' : 'Sala de Trofeos'}
+                    Estadísticas
                 </h2>
                 <p className="text-[10px] text-indigo-400/80 font-bold uppercase tracking-widest mt-1">
-                    {activeTab === 'stats' ? 'Análisis de rendimiento vital' : 'Hitos y Logros Desbloqueados'}
+                    Análisis de rendimiento vital
                 </p>
             </div>
           </div>
           
-          <div className="flex items-center justify-between w-full md:w-auto gap-4">
-            <div className="flex bg-slate-900/50 p-1 rounded-2xl border border-slate-700/50">
-                <button 
-                    onClick={() => { setActiveTab('stats'); SoundManager.play('click'); }}
-                    className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${activeTab === 'stats' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
-                >
-                    Gráficas
-                </button>
-                <button 
-                    onClick={() => { setActiveTab('achievements'); SoundManager.play('click'); }}
-                    className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${activeTab === 'achievements' ? 'bg-amber-500 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
-                >
-                    <Trophy size={14} /> Logros
-                    <span className="bg-slate-900/50 px-1.5 py-0.5 rounded text-[9px]">{unlockedIds.length}</span>
-                </button>
-            </div>
-
-            <button onClick={onClose} className="p-2 hover:bg-slate-700 rounded-full text-slate-400 transition-colors shrink-0">
-                <X size={24} />
-            </button>
-          </div>
+          <button onClick={onClose} className="p-2 hover:bg-slate-700 rounded-full text-slate-400 transition-colors shrink-0">
+              <X size={24} />
+          </button>
         </div>
 
         <div className="p-6 overflow-y-auto space-y-6 custom-scrollbar bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800">
           
-          {activeTab === 'stats' ? (
-              <>
-                <div className="bg-slate-900/40 p-5 rounded-3xl border border-slate-700 flex flex-col items-center justify-center overflow-hidden">
-                    <h3 className="text-slate-400 font-black text-xs uppercase tracking-widest mb-4 flex items-center gap-2 self-start w-full">
-                    <Brain size={14} className="text-slate-500" /> Mapa de Calor Anual
-                    </h3>
-                    <Heatmap data={data} year={new Date().getFullYear()} />
-                </div>
+          <div className="bg-slate-900/40 p-5 rounded-3xl border border-slate-700 flex flex-col items-center justify-center overflow-hidden">
+              <h3 className="text-slate-400 font-black text-xs uppercase tracking-widest mb-4 flex items-center gap-2 self-start w-full">
+              <Brain size={14} className="text-slate-500" /> Mapa de Calor Anual
+              </h3>
+              <Heatmap data={data} year={new Date().getFullYear()} />
+          </div>
 
-                {/* FILTROS */}
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-900/60 p-3 rounded-2xl border border-slate-700/50">
-                    <div className="flex items-center gap-2 text-slate-400 px-2">
-                        <Filter size={16} className="text-indigo-400" />
-                        <span className="text-[10px] uppercase font-black tracking-widest">Filtrar Análisis y Gráficas:</span>
-                    </div>
-                    
-                    <div className="flex-1 w-full sm:w-auto flex flex-col sm:flex-row gap-3 justify-end">
-                        <div className="relative group w-full sm:w-48">
-                            <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-slate-400">
-                                <CalendarRange size={14} />
-                            </div>
-                            <select 
-                                value={timeRange} 
-                                onChange={(e) => setTimeRange(e.target.value)}
-                                className="w-full bg-slate-800 text-white text-xs font-bold py-2.5 px-4 pr-10 rounded-xl outline-none hover:bg-slate-700 transition-colors cursor-pointer border border-slate-700 focus:border-indigo-500 appearance-none uppercase tracking-wide shadow-sm"
-                            >
-                                <option value="last_7">Últimos 7 días</option>
-                                <option value="last_30">Últimos 30 días</option>
-                                <option disabled>──────────</option>
-                                {MONTHS.map((m, i) => <option key={m} value={i}>{m}</option>)}
-                                <option disabled>──────────</option>
-                                <option value="all">Todo el Año</option>
-                            </select>
+          {/* FILTROS */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-900/60 p-3 rounded-2xl border border-slate-700/50">
+              <div className="flex items-center gap-2 text-slate-400 px-2">
+                  <Filter size={16} className="text-indigo-400" />
+                  <span className="text-[10px] uppercase font-black tracking-widest">Filtrar Análisis y Gráficas:</span>
+              </div>
+              
+              <div className="flex-1 w-full sm:w-auto flex flex-col sm:flex-row gap-3 justify-end">
+                  <div className="relative group w-full sm:w-48">
+                      <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-slate-400">
+                          <CalendarRange size={14} />
+                      </div>
+                      <select 
+                          value={timeRange} 
+                          onChange={(e) => setTimeRange(e.target.value)}
+                          className="w-full bg-slate-800 text-white text-xs font-bold py-2.5 px-4 pr-10 rounded-xl outline-none hover:bg-slate-700 transition-colors cursor-pointer border border-slate-700 focus:border-indigo-500 appearance-none uppercase tracking-wide shadow-sm"
+                      >
+                          <option value="last_7">Últimos 7 días</option>
+                          <option value="last_30">Últimos 30 días</option>
+                          <option disabled>──────────</option>
+                          {MONTHS.map((m, i) => <option key={m} value={i}>{m}</option>)}
+                          <option disabled>──────────</option>
+                          <option value="all">Todo el Año</option>
+                      </select>
+                  </div>
+                  
+                  {isMonthSelected && (
+                        <div className="relative group w-full sm:w-56 animate-in slide-in-from-left-2 duration-300">
+                          <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-slate-400">
+                              <ListFilter size={14} />
+                          </div>
+                          <select 
+                              value={weekRange} 
+                              onChange={(e) => setWeekRange(e.target.value as WeekRange)}
+                              className="w-full bg-slate-800 text-indigo-200 text-xs font-bold py-2.5 px-4 pr-10 rounded-xl outline-none hover:bg-slate-700 transition-colors cursor-pointer border border-indigo-500/30 focus:border-indigo-500 appearance-none uppercase tracking-wide shadow-sm"
+                          >
+                              <option value="all">Todo el Mes</option>
+                              <option value="1">Semana 1 (1-7)</option>
+                              <option value="2">Semana 2 (8-14)</option>
+                              <option value="3">Semana 3 (15-21)</option>
+                              <option value="4">Semana 4 (22+)</option>
+                          </select>
                         </div>
-                        
-                        {isMonthSelected && (
-                             <div className="relative group w-full sm:w-56 animate-in slide-in-from-left-2 duration-300">
-                                <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-slate-400">
-                                    <ListFilter size={14} />
-                                </div>
-                                <select 
-                                    value={weekRange} 
-                                    onChange={(e) => setWeekRange(e.target.value as WeekRange)}
-                                    className="w-full bg-slate-800 text-indigo-200 text-xs font-bold py-2.5 px-4 pr-10 rounded-xl outline-none hover:bg-slate-700 transition-colors cursor-pointer border border-indigo-500/30 focus:border-indigo-500 appearance-none uppercase tracking-wide shadow-sm"
-                                >
-                                    <option value="all">Todo el Mes</option>
-                                    <option value="1">Semana 1 (1-7)</option>
-                                    <option value="2">Semana 2 (8-14)</option>
-                                    <option value="3">Semana 3 (15-21)</option>
-                                    <option value="4">Semana 4 (22+)</option>
-                                </select>
-                             </div>
-                        )}
-                    </div>
-                </div>
+                  )}
+              </div>
+          </div>
 
-                {!stats ? (
-                    <div className="flex flex-col items-center justify-center py-16 text-center space-y-4 bg-slate-900/20 rounded-3xl border border-slate-800/50 border-dashed animate-in fade-in">
-                        <div className="opacity-30 text-6xl grayscale filter">🐸</div>
-                        <div className="space-y-1">
-                            <p className="text-slate-400 font-bold text-sm">Nada por aquí...</p>
-                            <p className="text-slate-500 text-xs italic">"No hay lore registrado en este periodo."</p>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4">
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                            
-                            {/* Summary + Pie */}
-                            <div className="flex flex-col gap-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="bg-slate-700/50 p-4 rounded-2xl border border-slate-600 flex flex-col justify-center items-center text-center">
-                                        <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Días</span>
-                                        <span className="text-3xl font-black text-white">{stats.totalDays}</span>
-                                    </div>
-                                    <div className="bg-slate-700/50 p-4 rounded-2xl border border-slate-600 flex flex-col justify-center items-center text-center">
-                                        <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Media</span>
-                                        <div className="flex items-baseline gap-1">
-                                            <span className="text-3xl font-black" style={{ color: stats.average >= 5 ? '#22c55e' : stats.average >= 3 ? '#eab308' : '#ef4444' }}>
-                                                {stats.average.toFixed(1)}
-                                            </span>
-                                            <span className="text-xs text-slate-500 font-bold">/ 6</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="bg-slate-900/50 p-5 rounded-3xl border border-slate-700 flex-1 flex flex-col">
-                                    <h3 className="text-slate-400 font-black text-xs uppercase mb-2 tracking-widest flex items-center gap-2">
-                                        <PieChartIcon size={14} /> Distribución
-                                    </h3>
-                                    <div className="flex-1 min-h-[160px] relative flex items-center justify-center">
-                                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
-                                            <img 
-                                                src={PEPE_ASSETS.CENTER_IMG} 
-                                                alt="Pepe Breath"
-                                                className="w-16 h-16 object-contain opacity-90"
-                                                style={{ animation: 'pepe-breath 3s ease-in-out infinite' }}
-                                            />
-                                            <style>{`
-                                            @keyframes pepe-breath {
-                                                0%, 100% { transform: scale(0.95); opacity: 0.8; }
-                                                50% { transform: scale(1.05); opacity: 1; }
-                                            }
-                                            `}</style>
-                                        </div>
-
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <PieChart>
-                                                <Pie data={stats.pieData} innerRadius={55} outerRadius={75} dataKey="value" paddingAngle={5} stroke="none">
-                                                {stats.pieData.map((e, i) => <Cell key={i} fill={e.color} stroke="none" />)}
-                                                </Pie>
-                                                <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: 'none', borderRadius: '12px' }} itemStyle={{ color: '#fff' }} />
-                                            </PieChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-x-2 gap-y-1 mt-2">
-                                        {stats.pieData.map(d => (
-                                        <div key={d.name} className="flex items-center justify-between text-xs font-bold">
-                                            <div className="flex items-center gap-1.5 text-slate-300">
-                                            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: d.color }} />
-                                            <span>{d.name}</span>
-                                            </div>
-                                            <span className="text-slate-500">{d.value}</span>
-                                        </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* ATOMIC JUDGE SECTION */}
-                            <JudgeSection 
-                                loadingAi={loadingAi}
-                                aiAnalysis={aiAnalysis}
-                                errorAi={errorAi}
-                                loadingText={loadingText}
-                                loadingImage={loadingImage}
-                                onAskPepe={askPepe}
-                                onReset={resetVerdict}
-                                rangeLabel={getRangeLabel()}
-                            />
-                        </div>
-
-                        {/* ATOMIC EVOLUTION CHARTS */}
-                        <div className="bg-slate-900/50 p-6 rounded-3xl border border-slate-700 overflow-hidden w-full">
-                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                                <h3 className="text-slate-400 font-black text-xs uppercase tracking-widest flex items-center gap-2">
-                                    <TrendingUp size={14} /> Evolución de Vibra ({getRangeLabel()})
-                                </h3>
-                                <div className="flex flex-wrap items-center gap-4">
-                                    <div className="flex items-center gap-1 bg-slate-800 p-1 rounded-xl border border-slate-700">
-                                        <button onClick={() => setChartType('bar')} className={`p-1.5 rounded-lg transition-all ${chartType === 'bar' ? 'bg-indigo-500 text-white shadow-lg' : 'text-slate-500 hover:text-white hover:bg-slate-700'}`} title="Barras Diarias"><BarChart3 size={14} /></button>
-                                        <button onClick={() => setChartType('area')} className={`p-1.5 rounded-lg transition-all ${chartType === 'area' ? 'bg-indigo-500 text-white shadow-lg' : 'text-slate-500 hover:text-white hover:bg-slate-700'}`} title="Área"><Waves size={14} /></button>
-                                        <button onClick={() => setChartType('radar')} className={`p-1.5 rounded-lg transition-all ${chartType === 'radar' ? 'bg-indigo-500 text-white shadow-lg' : 'text-slate-500 hover:text-white hover:bg-slate-700'}`} title="Radar Semanal"><Hexagon size={14} /></button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="w-full h-80 md:h-96">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <EvolutionCharts 
-                                        type={chartType} 
-                                        lineData={stats.lineData} 
-                                        radarData={stats.radarData} 
-                                    />
-                                </ResponsiveContainer>
-                            </div>
-                        </div>
-                    </div>
-                )}
-              </>
+          {!stats ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center space-y-4 bg-slate-900/20 rounded-3xl border border-slate-800/50 border-dashed animate-in fade-in">
+                  <div className="opacity-30 text-6xl grayscale filter">🐸</div>
+                  <div className="space-y-1">
+                      <p className="text-slate-400 font-bold text-sm">Nada por aquí...</p>
+                      <p className="text-slate-500 text-xs italic">"No hay lore registrado en este periodo."</p>
+                  </div>
+              </div>
           ) : (
-            <AchievementsList unlockedIds={unlockedIds} />
+              <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                      
+                      {/* Summary + Pie */}
+                      <div className="flex flex-col gap-4">
+                          <div className="grid grid-cols-2 gap-4">
+                              <div className="bg-slate-700/50 p-4 rounded-2xl border border-slate-600 flex flex-col justify-center items-center text-center">
+                                  <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Días</span>
+                                  <span className="text-3xl font-black text-white">{stats.totalDays}</span>
+                              </div>
+                              <div className="bg-slate-700/50 p-4 rounded-2xl border border-slate-600 flex flex-col justify-center items-center text-center">
+                                  <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Media</span>
+                                  <div className="flex items-baseline gap-1">
+                                      <span className="text-3xl font-black" style={{ color: stats.average >= 5 ? '#22c55e' : stats.average >= 3 ? '#eab308' : '#ef4444' }}>
+                                          {stats.average.toFixed(1)}
+                                      </span>
+                                      <span className="text-xs text-slate-500 font-bold">/ 6</span>
+                                  </div>
+                              </div>
+                          </div>
+
+                          <div className="bg-slate-900/50 p-5 rounded-3xl border border-slate-700 flex-1 flex flex-col">
+                              <h3 className="text-slate-400 font-black text-xs uppercase mb-2 tracking-widest flex items-center gap-2">
+                                  <PieChartIcon size={14} /> Distribución
+                              </h3>
+                              <div className="flex-1 min-h-[160px] relative flex items-center justify-center">
+                                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+                                      <img 
+                                          src={PEPE_ASSETS.CENTER_IMG} 
+                                          alt="Pepe Breath"
+                                          className="w-16 h-16 object-contain opacity-90"
+                                          style={{ animation: 'pepe-breath 3s ease-in-out infinite' }}
+                                      />
+                                      <style>{`
+                                      @keyframes pepe-breath {
+                                          0%, 100% { transform: scale(0.95); opacity: 0.8; }
+                                          50% { transform: scale(1.05); opacity: 1; }
+                                      }
+                                      `}</style>
+                                  </div>
+
+                                  <ResponsiveContainer width="100%" height="100%">
+                                      <PieChart>
+                                          <Pie data={stats.pieData} innerRadius={55} outerRadius={75} dataKey="value" paddingAngle={5} stroke="none">
+                                          {stats.pieData.map((e, i) => <Cell key={i} fill={e.color} stroke="none" />)}
+                                          </Pie>
+                                          <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: 'none', borderRadius: '12px' }} itemStyle={{ color: '#fff' }} />
+                                      </PieChart>
+                                  </ResponsiveContainer>
+                              </div>
+                              <div className="grid grid-cols-2 gap-x-2 gap-y-1 mt-2">
+                                  {stats.pieData.map(d => (
+                                  <div key={d.name} className="flex items-center justify-between text-xs font-bold">
+                                      <div className="flex items-center gap-1.5 text-slate-300">
+                                      <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: d.color }} />
+                                      <span>{d.name}</span>
+                                      </div>
+                                      <span className="text-slate-500">{d.value}</span>
+                                  </div>
+                                  ))}
+                              </div>
+                          </div>
+                      </div>
+
+                      {/* ATOMIC JUDGE SECTION */}
+                      <JudgeSection 
+                          loadingAi={loadingAi}
+                          aiAnalysis={aiAnalysis}
+                          errorAi={errorAi}
+                          loadingText={loadingText}
+                          loadingImage={loadingImage}
+                          onAskPepe={askPepe}
+                          onReset={resetVerdict}
+                          rangeLabel={getRangeLabel()}
+                      />
+                  </div>
+
+                  {/* ATOMIC EVOLUTION CHARTS */}
+                  <div className="bg-slate-900/50 p-6 rounded-3xl border border-slate-700 overflow-hidden w-full">
+                      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                          <h3 className="text-slate-400 font-black text-xs uppercase tracking-widest flex items-center gap-2">
+                              <TrendingUp size={14} /> Evolución de Vibra ({getRangeLabel()})
+                          </h3>
+                          <div className="flex flex-wrap items-center gap-4">
+                              <div className="flex items-center gap-1 bg-slate-800 p-1 rounded-xl border border-slate-700">
+                                  <button onClick={() => setChartType('bar')} className={`p-1.5 rounded-lg transition-all ${chartType === 'bar' ? 'bg-indigo-500 text-white shadow-lg' : 'text-slate-500 hover:text-white hover:bg-slate-700'}`} title="Barras Diarias"><BarChart3 size={14} /></button>
+                                  <button onClick={() => setChartType('area')} className={`p-1.5 rounded-lg transition-all ${chartType === 'area' ? 'bg-indigo-500 text-white shadow-lg' : 'text-slate-500 hover:text-white hover:bg-slate-700'}`} title="Área"><Waves size={14} /></button>
+                                  <button onClick={() => setChartType('radar')} className={`p-1.5 rounded-lg transition-all ${chartType === 'radar' ? 'bg-indigo-500 text-white shadow-lg' : 'text-slate-500 hover:text-white hover:bg-slate-700'}`} title="Radar Semanal"><Hexagon size={14} /></button>
+                              </div>
+                          </div>
+                      </div>
+                      <div className="w-full h-80 md:h-96">
+                          <ResponsiveContainer width="100%" height="100%">
+                              <EvolutionCharts 
+                                  type={chartType} 
+                                  lineData={stats.lineData} 
+                                  radarData={stats.radarData} 
+                              />
+                          </ResponsiveContainer>
+                      </div>
+                  </div>
+              </div>
           )}
 
         </div>

@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 export enum MoodLevel {
@@ -36,4 +37,10 @@ export interface Achievement {
   icon: React.ElementType;
   condition: (data: YearData) => boolean;
   color: string;
+}
+
+// Nueva interfaz para persistencia con fecha
+export interface UnlockedAchievement {
+  id: string;
+  unlockedAt: number | null; // Timestamp (null para logros migrados/legado)
 }
