@@ -39,8 +39,8 @@ export interface Achievement {
   color: string;
 }
 
-// Nueva interfaz para persistencia con fecha
+// Interfaz actualizada para persistencia con fecha obligatoria (o null para legacy muy antiguo)
 export interface UnlockedAchievement {
   id: string;
-  unlockedAt: number | null; // Timestamp (null para logros migrados/legado)
+  unlockedAt: number; // Timestamp de cuando se consiguió
 }

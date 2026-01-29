@@ -10,34 +10,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Racha de 7 días. Has completado tu primera Era (Taylor\'s Version).',
     icon: Flame,
     color: '#f97316', // Orange
-    condition: (data: YearData) => {
-        const dates = Object.keys(data).sort();
-        if (dates.length < 7) return false;
-        
-        let maxStreak = 0;
-        let currentStreak = 0;
-        
-        for (let i = 0; i < dates.length; i++) {
-            if (i === 0) {
-                currentStreak = 1;
-                continue;
-            }
-            const prev = new Date(dates[i-1]);
-            const curr = new Date(dates[i]);
-            const diffTime = Math.abs(curr.getTime() - prev.getTime());
-            // Use Math.round to handle DST (23h or 25h days) correctly
-            const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-            
-            if (diffDays === 1) {
-                currentStreak++;
-            } else {
-                maxStreak = Math.max(maxStreak, currentStreak);
-                currentStreak = 1;
-            }
-        }
-        maxStreak = Math.max(maxStreak, currentStreak);
-        return maxStreak >= 7;
-    }
+    condition: (data: YearData) => checkStreak(data, 7)
   },
   {
     id: 'writer_10',
@@ -45,9 +18,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Escribe notas en 10 días. "I remember it all too well".',
     icon: BookOpen,
     color: '#ef4444', // Red (Taylor's Red)
-    condition: (data: YearData) => {
-        return Object.values(data).filter(d => d.note && d.note.trim().length > 5).length >= 10;
-    }
+    condition: (data: YearData) => Object.values(data).filter(d => d.note && d.note.trim().length > 5).length >= 10
   },
   {
     id: 'legendary_5',
@@ -55,9 +26,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Consigue 5 días Legendarios. ¡Es un Shiny! ✨ (Probabilidad 1/4096).',
     icon: Crown,
     color: '#fbbf24', // Gold/Yellow
-    condition: (data: YearData) => {
-        return Object.values(data).filter(d => d.level === MoodLevel.Legendary).length >= 5;
-    }
+    condition: (data: YearData) => Object.values(data).filter(d => d.level === MoodLevel.Legendary).length >= 5
   },
   {
     id: 'sadge_5',
@@ -65,9 +34,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: '5 días Sadge. Estas heridas no sanarán (Linkin Park Tribute).',
     icon: Skull,
     color: '#94a3b8', // Slate (Grey/Dark)
-    condition: (data: YearData) => {
-        return Object.values(data).filter(d => d.level === MoodLevel.Sadge).length >= 5;
-    }
+    condition: (data: YearData) => Object.values(data).filter(d => d.level === MoodLevel.Sadge).length >= 5
   },
   {
     id: 'month_warrior',
@@ -75,9 +42,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: '20 días registrados. Tienes el mapa tatuado en la piel. "Have a little faith".',
     icon: Map, // Prison Break Blueprints/Map
     color: '#60a5fa', // Blueish/Grey
-    condition: (data: YearData) => {
-        return Object.keys(data).length >= 20;
-    }
+    condition: (data: YearData) => Object.keys(data).length >= 20
   },
   {
     id: 'balanced',
@@ -85,9 +50,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: '5 días Normales. Ese es mi sitio. En un estado de equilibrio perfecto.',
     icon: Atom, // Updated to Atom for science/nerd reference
     color: '#84cc16', // Lime
-    condition: (data: YearData) => {
-         return Object.values(data).filter(d => d.level === MoodLevel.Normal).length >= 5;
-    }
+    condition: (data: YearData) => Object.values(data).filter(d => d.level === MoodLevel.Normal).length >= 5
   },
 
   // --- INTERMEDIATE (Pop Culture) ---
@@ -98,23 +61,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'De Sadge/Rage a Legendario. ¿Por qué nos caemos, Bruce? Para aprender a levantarnos.',
     icon: TrendingUp,
     color: '#10b981', // Emerald
-    condition: (data: YearData) => {
-        const dates = Object.keys(data).sort();
-        if (dates.length < 2) return false;
-        
-        for (let i = 0; i < dates.length - 1; i++) {
-            const current = data[dates[i]].level;
-            const next = data[dates[i+1]].level;
-            const prevDate = new Date(dates[i]);
-            const nextDate = new Date(dates[i+1]);
-            const diffDays = Math.round(Math.abs(nextDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
-
-            if (diffDays === 1 && (current === MoodLevel.Rage || current === MoodLevel.Sadge) && next === MoodLevel.Legendary) {
-                return true;
-            }
-        }
-        return false;
-    }
+    condition: (data: YearData) => checkPattern(data, [MoodLevel.Sadge, MoodLevel.Legendary]) || checkPattern(data, [MoodLevel.Rage, MoodLevel.Legendary])
   },
   {
     id: 'its_over',
@@ -122,23 +69,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'De Legendario a Sadge. Why\'d you have to go and make things so complicated? (Avril).',
     icon: TrendingDown,
     color: '#be123c', // Rose
-    condition: (data: YearData) => {
-        const dates = Object.keys(data).sort();
-        if (dates.length < 2) return false;
-        
-        for (let i = 0; i < dates.length - 1; i++) {
-            const current = data[dates[i]].level;
-            const next = data[dates[i+1]].level;
-            const prevDate = new Date(dates[i]);
-            const nextDate = new Date(dates[i+1]);
-            const diffDays = Math.round(Math.abs(nextDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
-
-            if (diffDays === 1 && current === MoodLevel.Legendary && (next === MoodLevel.Rage || next === MoodLevel.Sadge)) {
-                return true;
-            }
-        }
-        return false;
-    }
+    condition: (data: YearData) => checkPattern(data, [MoodLevel.Legendary, MoodLevel.Sadge]) || checkPattern(data, [MoodLevel.Legendary, MoodLevel.Rage])
   },
   {
     id: 'mucho_texto',
@@ -146,9 +77,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Nota > 140 caracteres. Pagaste el verificado para escribir hilos bíblicos.',
     icon: Twitter,
     color: '#3b82f6', // Blue
-    condition: (data: YearData) => {
-        return Object.values(data).some(d => d.note && d.note.length > 140);
-    }
+    condition: (data: YearData) => Object.values(data).some(d => d.note && d.note.length > 140)
   },
   {
     id: 'harrys_code',
@@ -156,28 +85,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: '5 días seguidos con el mismo mood exacto. Sigues el código al pie de la letra. Don\'t get caught.',
     icon: Fingerprint,
     color: '#0ea5e9', // Cyan/Blue Dexter Style
-    condition: (data: YearData) => {
-        const dates = Object.keys(data).sort();
-        if (dates.length < 5) return false;
-        
-        let currentStreak = 1;
-        let maxStreak = 1;
-
-        for (let i = 1; i < dates.length; i++) {
-            const prevDate = new Date(dates[i-1]);
-            const currDate = new Date(dates[i]);
-            const diffDays = Math.round(Math.abs(currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
-            
-            // Chequear que sean consecutivos Y que tengan el mismo nivel
-            if (diffDays === 1 && data[dates[i]].level === data[dates[i-1]].level) {
-                currentStreak++;
-            } else {
-                currentStreak = 1;
-            }
-            maxStreak = Math.max(maxStreak, currentStreak);
-        }
-        return maxStreak >= 5;
-    }
+    condition: (data: YearData) => checkSameMoodStreak(data, 5)
   },
   {
     id: 'toxic_waste',
@@ -185,30 +93,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: '3 días Rage seguidos. El reloj está sonando... Estás en el Upside Down.',
     icon: Clock, // Updated to Clock for Vecna/Stranger Things
     color: '#ef4444', // Red
-    condition: (data: YearData) => {
-         const dates = Object.keys(data).sort();
-         let toxicStreak = 0;
-         let maxToxic = 0;
-         
-         for (let i = 0; i < dates.length; i++) {
-             const level = data[dates[i]].level;
-             if (level === MoodLevel.Rage) {
-                 if (i > 0) {
-                      const prev = new Date(dates[i-1]);
-                      const curr = new Date(dates[i]);
-                      const diffDays = Math.round(Math.abs(curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
-                      if (diffDays === 1) toxicStreak++;
-                      else toxicStreak = 1;
-                 } else {
-                    toxicStreak = 1;
-                 }
-             } else {
-                toxicStreak = 0;
-             }
-             maxToxic = Math.max(maxToxic, toxicStreak);
-         }
-         return maxToxic >= 3;
-    }
+    condition: (data: YearData) => checkStreakWithCondition(data, 3, (d) => d.level === MoodLevel.Rage)
   },
   {
     id: 'wagmi',
@@ -216,10 +101,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: '3 días Legendarios acumulados. WAGMI. Stonks only go up.',
     icon: Rocket,
     color: '#06b6d4', // Cyan
-    condition: (data: YearData) => {
-         // Changed from streak logic to total count to enable easy unlocking from imported history
-         return Object.values(data).filter(d => d.level === MoodLevel.Legendary).length >= 3;
-    }
+    condition: (data: YearData) => Object.values(data).filter(d => d.level === MoodLevel.Legendary).length >= 3
   },
   {
     id: 'ghost_mode',
@@ -249,31 +131,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Registra 4 estados de ánimo DIFERENTES en 4 días seguidos. "Introduce a little anarchy".',
     icon: Smile,
     color: '#a855f7', // Joker Purple
-    condition: (data: YearData) => {
-        const dates = Object.keys(data).sort();
-        if (dates.length < 4) return false;
-        
-        for (let i = 0; i < dates.length - 3; i++) {
-            // Tomamos una ventana de 4 días
-            const slice = [dates[i], dates[i+1], dates[i+2], dates[i+3]];
-            
-            // 1. Verificar que los 4 días sean consecutivos entre sí
-            const isConsecutive = slice.every((date, idx) => {
-                if (idx === 0) return true;
-                const prev = new Date(slice[idx-1]);
-                const curr = new Date(date);
-                const diffDays = Math.round(Math.abs(curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
-                return diffDays === 1;
-            });
-
-            if (isConsecutive) {
-                // 2. Verificar que los 4 moods sean únicos (Set size === 4)
-                const moods = new Set(slice.map(d => data[d].level));
-                if (moods.size === 4) return true;
-            }
-        }
-        return false;
-    }
+    condition: (data: YearData) => checkUniqueMoodsInWindow(data, 4)
   },
   {
     id: 'man_of_steel',
@@ -281,30 +139,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Racha de 10 días invencible (Normal o superior). El sol amarillo te da poder.',
     icon: ShieldCheck,
     color: '#3b82f6', // Superman Blue
-    condition: (data: YearData) => {
-        const dates = Object.keys(data).sort();
-        let streak = 0;
-        let maxStreak = 0;
-        
-        for (let i = 0; i < dates.length; i++) {
-             const level = data[dates[i]].level;
-             if (level >= MoodLevel.Normal) { // Normal, MoiBiens, Legendary
-                 if (i > 0) {
-                      const prev = new Date(dates[i-1]);
-                      const curr = new Date(dates[i]);
-                      const diffDays = Math.round(Math.abs(curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
-                      if (diffDays === 1) streak++;
-                      else streak = 1;
-                 } else {
-                    streak = 1;
-                 }
-             } else {
-                streak = 0;
-             }
-             maxStreak = Math.max(maxStreak, streak);
-         }
-         return maxStreak >= 10;
-    }
+    condition: (data: YearData) => checkStreakWithCondition(data, 10, (d) => d.level >= MoodLevel.Normal)
   },
   {
     id: 'dark_knight',
@@ -316,13 +151,9 @@ export const ACHIEVEMENTS: Achievement[] = [
         try {
             const isEco = localStorage.getItem('pepe_eco_mode') === 'true';
             const wasUnlocked = localStorage.getItem('pepe_ach_dark_knight_unlocked') === 'true';
-            
-            // Si está activo ahora y no estaba guardado, lo guardamos para siempre
             if (isEco && !wasUnlocked) {
                  localStorage.setItem('pepe_ach_dark_knight_unlocked', 'true');
             }
-            
-            // Retorna true si está activo AHORA o si ya fue desbloqueado ANTES
             return isEco || wasUnlocked;
         } catch(e) { return false; }
     }
@@ -361,9 +192,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Escribe una nota profunda (>200 caracteres) en un día Triste. "Instead of going under...".',
     icon: Waves,
     color: '#0ea5e9', // Blue/Cyan mix
-    condition: (data: YearData) => {
-        return Object.values(data).some(d => d.level === MoodLevel.Sadge && d.note && d.note.length > 200);
-    }
+    condition: (data: YearData) => Object.values(data).some(d => d.level === MoodLevel.Sadge && d.note && d.note.length > 200)
   },
   {
     id: 'dark_passenger',
@@ -371,27 +200,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: '3 días "Normales" (La Máscara) seguidos de 1 día de "Rage". Tonight\'s the night.',
     icon: Droplets, // Blood Spatter
     color: '#9f1239', // Blood Red
-    condition: (data: YearData) => {
-        const dates = Object.keys(data).sort();
-        if (dates.length < 4) return false;
-        
-        for (let i = 0; i < dates.length - 3; i++) {
-            const l1 = data[dates[i]].level;
-            const l2 = data[dates[i+1]].level;
-            const l3 = data[dates[i+2]].level;
-            const l4 = data[dates[i+3]].level;
-
-            // Pattern: Normal -> Normal -> Normal -> Rage
-            if (l1 === MoodLevel.Normal && l2 === MoodLevel.Normal && l3 === MoodLevel.Normal && l4 === MoodLevel.Rage) {
-                 const d1 = new Date(dates[i]);
-                 const d4 = new Date(dates[i+3]);
-                 const diffDays = Math.round(Math.abs(d4.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
-                 // Si hay 3 días de diferencia entre el primero y el cuarto, son consecutivos (0,1,2,3)
-                 if (diffDays === 3) return true;
-            }
-        }
-        return false;
-    }
+    condition: (data: YearData) => checkSpecificPattern(data, [MoodLevel.Normal, MoodLevel.Normal, MoodLevel.Normal, MoodLevel.Rage])
   },
   {
     id: 'talk_no_jutsu',
@@ -406,23 +215,15 @@ export const ACHIEVEMENTS: Achievement[] = [
         for (let i = 0; i < dates.length - 1; i++) {
             const d1 = data[dates[i]];
             const d2 = data[dates[i+1]];
-            
             const prev = new Date(dates[i]);
             const curr = new Date(dates[i+1]);
             const diffDays = Math.round(Math.abs(curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
 
-            // Verificar consecutividad (1 día de diferencia)
             if (diffDays === 1) {
-                // Día 1: Malo (Rage/Sadge) Y Nota > 20 chars
                 const isBadDay = d1.level === MoodLevel.Rage || d1.level === MoodLevel.Sadge;
                 const hasSignificantNote = d1.note && d1.note.length > 20;
-                
-                // Día 2: Bueno (Normal o mejor)
                 const isGoodNext = d2.level >= MoodLevel.Normal;
-
-                if (isBadDay && hasSignificantNote && isGoodNext) {
-                    return true;
-                }
+                if (isBadDay && hasSignificantNote && isGoodNext) return true;
             }
         }
         return false;
@@ -434,23 +235,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Pasas de "Moi Biens" a "Rage" de un día para otro. Has despertado al demonio interior (BFMV).',
     icon: Swords,
     color: '#ef4444', // Red
-    condition: (data: YearData) => {
-        const dates = Object.keys(data).sort();
-        if (dates.length < 2) return false;
-        
-        for (let i = 0; i < dates.length - 1; i++) {
-            const current = data[dates[i]].level;
-            const next = data[dates[i+1]].level;
-            const prevDate = new Date(dates[i]);
-            const nextDate = new Date(dates[i+1]);
-            const diffDays = Math.round(Math.abs(nextDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
-
-            if (diffDays === 1 && (current === MoodLevel.MoiBiens || current === MoodLevel.Legendary) && next === MoodLevel.Rage) {
-                return true;
-            }
-        }
-        return false;
-    }
+    condition: (data: YearData) => checkPattern(data, [MoodLevel.MoiBiens, MoodLevel.Rage]) || checkPattern(data, [MoodLevel.Legendary, MoodLevel.Rage])
   },
   {
     id: 'tears_dont_fall',
@@ -461,17 +246,13 @@ export const ACHIEVEMENTS: Achievement[] = [
     condition: (data: YearData) => {
         const dates = Object.keys(data).sort();
         if (dates.length < 2) return false;
-        
         for (let i = 0; i < dates.length - 1; i++) {
-            const current = data[dates[i]].level;
-            const next = data[dates[i+1]].level;
-            const prevDate = new Date(dates[i]);
-            const nextDate = new Date(dates[i+1]);
-            const diffDays = Math.round(Math.abs(nextDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
-
-            if (diffDays === 1 && current === MoodLevel.Sadge && next >= MoodLevel.Normal) {
-                return true;
-            }
+            const d1 = data[dates[i]];
+            const d2 = data[dates[i+1]];
+            const prev = new Date(dates[i]);
+            const curr = new Date(dates[i+1]);
+            const diffDays = Math.round(Math.abs(curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
+            if (diffDays === 1 && d1.level === MoodLevel.Sadge && d2.level >= MoodLevel.Normal) return true;
         }
         return false;
     }
@@ -497,30 +278,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: '5 días "Meh" seguidos. I\'ve become so numb, I can\'t feel you there. (LP).',
     icon: CloudRain,
     color: '#eab308', // Yellow
-    condition: (data: YearData) => {
-         const dates = Object.keys(data).sort();
-         let streak = 0;
-         let maxStreak = 0;
-         
-         for (let i = 0; i < dates.length; i++) {
-             const level = data[dates[i]].level;
-             if (level === MoodLevel.Regular) {
-                 if (i > 0) {
-                      const prev = new Date(dates[i-1]);
-                      const curr = new Date(dates[i]);
-                      const diffDays = Math.round(Math.abs(curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
-                      if (diffDays === 1) streak++;
-                      else streak = 1;
-                 } else {
-                    streak = 1;
-                 }
-             } else {
-                streak = 0;
-             }
-             maxStreak = Math.max(maxStreak, streak);
-         }
-         return maxStreak >= 5;
-    }
+    condition: (data: YearData) => checkStreakWithCondition(data, 5, (d) => d.level === MoodLevel.Regular)
   },
   {
     id: 'one_step_closer',
@@ -528,24 +286,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Pasas de "Sadge" a "Rage" directamente. Justo al borde de romperte. (LP)',
     icon: Activity,
     color: '#ef4444', // Red
-    condition: (data: YearData) => {
-         const dates = Object.keys(data).sort();
-         if (dates.length < 2) return false;
-         
-         for (let i = 0; i < dates.length - 1; i++) {
-            const current = data[dates[i]].level;
-            const next = data[dates[i+1]].level;
-            const prevDate = new Date(dates[i]);
-            const nextDate = new Date(dates[i+1]);
-            const diffDays = Math.round(Math.abs(nextDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
-            
-            // De Triste a Furioso directamente
-            if (diffDays === 1 && current === MoodLevel.Sadge && next === MoodLevel.Rage) {
-                return true;
-            }
-         }
-         return false;
-    }
+    condition: (data: YearData) => checkPattern(data, [MoodLevel.Sadge, MoodLevel.Rage])
   },
   {
     id: 'reputation',
@@ -553,10 +294,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: '13 días de baja vibra (Rage/Sadge) en total. "I\'ve got a list of names and yours is in red".',
     icon: Scroll, // Updated to Scroll (List of names)
     color: '#94a3b8', // Metallic/Silver
-    condition: (data: YearData) => {
-        const badDays = Object.values(data).filter(d => d.level === MoodLevel.Rage || d.level === MoodLevel.Sadge).length;
-        return badDays >= 13;
-    }
+    condition: (data: YearData) => Object.values(data).filter(d => d.level === MoodLevel.Rage || d.level === MoodLevel.Sadge).length >= 13
   },
   {
     id: 'cruel_summer',
@@ -580,29 +318,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: '3 días Tristes (Sadge) seguidos. Sientes que nunca volverás a ser feliz.',
     icon: CloudFog, // Updated to CloudFog (Mist) for Dementors
     color: '#64748b', // Slate
-    condition: (data: YearData) => {
-         const dates = Object.keys(data).sort();
-         let streak = 0;
-         let maxStreak = 0;
-         for (let i = 0; i < dates.length; i++) {
-             const level = data[dates[i]].level;
-             if (level === MoodLevel.Sadge) {
-                 if (i > 0) {
-                      const prev = new Date(dates[i-1]);
-                      const curr = new Date(dates[i]);
-                      const diffDays = Math.round(Math.abs(curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
-                      if (diffDays === 1) streak++;
-                      else streak = 1;
-                 } else {
-                    streak = 1;
-                 }
-             } else {
-                streak = 0;
-             }
-             maxStreak = Math.max(maxStreak, streak);
-         }
-         return maxStreak >= 3;
-    }
+    condition: (data: YearData) => checkStreakWithCondition(data, 3, (d) => d.level === MoodLevel.Sadge)
   },
   {
     id: 'horcruxes',
@@ -610,9 +326,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Registra 7 días de Furia (Rage) en total. Has dividido tu alma demasiadas veces.',
     icon: Gem,
     color: '#16a34a', // Green (Slytherinish)
-    condition: (data: YearData) => {
-        return Object.values(data).filter(d => d.level === MoodLevel.Rage).length >= 7;
-    }
+    condition: (data: YearData) => Object.values(data).filter(d => d.level === MoodLevel.Rage).length >= 7
   },
   {
     id: 'pump_it',
@@ -623,20 +337,15 @@ export const ACHIEVEMENTS: Achievement[] = [
     condition: (data: YearData) => {
         const dates = Object.keys(data).sort();
         if (dates.length < 3) return false;
-
         for (let i = 0; i < dates.length - 2; i++) {
             const l1 = data[dates[i]].level;
             const l2 = data[dates[i+1]].level;
             const l3 = data[dates[i+2]].level;
-            
             const d1 = new Date(dates[i]);
             const d2 = new Date(dates[i+1]);
             const d3 = new Date(dates[i+2]);
-            
-            // Verificar consecutividad
             const diff1 = Math.round(Math.abs(d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
             const diff2 = Math.round(Math.abs(d3.getTime() - d2.getTime()) / (1000 * 60 * 60 * 24));
-
             if (diff1 === 1 && diff2 === 1) {
                 if (l1 < l2 && l2 < l3) return true;
             }
@@ -670,9 +379,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: '5 días "Moi Biens" (Verde). Has vencido al líder del gimnasio de tipo Planta.',
     icon: Leaf,
     color: '#4ade80', // Light Green
-    condition: (data: YearData) => {
-        return Object.values(data).filter(d => d.level === MoodLevel.MoiBiens).length >= 5;
-    }
+    condition: (data: YearData) => Object.values(data).filter(d => d.level === MoodLevel.MoiBiens).length >= 5
   },
   {
     id: 'vibe_check',
@@ -680,33 +387,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Racha de 14 días. I was supposed to be sent away but they forgot to come and get me (Taylor).',
     icon: CheckCircle2,
     color: '#6366f1', // Indigo
-    condition: (data: YearData) => {
-        const dates = Object.keys(data).sort();
-        if (dates.length < 14) return false;
-        
-        let maxStreak = 0;
-        let currentStreak = 0;
-        
-        for (let i = 0; i < dates.length; i++) {
-            if (i === 0) {
-                currentStreak = 1;
-                continue;
-            }
-            const prev = new Date(dates[i-1]);
-            const curr = new Date(dates[i]);
-            const diffTime = Math.abs(curr.getTime() - prev.getTime());
-            const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-            
-            if (diffDays === 1) {
-                currentStreak++;
-            } else {
-                maxStreak = Math.max(maxStreak, currentStreak);
-                currentStreak = 1;
-            }
-        }
-        maxStreak = Math.max(maxStreak, currentStreak);
-        return maxStreak >= 14;
-    }
+    condition: (data: YearData) => checkStreak(data, 14)
   },
 
   // --- LEGENDARY / ENDGAME ---
@@ -717,9 +398,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: '300 días registrados. Gotta Catch \'Em All! Eres el Campeón de la Liga.',
     icon: Gamepad2,
     color: '#f59e0b', // Amber
-    condition: (data: YearData) => {
-        return Object.keys(data).length >= 300;
-    }
+    condition: (data: YearData) => Object.keys(data).length >= 300
   },
   {
     id: 'professional_yapper',
@@ -727,9 +406,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Notas en 50 días. Eres el Presidente del Departamento de Poetas Torturados.',
     icon: Feather, // Updated to Feather/Quill
     color: '#ec4899', // Pink
-    condition: (data: YearData) => {
-        return Object.values(data).filter(d => d.note && d.note.trim().length > 5).length >= 50;
-    }
+    condition: (data: YearData) => Object.values(data).filter(d => d.note && d.note.trim().length > 5).length >= 50
   },
   {
     id: 'the_1_percent',
@@ -737,33 +414,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Racha de 30 días. Has caído en una de mis bromas clásicas (o eres un genio constante).',
     icon: Medal,
     color: '#fbbf24', // Gold
-    condition: (data: YearData) => {
-        const dates = Object.keys(data).sort();
-        if (dates.length < 30) return false;
-        
-        let maxStreak = 0;
-        let currentStreak = 0;
-        
-        for (let i = 0; i < dates.length; i++) {
-            if (i === 0) {
-                currentStreak = 1;
-                continue;
-            }
-            const prev = new Date(dates[i-1]);
-            const curr = new Date(dates[i]);
-            const diffTime = Math.abs(curr.getTime() - prev.getTime());
-            const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-            
-            if (diffDays === 1) {
-                currentStreak++;
-            } else {
-                maxStreak = Math.max(maxStreak, currentStreak);
-                currentStreak = 1;
-            }
-        }
-        maxStreak = Math.max(maxStreak, currentStreak);
-        return maxStreak >= 30;
-    }
+    condition: (data: YearData) => checkStreak(data, 30)
   },
   {
     id: 'the_avatar',
@@ -807,11 +458,171 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: '182 días registrados. All the small things... true care, truth brings.',
     icon: Music,
     color: '#f97316', // Orange
-    condition: (data: YearData) => {
-        return Object.keys(data).length >= 182;
-    }
+    condition: (data: YearData) => Object.keys(data).length >= 182
   }
 ];
+
+// --- HELPER FUNCTIONS ---
+
+function checkStreak(data: YearData, requiredStreak: number): boolean {
+    const dates = Object.keys(data).sort();
+    if (dates.length < requiredStreak) return false;
+    
+    let currentStreak = 0;
+    let maxStreak = 0;
+    
+    for (let i = 0; i < dates.length; i++) {
+        if (i === 0) {
+            currentStreak = 1;
+            continue;
+        }
+        const prev = new Date(dates[i-1]);
+        const curr = new Date(dates[i]);
+        const diffDays = Math.round(Math.abs(curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (diffDays === 1) {
+            currentStreak++;
+        } else {
+            maxStreak = Math.max(maxStreak, currentStreak);
+            currentStreak = 1;
+        }
+    }
+    maxStreak = Math.max(maxStreak, currentStreak);
+    return maxStreak >= requiredStreak;
+}
+
+function checkStreakWithCondition(data: YearData, requiredStreak: number, predicate: (d: any) => boolean): boolean {
+    const dates = Object.keys(data).sort();
+    let currentStreak = 0;
+    let maxStreak = 0;
+    
+    for (let i = 0; i < dates.length; i++) {
+        const entry = data[dates[i]];
+        if (predicate(entry)) {
+            if (i > 0) {
+                const prev = new Date(dates[i-1]);
+                const curr = new Date(dates[i]);
+                const diffDays = Math.round(Math.abs(curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
+                if (diffDays === 1) currentStreak++;
+                else currentStreak = 1;
+            } else {
+                currentStreak = 1;
+            }
+        } else {
+            currentStreak = 0;
+        }
+        maxStreak = Math.max(maxStreak, currentStreak);
+    }
+    return maxStreak >= requiredStreak;
+}
+
+function checkPattern(data: YearData, sequence: MoodLevel[]): boolean {
+    const dates = Object.keys(data).sort();
+    if (dates.length < sequence.length) return false;
+    
+    for (let i = 0; i <= dates.length - sequence.length; i++) {
+        let match = true;
+        for (let j = 0; j < sequence.length; j++) {
+            if (j > 0) {
+                const prev = new Date(dates[i+j-1]);
+                const curr = new Date(dates[i+j]);
+                const diffDays = Math.round(Math.abs(curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
+                if (diffDays !== 1) { match = false; break; }
+            }
+            if (data[dates[i+j]].level !== sequence[j]) { match = false; break; }
+        }
+        if (match) return true;
+    }
+    return false;
+}
+
+function checkSameMoodStreak(data: YearData, length: number): boolean {
+    const dates = Object.keys(data).sort();
+    if (dates.length < length) return false;
+    let currentStreak = 1;
+    let maxStreak = 1;
+
+    for (let i = 1; i < dates.length; i++) {
+        const prevDate = new Date(dates[i-1]);
+        const currDate = new Date(dates[i]);
+        const diffDays = Math.round(Math.abs(currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (diffDays === 1 && data[dates[i]].level === data[dates[i-1]].level) {
+            currentStreak++;
+        } else {
+            currentStreak = 1;
+        }
+        maxStreak = Math.max(maxStreak, currentStreak);
+    }
+    return maxStreak >= length;
+}
+
+function checkUniqueMoodsInWindow(data: YearData, windowSize: number): boolean {
+    const dates = Object.keys(data).sort();
+    if (dates.length < windowSize) return false;
+    
+    for (let i = 0; i <= dates.length - windowSize; i++) {
+        const slice = dates.slice(i, i + windowSize);
+        const isConsecutive = slice.every((date, idx) => {
+            if (idx === 0) return true;
+            const prev = new Date(slice[idx-1]);
+            const curr = new Date(date);
+            const diffDays = Math.round(Math.abs(curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
+            return diffDays === 1;
+        });
+
+        if (isConsecutive) {
+            const moods = new Set(slice.map(d => data[d].level));
+            if (moods.size === windowSize) return true;
+        }
+    }
+    return false;
+}
+
+function checkSpecificPattern(data: YearData, sequence: MoodLevel[]): boolean {
+    return checkPattern(data, sequence);
+}
+
+// --- HISTORICAL REPLAY LOGIC ---
+
+/**
+ * Calculates the exact date an achievement was unlocked by replaying history.
+ * Iterates through all recorded dates chronologically, building a partial
+ * view of the data, and checks the condition at each step.
+ */
+export const calculateHistoricalUnlockDate = (achievement: Achievement, fullData: YearData): number => {
+    // 1. Get all chronological dates
+    const dates = Object.keys(fullData).sort();
+    
+    // 2. Accumulator for partial history
+    const partialData: YearData = {};
+
+    // 3. Replay history day by day
+    for (const date of dates) {
+        partialData[date] = fullData[date]; // Add current day to history
+        
+        // 4. Check if condition is met with this partial data
+        if (achievement.condition(partialData)) {
+             // Found the trigger date!
+             const [y, m, d] = date.split('-').map(Number);
+             const resultDate = new Date(y, m - 1, d);
+             
+             // 5. Assign a realistic "night time" (22:00 - 23:59)
+             // Use a pseudo-random seed based on date to be deterministic but varied
+             const seed = y + m + d;
+             const randomMinutes = seed % 60;
+             const randomHour = 22 + (seed % 2); // 22 or 23
+             
+             resultDate.setHours(randomHour);
+             resultDate.setMinutes(randomMinutes);
+             
+             return resultDate.getTime();
+        }
+    }
+
+    // Fallback: If condition met in fullData but logic failed (shouldn't happen), return now.
+    return Date.now();
+};
 
 export const getUnlockedAchievements = (data: YearData): string[] => {
     return ACHIEVEMENTS.filter(ach => ach.condition(data)).map(ach => ach.id);

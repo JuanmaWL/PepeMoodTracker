@@ -21,13 +21,8 @@ const AchievementsList: React.FC<AchievementsListProps> = ({ unlockedItems }) =>
             
             // Si ambos están desbloqueados, ordenar por fecha (más reciente primero)
             if (unlockA && unlockB) {
-                // Manejar Legacy (null) -> ponerlos al final de los desbloqueados
-                if (unlockA.unlockedAt && unlockB.unlockedAt) {
-                    return unlockB.unlockedAt - unlockA.unlockedAt;
-                }
-                if (unlockA.unlockedAt && !unlockB.unlockedAt) return -1;
-                if (!unlockA.unlockedAt && unlockB.unlockedAt) return 1;
-                return 0; // Ambos legacy
+                // Manejar Legacy (0) -> ponerlos al final de los desbloqueados si hubiera mezcla
+                return unlockB.unlockedAt - unlockA.unlockedAt;
             }
             
             if (unlockA && !unlockB) return -1; // A primero
@@ -37,13 +32,12 @@ const AchievementsList: React.FC<AchievementsListProps> = ({ unlockedItems }) =>
         });
     }, [unlockedItems]);
 
-    const formatDate = (timestamp: number | null) => {
-        if (!timestamp) return 'Legado (Pre-2024)'; // Migrados sin fecha
-        return new Date(timestamp).toLocaleDateString('es-ES', { 
+    const formatDate = (timestamp: number) => {
+        if (!timestamp) return 'Antiguamente (Legacy)'; // Migrados sin fecha válida
+        return `Conseguido el ${new Date(timestamp).toLocaleDateString('es-ES', { 
             day: 'numeric', 
-            month: 'short', 
-            year: 'numeric' 
-        });
+            month: 'long'
+        })}`;
     };
 
     return (

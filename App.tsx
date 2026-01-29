@@ -10,7 +10,7 @@ import { YearData, DayData, MoodLevel, Achievement, UnlockedAchievement } from '
 import { STORAGE_KEY, BANNER_SLIDES, PEPE_ASSETS } from './constants';
 import { Plus, Trash2, AlertTriangle, Sliders, Loader2, BatteryCharging, FileJson, Save, Trophy, HelpCircle, BookOpen, BoxSelect } from 'lucide-react';
 import SoundManager from './utils/sounds';
-import { ACHIEVEMENTS, getUnlockedAchievements } from './utils/gamification';
+import { ACHIEVEMENTS, getUnlockedAchievements, calculateHistoricalUnlockDate } from './utils/gamification';
 
 const MoodModal = React.lazy(() => import('./components/MoodModal'));
 const StatsModal = React.lazy(() => import('./components/StatsModal'));
@@ -176,6 +176,7 @@ const App: React.FC = () => {
     }
   }, []);
 
+  // --- INITIAL DATA LOAD & ACHIEVEMENT MIGRATION ---
   useEffect(() => {
     SoundManager.preload();
     
@@ -184,6 +185,21 @@ const App: React.FC = () => {
     if (!hasSeenTutorial) {
         setTimeout(() => setIsWelcomeModalOpen(true), 1000);
     }
+
+    // Load Data
+    const storedData = localStorage.getItem(STORAGE_KEY);
+    if (storedData) {
+        try { 
+            const parsedData = JSON.parse(storedData);
+            setYearData(parsedData); 
+        } catch (e) { console.error(e); }
+    }
+
+    // Load Config
+    const storedEco = localStorage.getItem('pepe_eco_mode');
+    if (storedEco) setEcoMode(storedEco === 'true');
+    const storedPixel = localStorage.getItem('pepe_pixel_mode');
+    if (storedPixel) setPixelMode(storedPixel === 'true');
 
     // --- MIGRATION LOGIC (V1 String[] -> V2 UnlockedAchievement[]) ---
     try {
@@ -198,7 +214,7 @@ const App: React.FC = () => {
                 const parsedV1 = JSON.parse(storedV1) as string[];
                 const migrated: UnlockedAchievement[] = parsedV1.map(id => ({
                     id,
-                    unlockedAt: null // Legacy marker
+                    unlockedAt: 0 // Legacy marker
                 }));
                 setUnlockedAchievements(migrated);
                 localStorage.setItem(ACHIEVEMENTS_STORAGE_KEY_V2, JSON.stringify(migrated));
@@ -219,26 +235,37 @@ const App: React.FC = () => {
       }, 700);
   }, []);
 
-  // --- MAIN ACHIEVEMENT LOGIC ---
+  // --- MAIN ACHIEVEMENT LOGIC (HISTORICAL REPLAY) ---
   useEffect(() => {
     if (isFirstLoad.current) {
         isFirstLoad.current = false;
         return;
     }
 
-    // 1. Calculate current valid IDs based on YearData
+    // 1. Calculate currently valid IDs based on YearData (current state)
     const currentValidIDs = getUnlockedAchievements(yearData);
     
-    // 2. Identify newly unlocked items (present in validIDs but NOT in state)
+    // 2. Identify strictly newly unlocked items (present in validIDs but NOT in state)
     const existingIDs = new Set(unlockedAchievements.map(ua => ua.id));
     const newUnlockIDs = currentValidIDs.filter(id => !existingIDs.has(id));
 
     if (newUnlockIDs.length > 0) {
-        const timestamp = Date.now();
-        const newUnlocksData: UnlockedAchievement[] = newUnlockIDs.map(id => ({
-            id,
-            unlockedAt: timestamp
-        }));
+        
+        // --- KEY FIX: CALCULATE HISTORICAL DATE FOR NEW UNLOCKS ---
+        const newUnlocksData: UnlockedAchievement[] = newUnlockIDs.map(id => {
+            const definition = ACHIEVEMENTS.find(a => a.id === id);
+            let unlockTimestamp = Date.now();
+            
+            // If the achievement exists, we try to find exactly WHEN it happened historically
+            if (definition) {
+                unlockTimestamp = calculateHistoricalUnlockDate(definition, yearData);
+            }
+
+            return {
+                id,
+                unlockedAt: unlockTimestamp
+            };
+        });
 
         // 3. Update State & Storage
         const updatedList = [...unlockedAchievements, ...newUnlocksData];
@@ -260,9 +287,6 @@ const App: React.FC = () => {
             }, 6000);
         }
     }
-    
-    // Note: We deliberately do NOT remove achievements if conditions are lost.
-    // "Once unlocked, always unlocked".
   }, [yearData, unlockedAchievements, triggerHaptic, closeAchievementToast]);
 
 
@@ -430,20 +454,6 @@ const App: React.FC = () => {
   const SUBTITLE = `${currentYear} EDITION`;
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try { setYearData(JSON.parse(stored)); } catch (e) { console.error(e); }
-    }
-    
-    // Cargar config
-    const storedEco = localStorage.getItem('pepe_eco_mode');
-    if (storedEco) setEcoMode(storedEco === 'true');
-    
-    const storedPixel = localStorage.getItem('pepe_pixel_mode');
-    if (storedPixel) setPixelMode(storedPixel === 'true');
-  }, []);
-
-  useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(yearData));
   }, [yearData]);
   
@@ -514,6 +524,10 @@ const App: React.FC = () => {
         if (typeof importedData === 'object' && importedData !== null) {
           triggerHaptic('medium');
           SoundManager.play('success');
+          // Forzar reseteo de logros al importar para recalcular
+          setUnlockedAchievements([]);
+          localStorage.removeItem(ACHIEVEMENTS_STORAGE_KEY_V2);
+          
           setYearData(importedData);
           setIsSettingsOpen(false); // Close modal on success
         }
