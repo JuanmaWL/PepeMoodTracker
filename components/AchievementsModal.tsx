@@ -30,8 +30,8 @@ const AchievementsModal: React.FC<AchievementsModalProps> = ({ isOpen, onClose, 
              <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:32px_32px]"></div>
         </div>
 
-        {/* HEADER */}
-        <div className="p-6 md:p-8 border-b border-white/5 flex flex-col gap-4 bg-slate-900/50 relative z-20 backdrop-blur-xl">
+        {/* HEADER UNIFICADO: LOGROS */}
+        <div className="p-6 md:p-8 border-b border-white/5 flex flex-col gap-4 bg-slate-900/50 relative z-20 backdrop-blur-xl shrink-0">
             <div className="flex justify-between items-center w-full">
                 <div className="flex items-center gap-4">
                     <div className="p-3 bg-gradient-to-br from-amber-400 to-orange-600 rounded-2xl text-white shadow-lg shadow-amber-500/20 animate-pulse relative group">
@@ -44,7 +44,7 @@ const AchievementsModal: React.FC<AchievementsModalProps> = ({ isOpen, onClose, 
                         </h2>
                         <div className="flex items-center gap-2 mt-1.5">
                             <span className="px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20 text-[10px] text-amber-300 font-bold uppercase tracking-widest flex items-center gap-1.5">
-                                <Medal size={10} />
+                                <Medal size={12} />
                                 {unlockedItems.length} Desbloqueados
                             </span>
                         </div>
@@ -52,7 +52,7 @@ const AchievementsModal: React.FC<AchievementsModalProps> = ({ isOpen, onClose, 
                 </div>
                 <button 
                     onClick={onClose} 
-                    className="p-3 hover:bg-white/5 rounded-full text-slate-400 hover:text-white transition-colors border border-transparent hover:border-white/10"
+                    className="p-3 hover:bg-white/5 rounded-full text-slate-400 hover:text-white transition-colors border border-transparent hover:border-white/10 shrink-0"
                 >
                     <X size={24} />
                 </button>
