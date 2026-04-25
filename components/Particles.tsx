@@ -152,12 +152,8 @@ const Particles: React.FC<ParticlesProps> = ({ count, enabled, pixelMode = false
     };
 
     const animate = () => {
-      if (document.hidden) {
-        setTimeout(() => {
-             animationFrameId = requestAnimationFrame(animate);
-        }, 100);
-        return;
-      }
+      animationFrameId = requestAnimationFrame(animate);
+      if (document.hidden) return;
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
@@ -165,7 +161,6 @@ const Particles: React.FC<ParticlesProps> = ({ count, enabled, pixelMode = false
         p.update(mouseRef.current.x, mouseRef.current.y);
         p.draw();
       });
-      animationFrameId = requestAnimationFrame(animate);
     };
 
     init();

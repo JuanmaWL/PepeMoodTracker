@@ -180,7 +180,12 @@ const CloudModal: React.FC<CloudModalProps> = ({ isOpen, onClose, data }) => {
               }
           });
 
-          return { text: bestVariant, value: data.count };
+          return { 
+              text: bestVariant, 
+              value: data.count,
+              animDuration: 3 + (Math.random() * 2), // Pre-calculate random values
+              animDelay: -(Math.random() * 5)
+          };
       })
       .filter(item => item.value >= 1)
       .sort((a, b) => b.value - a.value);
@@ -353,8 +358,8 @@ const CloudModal: React.FC<CloudModalProps> = ({ isOpen, onClose, data }) => {
                       opacity: selectedWord && !isSelected ? 0.3 : 1,
                       transform: isSelected ? 'scale(1.15) translateZ(20px)' : `scale(1) translateZ(0px)`,
                       boxShadow: isSelected || isTop ? `0 0 15px ${style.glow.replace('shadow-', '').replace('/20', '')}` : 'none',
-                      animation: isSelected ? 'none' : `float ${3 + Math.random() * 2}s ease-in-out infinite`,
-                      animationDelay: `${Math.random() * -5}s`
+                      animation: isSelected ? 'none' : `float ${w.animDuration}s ease-in-out infinite`,
+                      animationDelay: `${w.animDelay}s`
                     }}
                   > 
                     {/* Estilos para animación flotante */}

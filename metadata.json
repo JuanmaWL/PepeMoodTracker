@@ -1,5 +1,6 @@
 {
   "name": "PepeMoodYear",
   "description": "A meme-inspired mood tracker featuring Pepe the Frog aesthetics, data visualization, and AI-powered mood analysis.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [],
+  "majorCapabilities": []
 }

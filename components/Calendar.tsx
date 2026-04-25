@@ -22,6 +22,7 @@ interface DayCellProps {
   level: MoodLevel;
   hasNote: boolean;
   isHighlighted: boolean;
+  todayStr: string;
   onClick: (dateStr: string) => void;
   onLongPress: (dateStr: string, x: number, y: number) => void;
 }
@@ -33,6 +34,7 @@ const DayCell = memo(({
   level, 
   hasNote, 
   isHighlighted, 
+  todayStr,
   onClick, 
   onLongPress 
 }: DayCellProps) => {
@@ -42,14 +44,7 @@ const DayCell = memo(({
   const config = MOODS[level];
   const isFilled = level !== MoodLevel.None;
   
-  // Memoizamos el cálculo de "Hoy" para evitar recrear el objeto Date constantemente
-  // Solo nos importa el día/mes/año actual del sistema, no hace falta recalcularlo en cada render de React si no cambia el día.
-  const isToday = useMemo(() => {
-      const today = new Date();
-      return today.getDate() === day && 
-             today.getMonth() === monthIndex && 
-             today.getFullYear() === currentYear;
-  }, [day, monthIndex, currentYear]);
+  const isToday = todayStr === dateStr;
 
   // Refs para gestión de gestos
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -205,7 +200,8 @@ const DayCell = memo(({
     prev.isHighlighted === next.isHighlighted &&
     prev.currentYear === next.currentYear &&
     prev.monthIndex === next.monthIndex && 
-    prev.day === next.day
+    prev.day === next.day &&
+    prev.todayStr === next.todayStr
   );
 });
 
@@ -214,6 +210,12 @@ const Calendar: React.FC<CalendarProps> = memo(({ yearData, onDayClick, onDayLon
   
   // OPTIMIZACIÓN CRÍTICA: Convertir array a Set para búsqueda O(1)
   const highlightedSet = useMemo(() => new Set(highlightedDates), [highlightedDates]);
+
+  // Compute today string once for all DayCells
+  const todayStr = useMemo(() => {
+      const today = new Date();
+      return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  }, []);
 
   const scrollToMonth = (index: number) => {
     const el = document.getElementById(`month-${index}`);
@@ -316,6 +318,7 @@ const Calendar: React.FC<CalendarProps> = memo(({ yearData, onDayClick, onDayLon
                         level={level}
                         hasNote={hasNote}
                         isHighlighted={isHighlighted}
+                        todayStr={todayStr}
                         onClick={onDayClick}
                         onLongPress={onDayLongPress}
                     />

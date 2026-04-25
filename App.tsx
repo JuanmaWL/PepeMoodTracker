@@ -94,12 +94,10 @@ const App: React.FC = () => {
     isActive: boolean;
     dateStr: string | null;
     startPos: { x: number; y: number } | null;
-    currentPos: { x: number; y: number } | null;
   }>({
     isActive: false,
     dateStr: null,
-    startPos: null,
-    currentPos: null
+    startPos: null
   });
   
   const quickLogStateRef = useRef(quickLogState);
@@ -120,9 +118,9 @@ const App: React.FC = () => {
     ];
 
     // Aumentamos cantidad y rango para asegurar cobertura total (especialmente en desktop 256px)
-    return Array.from({ length: 42 }).map((_, i) => ({
+    // Reducido a 24 para optimizar rendimiento en móviles, y agregado will-change.
+    return Array.from({ length: 24 }).map((_, i) => ({
       id: i,
-      // Grid size is 14px. Max width roughly 18.2 cols for w-64. We use 19 to cover edges fully.
       left: Math.floor(Math.random() * 19) * 14, 
       top: Math.floor(Math.random() * 19) * 14,
       color: colors[Math.floor(Math.random() * colors.length)],
@@ -251,175 +249,85 @@ const App: React.FC = () => {
 
     if (newUnlockIDs.length > 0) {
         
-        // --- KEY FIX: CALCULATE HISTORICAL DATE FOR NEW UNLOCKS ---
-        const newUnlocksData: UnlockedAchievement[] = newUnlockIDs.map(id => {
-            const definition = ACHIEVEMENTS.find(a => a.id === id);
-            let unlockTimestamp = Date.now();
+        // --- KEY FIX: CALCULATE HISTORICAL DATE FOR NEW UNLOCKS ASYNC TO PREVENT UI BLOCKING ---
+        setTimeout(() => {
+            const newUnlocksData: UnlockedAchievement[] = newUnlockIDs.map(id => {
+                const definition = ACHIEVEMENTS.find(a => a.id === id);
+                let unlockTimestamp = Date.now();
+                
+                if (definition) {
+                    unlockTimestamp = calculateHistoricalUnlockDate(definition, yearData);
+                }
+
+                return {
+                    id,
+                    unlockedAt: unlockTimestamp
+                };
+            });
+
+            // 3. Update State & Storage
+            const updatedList = [...unlockedAchievements, ...newUnlocksData];
+            setUnlockedAchievements(updatedList);
+            localStorage.setItem(ACHIEVEMENTS_STORAGE_KEY_V2, JSON.stringify(updatedList));
+
+            // 4. Trigger Toast for the FIRST new achievement found
+            const firstNewId = newUnlockIDs[0];
+            const achievementDef = ACHIEVEMENTS.find(ach => ach.id === firstNewId);
             
-            // If the achievement exists, we try to find exactly WHEN it happened historically
-            if (definition) {
-                unlockTimestamp = calculateHistoricalUnlockDate(definition, yearData);
+            if (achievementDef) {
+                if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+                setNewlyUnlocked(achievementDef);
+                setIsClosingToast(false);
+                SoundManager.play('achievement'); 
+                triggerHaptic('heavy');
+                toastTimeoutRef.current = setTimeout(() => {
+                    closeAchievementToast();
+                }, 6000);
             }
-
-            return {
-                id,
-                unlockedAt: unlockTimestamp
-            };
-        });
-
-        // 3. Update State & Storage
-        const updatedList = [...unlockedAchievements, ...newUnlocksData];
-        setUnlockedAchievements(updatedList);
-        localStorage.setItem(ACHIEVEMENTS_STORAGE_KEY_V2, JSON.stringify(updatedList));
-
-        // 4. Trigger Toast for the FIRST new achievement found
-        const firstNewId = newUnlockIDs[0];
-        const achievementDef = ACHIEVEMENTS.find(ach => ach.id === firstNewId);
-        
-        if (achievementDef) {
-            if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
-            setNewlyUnlocked(achievementDef);
-            setIsClosingToast(false);
-            SoundManager.play('achievement'); 
-            triggerHaptic('heavy');
-            toastTimeoutRef.current = setTimeout(() => {
-                closeAchievementToast();
-            }, 6000);
-        }
+        }, 50); // Small delay to let React render and paint first
     }
   }, [yearData, unlockedAchievements, triggerHaptic, closeAchievementToast]);
 
 
-  const handleGlobalMove = useCallback((e: TouchEvent | MouseEvent) => {
-    if (!quickLogStateRef.current.isActive) return;
-    if (e.cancelable) e.preventDefault();
-
-    let clientX, clientY;
-    if ('touches' in e) {
-        clientX = e.touches[0].clientX;
-        clientY = e.touches[0].clientY;
-    } else {
-        clientX = (e as MouseEvent).clientX;
-        clientY = (e as MouseEvent).clientY;
-    }
-
-    setQuickLogState(prev => ({
-        ...prev,
-        currentPos: { x: clientX, y: clientY }
-    }));
-  }, []);
-
-  const handleGlobalEnd = useCallback((e: TouchEvent | MouseEvent) => {
-    if (!quickLogStateRef.current.isActive) return;
-    
+  // handleGlobalEnd ahora recibe la selección final desde QuickLogMenu
+  const handleQuickLogComplete = useCallback((result: { type: 'MOOD'|'DELETE'|null, data?: any }) => {
     const state = quickLogStateRef.current;
     
-    if (state.startPos && state.currentPos && state.dateStr) {
-        // ACTUALIZACIÓN DE LÓGICA DE DETECCIÓN PARA COINCIDIR CON QUICKLOGMENU.TSX
-        const SAFE_MARGIN_X = 160;
-        const SAFE_MARGIN_TOP = 190;
-        const SAFE_MARGIN_BOTTOM = 140;
-
-        const clampedX = Math.min(Math.max(state.startPos.x, SAFE_MARGIN_X), window.innerWidth - SAFE_MARGIN_X);
-        const clampedY = Math.min(Math.max(state.startPos.y, SAFE_MARGIN_TOP), window.innerHeight - SAFE_MARGIN_BOTTOM);
-        
-        const menuCenter = { x: clampedX, y: clampedY };
-
-        const dx = state.currentPos.x - menuCenter.x;
-        const dy = state.currentPos.y - menuCenter.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        
-        // Zona muerta central de 15px para evitar clicks accidentales
-        if (dist >= 15) { 
-            // DELETE ZONE CHECK
-            if (dy > 40 && Math.abs(dx) < 60) {
-                 SoundManager.play('trash');
-                 triggerHaptic('heavy');
-                 setYearData(prev => {
-                    const { [state.dateStr!]: _, ...rest } = prev;
-                    return rest;
-                 });
-            } else {
-                const orderedMoods = [
-                    MoodLevel.Rage,
-                    MoodLevel.Sadge,
-                    MoodLevel.Regular,
-                    MoodLevel.Normal,
-                    MoodLevel.MoiBiens,
-                    MoodLevel.Legendary
-                ];
-                let closestMood: MoodLevel | null = null;
-                let minDist = Number.MAX_VALUE;
-                const RADIUS = 110; // Sincronizado con QuickLogMenu
-                const totalSpan = 180;
-                const step = totalSpan / (orderedMoods.length - 1);
-                
-                orderedMoods.forEach((mood, index) => {
-                     const angleDeg = 180 - (index * step);
-                     const rad = angleDeg * (Math.PI / 180);
-                     const ix = Math.cos(rad) * RADIUS;
-                     const iy = -Math.sin(rad) * RADIUS;
-                     const distToIcon = Math.sqrt(Math.pow(dx - ix, 2) + Math.pow(dy - iy, 2));
-                     
-                     // Umbral de detección aumentado a 60 para coincidir con QuickLogMenu
-                     if (distToIcon < 60 && distToIcon < minDist) {
-                         minDist = distToIcon;
-                         closestMood = mood;
-                     }
-                });
-    
-                if (closestMood) {
-                    SoundManager.play('success');
-                    triggerHaptic('medium');
-                    
-                    setYearData(prev => ({
-                        ...prev,
-                        [state.dateStr!]: {
-                            level: closestMood as MoodLevel,
-                            note: prev[state.dateStr!]?.note || '' 
-                        }
-                    }));
-                }
-            }
+    if (state.dateStr && result) {
+        if (result.type === 'DELETE') {
+             SoundManager.play('trash');
+             triggerHaptic('heavy');
+             setYearData(prev => {
+                const { [state.dateStr!]: _, ...rest } = prev;
+                return rest;
+             });
+        } else if (result.type === 'MOOD' && result.data) {
+             SoundManager.play('success');
+             triggerHaptic('medium');
+             
+             setYearData(prev => ({
+                 ...prev,
+                 [state.dateStr!]: {
+                     level: result.data as MoodLevel,
+                     note: prev[state.dateStr!]?.note || '' 
+                 }
+             }));
         }
     }
 
     setQuickLogState({
         isActive: false,
         dateStr: null,
-        startPos: null,
-        currentPos: null
+        startPos: null
     });
-
   }, [triggerHaptic]);
-
-  useEffect(() => {
-    if (quickLogState.isActive) {
-        window.addEventListener('touchmove', handleGlobalMove, { passive: false });
-        window.addEventListener('touchend', handleGlobalEnd);
-        window.addEventListener('mousemove', handleGlobalMove);
-        window.addEventListener('mouseup', handleGlobalEnd);
-    } else {
-        window.removeEventListener('touchmove', handleGlobalMove);
-        window.removeEventListener('touchend', handleGlobalEnd);
-        window.removeEventListener('mousemove', handleGlobalMove);
-        window.removeEventListener('mouseup', handleGlobalEnd);
-    }
-    return () => {
-        window.removeEventListener('touchmove', handleGlobalMove);
-        window.removeEventListener('touchend', handleGlobalEnd);
-        window.removeEventListener('mousemove', handleGlobalMove);
-        window.removeEventListener('mouseup', handleGlobalEnd);
-    };
-  }, [quickLogState.isActive, handleGlobalMove, handleGlobalEnd]);
 
   const handleDayLongPress = useCallback((dateStr: string, x: number, y: number) => {
       SoundManager.play('pop'); 
       setQuickLogState({
           isActive: true,
           dateStr: dateStr,
-          startPos: { x, y },
-          currentPos: { x, y }
+          startPos: { x, y }
       });
   }, []);
 
@@ -558,7 +466,7 @@ const App: React.FC = () => {
       <QuickLogMenu 
         isOpen={quickLogState.isActive}
         startPos={quickLogState.startPos}
-        currentPos={quickLogState.currentPos}
+        onComplete={handleQuickLogComplete}
       />
 
       {/* ENHANCED ACHIEVEMENT TOAST NOTIFICATION */}
@@ -736,7 +644,8 @@ const App: React.FC = () => {
                                 backgroundColor: p.color,
                                 animation: `pixel-breath ${p.duration}s infinite ${p.delay}s`,
                                 boxShadow: `0 0 10px ${p.color}`,
-                                opacity: 0 // Start hidden
+                                opacity: 0, // Start hidden
+                                willChange: 'transform, opacity'
                             }}
                         />
                     ))}

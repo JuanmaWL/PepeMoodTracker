@@ -1,5 +1,5 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Trash2, X } from 'lucide-react';
 import { MOODS } from '../constants';
 import { MoodLevel } from '../types';
@@ -7,7 +7,7 @@ import { MoodLevel } from '../types';
 interface QuickLogMenuProps {
   isOpen: boolean;
   startPos: { x: number; y: number } | null;
-  currentPos: { x: number; y: number } | null;
+  onComplete: (result: { type: 'MOOD'|'DELETE'|null, data?: any }) => void;
 }
 
 // Configuración visual
@@ -23,7 +23,19 @@ const SAFE_MARGIN_TOP = 190;
 // Bottom: 90 (Delete pos) + 30 (Size) + 20 (Padding) = 140 aprox
 const SAFE_MARGIN_BOTTOM = 140;
 
-const QuickLogMenu: React.FC<QuickLogMenuProps> = ({ isOpen, startPos, currentPos }) => {
+const QuickLogMenu: React.FC<QuickLogMenuProps> = ({ isOpen, startPos, onComplete }) => {
+  const [currentPos, setCurrentPos] = useState<{x: number, y: number} | null>(null);
+  
+  useEffect(() => {
+    if (isOpen && startPos) {
+      setCurrentPos(startPos);
+    } else {
+      setCurrentPos(null);
+    }
+  }, [isOpen, startPos]);
+
+  const activeSelectionRef = useRef<{ type: 'MOOD'|'DELETE'|null, data?: any } | null>(null);
+
   if (!isOpen || !startPos) return null;
 
   // CLAMPING INTELIGENTE:
@@ -90,6 +102,43 @@ const QuickLogMenu: React.FC<QuickLogMenuProps> = ({ isOpen, startPos, currentPo
     
     return null;
   }, [menuCenter, currentPos]);
+
+  useEffect(() => {
+    activeSelectionRef.current = activeSelection;
+  }, [activeSelection]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    
+    const handleMove = (e: MouseEvent | TouchEvent) => {
+        if (e.cancelable) e.preventDefault();
+        let clientX, clientY;
+        if ('touches' in e && e.touches.length > 0) {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+        } else {
+            clientX = (e as MouseEvent).clientX;
+            clientY = (e as MouseEvent).clientY;
+        }
+        setCurrentPos({ x: clientX, y: clientY });
+    };
+
+    const handleEnd = (e: MouseEvent | TouchEvent) => {
+        onComplete(activeSelectionRef.current || { type: null });
+    };
+
+    window.addEventListener('touchmove', handleMove, { passive: false });
+    window.addEventListener('touchend', handleEnd);
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleEnd);
+
+    return () => {
+        window.removeEventListener('touchmove', handleMove);
+        window.removeEventListener('touchend', handleEnd);
+        window.removeEventListener('mousemove', handleMove);
+        window.removeEventListener('mouseup', handleEnd);
+    };
+  }, [isOpen, onComplete]);
 
   const cursorColor = activeSelection ? activeSelection.color : 'rgba(255,255,255,0.5)'; 
   const step = 180 / (orderedMoods.length - 1);

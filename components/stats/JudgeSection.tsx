@@ -39,6 +39,19 @@ const JudgeSection: React.FC<JudgeSectionProps> = ({
   const judgeRef = useRef<HTMLDivElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
 
+  // Background particles memoized
+  const backgroundParticles = useMemo(() => {
+     return [...Array(10)].map((_, i) => ({
+        id: i,
+        top: `${Math.random() * 100}%`,
+        left: `${Math.random() * 100}%`,
+        width: `${Math.random() * 100 + 50}px`,
+        height: `${Math.random() * 100 + 50}px`,
+        animationDuration: `${Math.random() * 3 + 2}s`,
+        animationDelay: `${Math.random() * 2}s`
+     }));
+  }, []);
+
   useEffect(() => {
     // Random judge image on mount
     setJudgeImage(JUDGE_POOL[Math.floor(Math.random() * JUDGE_POOL.length)]);
@@ -201,14 +214,14 @@ const JudgeSection: React.FC<JudgeSectionProps> = ({
                     <img src={PEPE_ASSETS.COUNCIL} className="w-full h-full object-cover grayscale" />
             </div>
 
-            {[...Array(10)].map((_, i) => (
-                <div key={i} className="absolute rounded-full bg-indigo-500/10 blur-xl animate-pulse" style={{
-                        top: `${Math.random() * 100}%`,
-                        left: `${Math.random() * 100}%`,
-                        width: `${Math.random() * 100 + 50}px`,
-                        height: `${Math.random() * 100 + 50}px`,
-                        animationDuration: `${Math.random() * 3 + 2}s`,
-                        animationDelay: `${Math.random() * 2}s`
+            {backgroundParticles.map((p) => (
+                <div key={p.id} className="absolute rounded-full bg-indigo-500/10 blur-xl animate-pulse" style={{
+                        top: p.top,
+                        left: p.left,
+                        width: p.width,
+                        height: p.height,
+                        animationDuration: p.animationDuration,
+                        animationDelay: p.animationDelay
                     }}
                 />
             ))}

@@ -1,6 +1,5 @@
 
 import { useState, useCallback, useRef } from 'react';
-import { GoogleGenAI, Type, HarmCategory, HarmBlockThreshold } from "@google/genai";
 import { MOODS, PEPE_ASSETS } from '../constants';
 import { MoodLevel } from '../types';
 import SoundManager from '../utils/sounds';
@@ -29,6 +28,8 @@ interface UsePepeJudgeProps {
   stats: any;
   getRangeLabel: () => string;
 }
+
+let genaiModuleCache: any = null;
 
 export const usePepeJudge = ({ stats, getRangeLabel }: UsePepeJudgeProps) => {
   const [aiAnalysis, setAiAnalysis] = useState<string>("");
@@ -67,7 +68,11 @@ export const usePepeJudge = ({ stats, getRangeLabel }: UsePepeJudgeProps) => {
         if (!stats || stats.totalDays === 0) {
             throw new Error("No hay datos suficientes para juzgarte.");
         }
-
+        
+        if (!genaiModuleCache) {
+            genaiModuleCache = await import("@google/genai");
+        }
+        const { GoogleGenAI, Type, HarmCategory, HarmBlockThreshold } = genaiModuleCache;
         const ai = new GoogleGenAI({ apiKey: apiKey });
 
         // LÓGICA DE FILTRADO PARA EL TRIBUNAL
