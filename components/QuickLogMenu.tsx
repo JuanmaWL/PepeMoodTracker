@@ -36,16 +36,16 @@ const QuickLogMenu: React.FC<QuickLogMenuProps> = ({ isOpen, startPos, onComplet
 
   const activeSelectionRef = useRef<{ type: 'MOOD'|'DELETE'|null, data?: any } | null>(null);
 
-  if (!isOpen || !startPos) return null;
-
   // CLAMPING INTELIGENTE:
   // Aseguramos que el CENTRO del menú siempre esté en una zona donde quepa todo el arco.
   // Si tocas muy al borde, el menú se desplazará hacia adentro, manteniéndose conectado por la línea.
   
-  const menuCenterX = Math.min(Math.max(startPos.x, SAFE_MARGIN_X), window.innerWidth - SAFE_MARGIN_X);
-  const menuCenterY = Math.min(Math.max(startPos.y, SAFE_MARGIN_TOP), window.innerHeight - SAFE_MARGIN_BOTTOM);
-  
-  const menuCenter = { x: menuCenterX, y: menuCenterY };
+  const menuCenter = useMemo(() => {
+      if (!startPos) return null;
+      const menuCenterX = Math.min(Math.max(startPos.x, SAFE_MARGIN_X), window.innerWidth - SAFE_MARGIN_X);
+      const menuCenterY = Math.min(Math.max(startPos.y, SAFE_MARGIN_TOP), window.innerHeight - SAFE_MARGIN_BOTTOM);
+      return { x: menuCenterX, y: menuCenterY };
+  }, [startPos]);
 
   // ORDEN CROMÁTICO (Rojo -> Azul -> Naranja -> Amarillo -> Verde -> Morado)
   const orderedMoods = [
@@ -58,7 +58,7 @@ const QuickLogMenu: React.FC<QuickLogMenuProps> = ({ isOpen, startPos, onComplet
   ];
 
   const activeSelection = useMemo(() => {
-    if (!currentPos) return null;
+    if (!currentPos || !menuCenter) return null;
 
     const dx = currentPos.x - menuCenter.x;
     const dy = currentPos.y - menuCenter.y;
@@ -139,6 +139,8 @@ const QuickLogMenu: React.FC<QuickLogMenuProps> = ({ isOpen, startPos, onComplet
         window.removeEventListener('mouseup', handleEnd);
     };
   }, [isOpen, onComplete]);
+
+  if (!isOpen || !startPos || !menuCenter) return null;
 
   const cursorColor = activeSelection ? activeSelection.color : 'rgba(255,255,255,0.5)'; 
   const step = 180 / (orderedMoods.length - 1);
