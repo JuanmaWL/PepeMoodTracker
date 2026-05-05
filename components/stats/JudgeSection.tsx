@@ -1,5 +1,5 @@
 
-import React, { memo, useState, useEffect, useRef } from 'react';
+import React, { memo, useState, useEffect, useRef, useMemo } from 'react';
 import { Gavel, CalendarRange, ChevronDown, ChevronUp, Loader2, Zap, Skull, Heart, Flame, Sparkles, MessageCircleWarning, PartyPopper, Brain, RefreshCw, Undo2, Quote, Music, Trophy } from 'lucide-react';
 import { PEPE_ASSETS } from '../../constants';
 import { JudgeMood } from '../../hooks/usePepeJudge';
