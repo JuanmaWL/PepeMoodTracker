@@ -11,20 +11,27 @@ const RARITY_ORDER = {
     [Rarity.Common]: 1
 };
 
+const TRANSLATED_RARITIES = {
+    [Rarity.Legendary]: 'Legendario',
+    [Rarity.Epic]: 'Épico',
+    [Rarity.Rare]: 'Raro',
+    [Rarity.Common]: 'Común'
+};
+
 interface AchievementsListProps {
   unlockedItems: UnlockedAchievement[];
 }
 
 type SortOption = 'date' | 'alpha' | 'id';
 type FilterOption = 'all' | 'unlocked' | 'locked';
-type ViewMode = 'grid' | 'list' | 'compact';
+type ViewMode = 'list' | 'compact';
 
 const AchievementsList: React.FC<AchievementsListProps> = ({ unlockedItems }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [sortBy, setSortBy] = useState<SortOption>('date');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
     const [filterBy, setFilterBy] = useState<FilterOption>('all');
-    const [viewMode, setViewMode] = useState<ViewMode>('grid');
+    const [viewMode, setViewMode] = useState<ViewMode>('list');
     const [isFiltersExpanded, setIsFiltersExpanded] = useState(false);
     
     // Filter and Sort logic
@@ -114,12 +121,6 @@ const AchievementsList: React.FC<AchievementsListProps> = ({ unlockedItems }) =>
                     
                     {/* View Switcher - More compact on mobile */}
                     <div className="flex bg-black/40 p-0.5 md:p-1 rounded-xl md:rounded-2xl border border-white/10 shrink-0">
-                        <button 
-                            onClick={() => setViewMode('grid')}
-                            className={`p-1.5 md:p-2 rounded-lg md:rounded-xl transition-all ${viewMode === 'grid' ? 'bg-amber-500 text-white' : 'text-slate-500'}`}
-                        >
-                            <LayoutGrid size={14} className="md:size-[18px]" />
-                        </button>
                         <button 
                             onClick={() => setViewMode('list')}
                             className={`p-1.5 md:p-2 rounded-lg md:rounded-xl transition-all ${viewMode === 'list' ? 'bg-amber-500 text-white' : 'text-slate-500'}`}
@@ -220,28 +221,26 @@ const AchievementsList: React.FC<AchievementsListProps> = ({ unlockedItems }) =>
                 </div>
             </div>
 
-            {/* ACHIEVEMENTS GRID */}
+            {/* ACHIEVEMENTS LIST/COMPACT */}
             <div className={`
                 pb-20 mt-1 transition-all duration-500
-                ${viewMode === 'grid' 
-                    ? 'grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-2 md:gap-6' 
-                    : viewMode === 'list' 
-                        ? 'flex flex-col gap-2 md:gap-4' 
-                        : 'grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3 md:gap-3'}
+                ${viewMode === 'list' 
+                    ? 'flex flex-col gap-3 md:gap-4' 
+                    : 'grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3 md:gap-4'}
             `}>
                  {processedAchievements.length > 0 ? processedAchievements.map((ach) => {
                      const unlockInfo = unlockedItems.find(u => u.id === ach.id);
                      const isUnlocked = !!unlockInfo;
-                     const rarityName = (ach.rarity || Rarity.Common).toUpperCase();
+                     const rarityName = TRANSLATED_RARITIES[ach.rarity || Rarity.Common].toUpperCase();
                      
                      if (viewMode === 'compact') {
                         return (
                             <div 
                                 key={ach.id}
                                 className={`
-                                    aspect-square rounded-2xl md:rounded-3xl border flex flex-col items-center justify-center gap-1 group/mini transition-all duration-300 relative overflow-hidden active:scale-95 touch-manipulation
+                                    aspect-[4/5] rounded-3xl border flex flex-col items-center justify-between p-4 group/compact transition-all duration-300 relative overflow-hidden active:scale-95 touch-manipulation
                                     ${isUnlocked 
-                                        ? 'bg-slate-800/40 border-white/10 hover:scale-105 hover:bg-slate-800/60 shadow-xl' 
+                                        ? 'bg-slate-800/40 border-white/10 hover:bg-slate-800/60 shadow-xl' 
                                         : 'bg-black/20 border-white/5 opacity-40 grayscale'}
                                 `}
                                 style={{
@@ -249,17 +248,30 @@ const AchievementsList: React.FC<AchievementsListProps> = ({ unlockedItems }) =>
                                     borderColor: isUnlocked ? `${ach.color}30` : ''
                                 }}
                             >
-                                <div className="p-1.5 md:p-3 rounded-xl md:rounded-2xl transition-transform duration-500 group-hover/mini:rotate-12 group-active/mini:scale-110" style={{ color: isUnlocked ? ach.color : '#334155', backgroundColor: isUnlocked ? `${ach.color}15` : 'transparent' }}>
-                                    {isUnlocked ? <ach.icon className="size-6 md:size-8" /> : <Lock className="size-5 md:size-6" />}
+                                <div className="mt-2 p-3 md:p-4 rounded-2xl transition-transform duration-500 group-hover/compact:rotate-12 group-active/compact:scale-110" style={{ color: isUnlocked ? ach.color : '#334155', backgroundColor: isUnlocked ? `${ach.color}15` : 'transparent' }}>
+                                    {isUnlocked ? <ach.icon className="size-10 md:size-12" /> : <Lock className="size-8 md:size-10" />}
+                                </div>
+
+                                <div className="text-center w-full mt-auto">
+                                    <span className={`block text-[11px] md:text-sm font-black text-white uppercase tracking-tighter leading-tight mb-1 line-clamp-2 px-1 ${isUnlocked ? '' : 'text-slate-500'}`}>
+                                        {ach.title}
+                                    </span>
+                                    {isUnlocked && (
+                                        <div className="px-2 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-widest inline-block mb-1" style={{ backgroundColor: `${ach.color}20`, color: ach.color }}>
+                                            {rarityName}
+                                        </div>
+                                    )}
                                 </div>
                                 
-                                {/* Info on Mobile Hold / Hover */}
-                                <div className="absolute inset-0 bg-slate-900/95 flex flex-col items-center justify-center p-3 text-center opacity-0 group-hover/mini:opacity-100 group-active/mini:opacity-100 transition-opacity duration-300 pointer-events-none backdrop-blur-md">
-                                    <span className="text-[10px] font-black text-white uppercase tracking-tighter leading-tight mb-1">{ach.title}</span>
-                                    <p className="text-[8px] text-slate-400 font-medium line-clamp-3">{ach.description}</p>
-                                    <div className="mt-2 px-1.5 py-0.5 rounded-full text-[7px] font-bold uppercase tracking-widest" style={{ backgroundColor: `${ach.color}20`, color: ach.color }}>
-                                        {rarityName}
-                                    </div>
+                                {/* Full info on mobile Hover overlay */}
+                                <div className="absolute inset-0 bg-slate-900/95 flex flex-col items-center justify-center p-4 text-center opacity-0 group-hover/compact:opacity-100 transition-opacity duration-300 pointer-events-none backdrop-blur-md">
+                                    <span className="text-sm font-black text-white uppercase tracking-tight mb-2">{ach.title}</span>
+                                    <p className="text-[11px] text-slate-400 font-medium leading-tight mb-3">{ach.description}</p>
+                                    {isUnlocked && (
+                                        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pt-2 border-t border-white/10">
+                                            {formatDate(unlockInfo.unlockedAt)}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         );
@@ -300,97 +312,15 @@ const AchievementsList: React.FC<AchievementsListProps> = ({ unlockedItems }) =>
                                     </p>
                                 </div>
                                 {isUnlocked && (
-                                    <div className="hidden sm:flex flex-col items-end shrink-0 pl-4 border-l border-white/5">
-                                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1">Obtenido</span>
-                                        <span className="text-[10px] font-bold text-slate-400">{formatDate(unlockInfo.unlockedAt)}</span>
+                                    <div className="flex flex-col items-end shrink-0 pl-3 md:pl-4 border-l border-white/5">
+                                        <span className="text-[8px] md:text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1">Obtenido</span>
+                                        <span className="text-[9px] md:text-[10px] font-bold text-slate-400 whitespace-nowrap">{formatDate(unlockInfo.unlockedAt)}</span>
                                     </div>
                                 )}
                             </div>
                         );
                      }
-                     
-                     return (
-                         <div 
-                            key={ach.id} 
-                            className={`
-                                relative p-3 md:p-6 rounded-[1.5rem] md:rounded-[2.5rem] border transition-all duration-700 flex flex-col gap-3 md:gap-5 overflow-hidden group/card
-                                ${isUnlocked 
-                                    ? 'bg-slate-800/20 border-white/10 hover:border-amber-500/30 hover:bg-slate-800/40 md:hover:-translate-y-2 shadow-lg' 
-                                    : 'bg-black/20 border-white/5 opacity-40 grayscale hover:opacity-100 hover:grayscale-0'
-                                }
-                            `}
-                            style={{
-                                boxShadow: isUnlocked ? `0 20px 40px -15px ${ach.color}20` : 'none'
-                            }}
-                         >
-                            {/* Background Effects for Unlocked */}
-                            {isUnlocked && (
-                                <>
-                                    <div 
-                                        className="absolute inset-0 opacity-[0.03] pointer-events-none group-hover/card:opacity-[0.08] transition-opacity duration-700"
-                                        style={{ background: `radial-gradient(circle at top right, ${ach.color}, transparent 70%)` }}
-                                    />
-                                    <div className="absolute inset-0 -translate-x-full group-hover/card:animate-[shimmer_2s_linear] bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none z-10" />
-                                </>
-                            )}
-
-                            <div className="flex items-start gap-3 md:gap-5 relative z-20">
-                                {/* Icon Box */}
-                                <div 
-                                    className={`
-                                        w-12 h-12 md:w-16 md:h-16 rounded-[1.2rem] md:rounded-[1.5rem] flex items-center justify-center shrink-0 transition-all duration-700 md:group-hover/card:scale-110 md:group-hover/card:rotate-6
-                                        relative
-                                    `}
-                                    style={{ 
-                                        backgroundColor: isUnlocked ? `${ach.color}20` : '#0f172a', 
-                                        color: isUnlocked ? ach.color : '#334155',
-                                        border: isUnlocked ? `1px solid ${ach.color}40` : '1px solid #1e293b'
-                                    }}
-                                >
-                                    {isUnlocked && (
-                                        <div 
-                                            className="absolute inset-0 blur-xl opacity-40 animate-pulse pointer-events-none"
-                                            style={{ backgroundColor: ach.color }}
-                                        />
-                                    )}
-                                    {isUnlocked ? <ach.icon className="size-6 md:size-8 drop-shadow-[0_0_10px_rgba(255,255,255,0.3)] filter relative z-10" /> : <Lock size={20} className="md:size-6 relative z-10" />}
-                                </div>
-
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-1.5 md:gap-2 mb-1 md:mb-2">
-                                        <h4 className={`text-xs md:text-base font-black uppercase tracking-tighter leading-none ${isUnlocked ? 'text-white' : 'text-slate-500'}`}>
-                                            {ach.title}
-                                        </h4>
-                                        <span className="px-1 md:px-1.5 py-0.5 rounded text-[7px] md:text-[8px] font-bold uppercase tracking-widest border" style={{ backgroundColor: isUnlocked ? `${ach.color}10` : 'transparent', color: isUnlocked ? ach.color : '#334155', borderColor: isUnlocked ? `${ach.color}20` : '#1e293b' }}>
-                                            {rarityName}
-                                        </span>
-                                    </div>
-                                    <p className="text-[10px] md:text-xs text-slate-400 font-medium leading-tight md:leading-relaxed group-hover/card:text-slate-200 transition-colors line-clamp-2 md:line-clamp-3">
-                                        {ach.description}
-                                    </p>
-                                </div>
-                            </div>
-
-                            {/* Footer: Date & Status */}
-                            {isUnlocked && (
-                                <div className="mt-auto pt-4 border-t border-white/5 flex justify-between items-center relative z-20">
-                                    <div className="flex items-center gap-2 opacity-60 group-hover/card:opacity-100 transition-opacity">
-                                        <CalendarCheck size={14} className="text-slate-400" />
-                                        <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
-                                            {formatDate(unlockInfo.unlockedAt)}
-                                        </span>
-                                    </div>
-                                    <div 
-                                        className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5"
-                                        style={{ backgroundColor: `${ach.color}20`, color: ach.color, border: `1px solid ${ach.color}30` }}
-                                    >
-                                        <div className="w-1.5 h-1.5 rounded-full animate-pulse shadow-[0_0_8px_currentColor]" style={{ backgroundColor: ach.color }} />
-                                        Completado
-                                    </div>
-                                </div>
-                            )}
-                         </div>
-                     );
+                     return null;
                  }) : (
                      <div className="col-span-full py-24 flex flex-col items-center justify-center text-center gap-6 bg-slate-900/40 rounded-[3.5rem] border border-dashed border-white/5 backdrop-blur-sm shadow-inner shadow-black/20">
                          <div className="p-8 bg-slate-800/80 rounded-full text-slate-700 shadow-xl border border-white/5 relative group">
