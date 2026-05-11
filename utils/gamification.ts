@@ -1,5 +1,5 @@
 
-import { Achievement, YearData, MoodLevel } from '../types';
+import { Achievement, YearData, MoodLevel, Rarity } from '../types';
 import { Flame, BookOpen, Crown, Skull, Zap, TrendingUp, TrendingDown, Gem, Bomb, Rocket, Ghost, Cat, Leaf, Activity, CheckCircle2, Mic2, Medal, Music, Gamepad2, Twitter, Waves, Sun, CloudRain, Shield, Atom, Clock, CloudFog, Dna, Feather, HandMetal, Scroll, Map, Smile, ShieldCheck, Moon, Swords, Droplets, Sprout, Fingerprint } from 'lucide-react';
 
 export const ACHIEVEMENTS: Achievement[] = [
@@ -10,7 +10,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Racha de 7 días. Has completado tu primera Era (Taylor\'s Version).',
     icon: Flame,
     color: '#f97316', // Orange
-    condition: (data: YearData) => checkStreak(data, 7)
+    condition: (data: YearData) => checkStreak(data, 7),
+    rarity: Rarity.Common
   },
   {
     id: 'writer_10',
@@ -18,7 +19,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Escribe notas en 10 días. "I remember it all too well".',
     icon: BookOpen,
     color: '#ef4444', // Red (Taylor's Red)
-    condition: (data: YearData) => Object.values(data).filter(d => d.note && d.note.trim().length > 5).length >= 10
+    condition: (data: YearData) => Object.values(data).filter(d => d.note && d.note.trim().length > 5).length >= 10,
+    rarity: Rarity.Common
   },
   {
     id: 'legendary_5',
@@ -26,7 +28,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Consigue 5 días Legendarios. ¡Es un Shiny! ✨ (Probabilidad 1/4096).',
     icon: Crown,
     color: '#fbbf24', // Gold/Yellow
-    condition: (data: YearData) => Object.values(data).filter(d => d.level === MoodLevel.Legendary).length >= 5
+    condition: (data: YearData) => Object.values(data).filter(d => d.level === MoodLevel.Legendary).length >= 5,
+    rarity: Rarity.Rare
   },
   {
     id: 'sadge_5',
@@ -34,7 +37,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: '5 días Sadge. Estas heridas no sanarán (Linkin Park Tribute).',
     icon: Skull,
     color: '#94a3b8', // Slate (Grey/Dark)
-    condition: (data: YearData) => Object.values(data).filter(d => d.level === MoodLevel.Sadge).length >= 5
+    condition: (data: YearData) => Object.values(data).filter(d => d.level === MoodLevel.Sadge).length >= 5,
+    rarity: Rarity.Rare
   },
   {
     id: 'month_warrior',
@@ -42,7 +46,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: '20 días registrados. Tienes el mapa tatuado en la piel. "Have a little faith".',
     icon: Map, // Prison Break Blueprints/Map
     color: '#60a5fa', // Blueish/Grey
-    condition: (data: YearData) => Object.keys(data).length >= 20
+    condition: (data: YearData) => Object.keys(data).length >= 20,
+    rarity: Rarity.Rare
   },
   {
     id: 'balanced',
@@ -50,7 +55,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: '5 días Normales. Ese es mi sitio. En un estado de equilibrio perfecto.',
     icon: Atom, // Updated to Atom for science/nerd reference
     color: '#84cc16', // Lime
-    condition: (data: YearData) => Object.values(data).filter(d => d.level === MoodLevel.Normal).length >= 5
+    condition: (data: YearData) => Object.values(data).filter(d => d.level === MoodLevel.Normal).length >= 5,
+    rarity: Rarity.Common
   },
 
   // --- INTERMEDIATE (Pop Culture) ---
@@ -61,7 +67,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'De Sadge/Rage a Legendario. ¿Por qué nos caemos, Bruce? Para aprender a levantarnos.',
     icon: TrendingUp,
     color: '#10b981', // Emerald
-    condition: (data: YearData) => checkPattern(data, [MoodLevel.Sadge, MoodLevel.Legendary]) || checkPattern(data, [MoodLevel.Rage, MoodLevel.Legendary])
+    condition: (data: YearData) => checkPattern(data, [MoodLevel.Sadge, MoodLevel.Legendary]) || checkPattern(data, [MoodLevel.Rage, MoodLevel.Legendary]),
+    rarity: Rarity.Epic
   },
   {
     id: 'its_over',
@@ -69,7 +76,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'De Legendario a Sadge. Why\'d you have to go and make things so complicated? (Avril).',
     icon: TrendingDown,
     color: '#be123c', // Rose
-    condition: (data: YearData) => checkPattern(data, [MoodLevel.Legendary, MoodLevel.Sadge]) || checkPattern(data, [MoodLevel.Legendary, MoodLevel.Rage])
+    condition: (data: YearData) => checkPattern(data, [MoodLevel.Legendary, MoodLevel.Sadge]) || checkPattern(data, [MoodLevel.Legendary, MoodLevel.Rage]),
+    rarity: Rarity.Epic
   },
   {
     id: 'mucho_texto',
@@ -77,7 +85,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Nota > 140 caracteres. Pagaste el verificado para escribir hilos bíblicos.',
     icon: Twitter,
     color: '#3b82f6', // Blue
-    condition: (data: YearData) => Object.values(data).some(d => d.note && d.note.length > 140)
+    condition: (data: YearData) => Object.values(data).some(d => d.note && d.note.length > 140),
+    rarity: Rarity.Common
   },
   {
     id: 'harrys_code',
@@ -85,7 +94,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: '5 días seguidos con el mismo mood exacto. Sigues el código al pie de la letra. Don\'t get caught.',
     icon: Fingerprint,
     color: '#0ea5e9', // Cyan/Blue Dexter Style
-    condition: (data: YearData) => checkSameMoodStreak(data, 5)
+    condition: (data: YearData) => checkSameMoodStreak(data, 5),
+    rarity: Rarity.Epic
   },
   {
     id: 'toxic_waste',
@@ -93,7 +103,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: '3 días Rage seguidos. El reloj está sonando... Estás en el Upside Down.',
     icon: Clock, // Updated to Clock for Vecna/Stranger Things
     color: '#ef4444', // Red
-    condition: (data: YearData) => checkStreakWithCondition(data, 3, (d) => d.level === MoodLevel.Rage)
+    condition: (data: YearData) => checkStreakWithCondition(data, 3, (d) => d.level === MoodLevel.Rage),
+    rarity: Rarity.Rare
   },
   {
     id: 'wagmi',
@@ -101,7 +112,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: '3 días Legendarios acumulados. WAGMI. Stonks only go up.',
     icon: Rocket,
     color: '#06b6d4', // Cyan
-    condition: (data: YearData) => Object.values(data).filter(d => d.level === MoodLevel.Legendary).length >= 3
+    condition: (data: YearData) => Object.values(data).filter(d => d.level === MoodLevel.Legendary).length >= 3,
+    rarity: Rarity.Rare
   },
   {
     id: 'ghost_mode',
@@ -121,7 +133,8 @@ export const ACHIEVEMENTS: Achievement[] = [
             if (diffDays > 7) return true;
         }
         return false;
-    }
+    },
+    rarity: Rarity.Rare
   },
 
   // --- DC UNIVERSE ---
@@ -131,7 +144,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Registra 4 estados de ánimo DIFERENTES en 4 días seguidos. "Introduce a little anarchy".',
     icon: Smile,
     color: '#a855f7', // Joker Purple
-    condition: (data: YearData) => checkUniqueMoodsInWindow(data, 4)
+    condition: (data: YearData) => checkUniqueMoodsInWindow(data, 4),
+    rarity: Rarity.Epic
   },
   {
     id: 'man_of_steel',
@@ -139,7 +153,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Racha de 10 días invencible (Normal o superior). El sol amarillo te da poder.',
     icon: ShieldCheck,
     color: '#3b82f6', // Superman Blue
-    condition: (data: YearData) => checkStreakWithCondition(data, 10, (d) => d.level >= MoodLevel.Normal)
+    condition: (data: YearData) => checkStreakWithCondition(data, 10, (d) => d.level >= MoodLevel.Normal),
+    rarity: Rarity.Rare
   },
   {
     id: 'dark_knight',
@@ -156,7 +171,8 @@ export const ACHIEVEMENTS: Achievement[] = [
             }
             return isEco || wasUnlocked;
         } catch(e) { return false; }
-    }
+    },
+    rarity: Rarity.Rare
   },
   {
     id: 'speed_force',
@@ -168,7 +184,8 @@ export const ACHIEVEMENTS: Achievement[] = [
         try {
             return parseInt(localStorage.getItem('pepe_particle_count') || '0') >= 400;
         } catch(e) { return false; }
-    }
+    },
+    rarity: Rarity.Common
   },
   {
     id: 'anti_life_equation',
@@ -181,7 +198,8 @@ export const ACHIEVEMENTS: Achievement[] = [
             const val = localStorage.getItem('pepe_particle_count');
             return val !== null && parseInt(val) === 0;
         } catch(e) { return false; }
-    }
+    },
+    rarity: Rarity.Epic
   },
 
   // --- INNOVATIVE / ADVANCED ---
@@ -192,7 +210,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Escribe una nota profunda (>200 caracteres) en un día Triste. "Instead of going under...".',
     icon: Waves,
     color: '#0ea5e9', // Blue/Cyan mix
-    condition: (data: YearData) => Object.values(data).some(d => d.level === MoodLevel.Sadge && d.note && d.note.length > 200)
+    condition: (data: YearData) => Object.values(data).some(d => d.level === MoodLevel.Sadge && d.note && d.note.length > 200),
+    rarity: Rarity.Rare
   },
   {
     id: 'dark_passenger',
@@ -200,7 +219,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: '3 días "Normales" (La Máscara) seguidos de 1 día de "Rage". Tonight\'s the night.',
     icon: Droplets, // Blood Spatter
     color: '#9f1239', // Blood Red
-    condition: (data: YearData) => checkSpecificPattern(data, [MoodLevel.Normal, MoodLevel.Normal, MoodLevel.Normal, MoodLevel.Rage])
+    condition: (data: YearData) => checkSpecificPattern(data, [MoodLevel.Normal, MoodLevel.Normal, MoodLevel.Normal, MoodLevel.Rage]),
+    rarity: Rarity.Epic
   },
   {
     id: 'talk_no_jutsu',
@@ -227,7 +247,8 @@ export const ACHIEVEMENTS: Achievement[] = [
             }
         }
         return false;
-    }
+    },
+    rarity: Rarity.Epic
   },
   {
     id: 'waking_the_demon',
@@ -235,7 +256,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Pasas de "Moi Biens" a "Rage" de un día para otro. Has despertado al demonio interior (BFMV).',
     icon: Swords,
     color: '#ef4444', // Red
-    condition: (data: YearData) => checkPattern(data, [MoodLevel.MoiBiens, MoodLevel.Rage]) || checkPattern(data, [MoodLevel.Legendary, MoodLevel.Rage])
+    condition: (data: YearData) => checkPattern(data, [MoodLevel.MoiBiens, MoodLevel.Rage]) || checkPattern(data, [MoodLevel.Legendary, MoodLevel.Rage]),
+    rarity: Rarity.Epic
   },
   {
     id: 'tears_dont_fall',
@@ -255,7 +277,8 @@ export const ACHIEVEMENTS: Achievement[] = [
             if (diffDays === 1 && d1.level === MoodLevel.Sadge && d2.level >= MoodLevel.Normal) return true;
         }
         return false;
-    }
+    },
+    rarity: Rarity.Rare
   },
   {
     id: 'take_me_back_to_eden',
@@ -270,7 +293,8 @@ export const ACHIEVEMENTS: Achievement[] = [
             const date = new Date(y, m - 1, day);
             return date.getDay() === 0; // 0 is Sunday
         });
-    }
+    },
+    rarity: Rarity.Rare
   },
   {
     id: 'numb',
@@ -278,7 +302,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: '5 días "Meh" seguidos. I\'ve become so numb, I can\'t feel you there. (LP).',
     icon: CloudRain,
     color: '#eab308', // Yellow
-    condition: (data: YearData) => checkStreakWithCondition(data, 5, (d) => d.level === MoodLevel.Regular)
+    condition: (data: YearData) => checkStreakWithCondition(data, 5, (d) => d.level === MoodLevel.Regular),
+    rarity: Rarity.Rare
   },
   {
     id: 'one_step_closer',
@@ -286,7 +311,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Pasas de "Sadge" a "Rage" directamente. Justo al borde de romperte. (LP)',
     icon: Activity,
     color: '#ef4444', // Red
-    condition: (data: YearData) => checkPattern(data, [MoodLevel.Sadge, MoodLevel.Rage])
+    condition: (data: YearData) => checkPattern(data, [MoodLevel.Sadge, MoodLevel.Rage]),
+    rarity: Rarity.Rare
   },
   {
     id: 'reputation',
@@ -294,7 +320,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: '13 días de baja vibra (Rage/Sadge) en total. "I\'ve got a list of names and yours is in red".',
     icon: Scroll, // Updated to Scroll (List of names)
     color: '#94a3b8', // Metallic/Silver
-    condition: (data: YearData) => Object.values(data).filter(d => d.level === MoodLevel.Rage || d.level === MoodLevel.Sadge).length >= 13
+    condition: (data: YearData) => Object.values(data).filter(d => d.level === MoodLevel.Rage || d.level === MoodLevel.Sadge).length >= 13,
+    rarity: Rarity.Epic
   },
   {
     id: 'cruel_summer',
@@ -310,7 +337,8 @@ export const ACHIEVEMENTS: Achievement[] = [
             const isSummer = month >= 6 && month <= 8; 
             return isSummer && (d.level === MoodLevel.Rage || d.level === MoodLevel.Sadge);
         });
-    }
+    },
+    rarity: Rarity.Rare
   },
   {
     id: 'dementors_kiss',
@@ -318,7 +346,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: '3 días Tristes (Sadge) seguidos. Sientes que nunca volverás a ser feliz.',
     icon: CloudFog, // Updated to CloudFog (Mist) for Dementors
     color: '#64748b', // Slate
-    condition: (data: YearData) => checkStreakWithCondition(data, 3, (d) => d.level === MoodLevel.Sadge)
+    condition: (data: YearData) => checkStreakWithCondition(data, 3, (d) => d.level === MoodLevel.Sadge),
+    rarity: Rarity.Rare
   },
   {
     id: 'horcruxes',
@@ -326,7 +355,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Registra 7 días de Furia (Rage) en total. Has dividido tu alma demasiadas veces.',
     icon: Gem,
     color: '#16a34a', // Green (Slytherinish)
-    condition: (data: YearData) => Object.values(data).filter(d => d.level === MoodLevel.Rage).length >= 7
+    condition: (data: YearData) => Object.values(data).filter(d => d.level === MoodLevel.Rage).length >= 7,
+    rarity: Rarity.Epic
   },
   {
     id: 'pump_it',
@@ -351,7 +381,8 @@ export const ACHIEVEMENTS: Achievement[] = [
             }
         }
         return false;
-    }
+    },
+    rarity: Rarity.Epic
   },
   {
     id: 'garfield_mode',
@@ -371,7 +402,8 @@ export const ACHIEVEMENTS: Achievement[] = [
              }
         });
         return badMondays >= 3;
-    }
+    },
+    rarity: Rarity.Rare
   },
   {
     id: 'touch_grass',
@@ -379,7 +411,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: '5 días "Moi Biens" (Verde). Has vencido al líder del gimnasio de tipo Planta.',
     icon: Leaf,
     color: '#4ade80', // Light Green
-    condition: (data: YearData) => Object.values(data).filter(d => d.level === MoodLevel.MoiBiens).length >= 5
+    condition: (data: YearData) => Object.values(data).filter(d => d.level === MoodLevel.MoiBiens).length >= 5,
+    rarity: Rarity.Common
   },
   {
     id: 'vibe_check',
@@ -387,7 +420,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Racha de 14 días. I was supposed to be sent away but they forgot to come and get me (Taylor).',
     icon: CheckCircle2,
     color: '#6366f1', // Indigo
-    condition: (data: YearData) => checkStreak(data, 14)
+    condition: (data: YearData) => checkStreak(data, 14),
+    rarity: Rarity.Rare
   },
 
   // --- LEGENDARY / ENDGAME ---
@@ -398,7 +432,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: '300 días registrados. Gotta Catch \'Em All! Eres el Campeón de la Liga.',
     icon: Gamepad2,
     color: '#f59e0b', // Amber
-    condition: (data: YearData) => Object.keys(data).length >= 300
+    condition: (data: YearData) => Object.keys(data).length >= 300,
+    rarity: Rarity.Legendary
   },
   {
     id: 'professional_yapper',
@@ -406,7 +441,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Notas en 50 días. Eres el Presidente del Departamento de Poetas Torturados.',
     icon: Feather, // Updated to Feather/Quill
     color: '#ec4899', // Pink
-    condition: (data: YearData) => Object.values(data).filter(d => d.note && d.note.trim().length > 5).length >= 50
+    condition: (data: YearData) => Object.values(data).filter(d => d.note && d.note.trim().length > 5).length >= 50,
+    rarity: Rarity.Legendary
   },
   {
     id: 'the_1_percent',
@@ -414,7 +450,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Racha de 30 días. Has caído en una de mis bromas clásicas (o eres un genio constante).',
     icon: Medal,
     color: '#fbbf24', // Gold
-    condition: (data: YearData) => checkStreak(data, 30)
+    condition: (data: YearData) => checkStreak(data, 30),
+    rarity: Rarity.Legendary
   },
   {
     id: 'the_avatar',
@@ -428,7 +465,8 @@ export const ACHIEVEMENTS: Achievement[] = [
             if (d.level > 0 && d.level <= 6) counts[d.level]++;
         });
         return Object.values(counts).every(count => count >= 1);
-    }
+    },
+    rarity: Rarity.Legendary
   },
   {
     id: 'employee_of_month',
@@ -450,7 +488,8 @@ export const ACHIEVEMENTS: Achievement[] = [
             if (count >= daysInMonth) return true;
         }
         return false;
-    }
+    },
+    rarity: Rarity.Legendary
   },
   {
     id: 'half_life',
@@ -458,7 +497,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: '182 días registrados. All the small things... true care, truth brings.',
     icon: Music,
     color: '#f97316', // Orange
-    condition: (data: YearData) => Object.keys(data).length >= 182
+    condition: (data: YearData) => Object.keys(data).length >= 182,
+    rarity: Rarity.Epic
   }
 ];
 

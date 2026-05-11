@@ -2,7 +2,14 @@
 import React, { memo, useMemo, useState } from 'react';
 import { Lock, CalendarCheck, Search, Filter, ArrowUpDown, Check, X, Trophy, ChevronDown, LayoutGrid, List, LayoutPanelTop } from 'lucide-react';
 import { ACHIEVEMENTS } from '../../utils/gamification';
-import { UnlockedAchievement } from '../../types';
+import { UnlockedAchievement, Rarity } from '../../types';
+
+const RARITY_ORDER = {
+    [Rarity.Legendary]: 4,
+    [Rarity.Epic]: 3,
+    [Rarity.Rare]: 2,
+    [Rarity.Common]: 1
+};
 
 interface AchievementsListProps {
   unlockedItems: UnlockedAchievement[];
@@ -15,6 +22,7 @@ type ViewMode = 'grid' | 'list' | 'compact';
 const AchievementsList: React.FC<AchievementsListProps> = ({ unlockedItems }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [sortBy, setSortBy] = useState<SortOption>('date');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
     const [filterBy, setFilterBy] = useState<FilterOption>('all');
     const [viewMode, setViewMode] = useState<ViewMode>('grid');
     const [isFiltersExpanded, setIsFiltersExpanded] = useState(false);
@@ -40,25 +48,30 @@ const AchievementsList: React.FC<AchievementsListProps> = ({ unlockedItems }) =>
         }
 
         // 3. Sorting
-        return items.sort((a, b) => {
+        const sorted = items.sort((a, b) => {
             const unlockA = unlockedItems.find(u => u.id === a.id);
             const unlockB = unlockedItems.find(u => u.id === b.id);
             
+            let result = 0;
             if (sortBy === 'date') {
-                // If both unlocked, sort by date
-                if (unlockA && unlockB) return unlockB.unlockedAt - unlockA.unlockedAt;
-                // Unlocked first
-                if (unlockA && !unlockB) return -1;
-                if (!unlockA && unlockB) return 1;
-                return 0;
+                if (unlockA && unlockB) result = unlockA.unlockedAt - unlockB.unlockedAt;
+                else if (unlockA && !unlockB) result = 1;
+                else if (!unlockA && unlockB) result = -1;
+                else result = 0;
             } else if (sortBy === 'alpha') {
-                return a.title.localeCompare(b.title);
+                result = b.title.localeCompare(a.title);
             } else {
-                // Sort by ID is usually Category/Rarity in logic
-                return a.id.localeCompare(b.id);
+                // Rarity Sort
+                const rareA = RARITY_ORDER[a.rarity || Rarity.Common];
+                const rareB = RARITY_ORDER[b.rarity || Rarity.Common];
+                result = rareA - rareB;
             }
+            
+            return sortOrder === 'desc' ? -result : result;
         });
-    }, [unlockedItems, searchQuery, sortBy, filterBy]);
+
+        return sorted;
+    }, [unlockedItems, searchQuery, sortBy, filterBy, sortOrder]);
 
     const formatDate = (timestamp: number) => {
         if (!timestamp) return 'Hito Histórico'; 
@@ -143,13 +156,14 @@ const AchievementsList: React.FC<AchievementsListProps> = ({ unlockedItems }) =>
                 `}>
                     <div className="flex flex-col sm:flex-row gap-3 pt-2">
                         {/* Status Filter */}
-                        <div className="flex bg-black/40 p-1.5 rounded-2xl border border-white/5 flex-1 shadow-inner relative overflow-hidden">
+                        <div className="flex bg-black/40 p-1.5 rounded-2xl border border-white/5 flex-1 shadow-inner relative overflow-hidden group/filter">
+                            <div className="absolute inset-0 bg-gradient-to-r from-amber-500/5 to-transparent pointer-events-none" />
                             {(['all', 'unlocked', 'locked'] as FilterOption[]).map((opt) => (
                                 <button
                                     key={opt}
                                     onClick={() => setFilterBy(opt)}
                                     className={`
-                                        flex-1 px-2 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 relative z-10
+                                        flex-1 px-1.5 md:px-2 py-2.5 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all duration-300 relative z-10
                                         ${filterBy === opt 
                                             ? 'bg-gradient-to-br from-amber-400 to-amber-600 text-white shadow-lg' 
                                             : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'}
@@ -160,27 +174,47 @@ const AchievementsList: React.FC<AchievementsListProps> = ({ unlockedItems }) =>
                             ))}
                         </div>
 
-                        {/* Sort Order */}
-                        <div className="flex bg-black/40 p-1.5 rounded-2xl border border-white/5 shadow-inner">
-                            {(['date', 'alpha', 'id'] as SortOption[]).map((opt) => (
-                                <button
-                                    key={opt}
-                                    onClick={() => setSortBy(opt)}
-                                    className={`
-                                        flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2
-                                        ${sortBy === opt 
-                                            ? 'bg-slate-800 text-amber-400 shadow-md border border-white/10 ring-1 ring-white/5 scale-[1.02]' 
-                                            : 'text-slate-600 hover:text-slate-400 hover:bg-white/5'}
-                                    `}
-                                >
-                                    {opt === 'date' && <CalendarCheck size={14} />}
-                                    {opt === 'alpha' && <ArrowUpDown size={14} />}
-                                    {opt === 'id' && <Trophy size={14} />}
-                                    <span className={sortBy === opt ? 'block' : 'hidden md:block'}>
-                                        {opt === 'date' ? 'Recientes' : opt === 'alpha' ? 'A-Z' : 'Rareza'}
-                                    </span>
-                                </button>
-                            ))}
+                        {/* Sort Logic */}
+                        <div className="flex gap-2 bg-black/40 p-1.5 rounded-2xl border border-white/5 shadow-inner">
+                            <div className="flex flex-1">
+                                {(['date', 'alpha', 'id'] as SortOption[]).map((opt) => (
+                                    <button
+                                        key={opt}
+                                        onClick={() => {
+                                            if (sortBy === opt) {
+                                                setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                                            } else {
+                                                setSortBy(opt);
+                                                setSortOrder('desc');
+                                            }
+                                        }}
+                                        className={`
+                                            flex-1 px-2 md:px-4 py-2.5 rounded-xl text-[8px] md:text-[10px] font-black uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-1.5 md:gap-2
+                                            ${sortBy === opt 
+                                                ? 'bg-slate-800 text-amber-400 shadow-md border border-white/10 ring-1 ring-white/5 scale-[1.02]' 
+                                                : 'text-slate-600 hover:text-slate-400 hover:bg-white/5'}
+                                        `}
+                                    >
+                                        {opt === 'date' && <CalendarCheck size={14} />}
+                                        {opt === 'alpha' && <ArrowUpDown size={14} />}
+                                        {opt === 'id' && <Trophy size={14} />}
+                                        
+                                        <span className="ml-1">
+                                            {opt === 'date' 
+                                                ? (sortOrder === 'desc' ? 'Nuevos' : 'Viejos') 
+                                                : opt === 'alpha' 
+                                                    ? (sortOrder === 'desc' ? 'z-a' : 'a-z') 
+                                                    : (sortOrder === 'desc' ? 'Rareza' : 'Rareza')}
+                                        </span>
+
+                                        {sortBy === opt && (
+                                            <div className={`ml-1 transition-transform duration-300 ${sortOrder === 'asc' ? '' : 'rotate-180'}`}>
+                                                <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse" />
+                                            </div>
+                                        )}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -190,37 +224,43 @@ const AchievementsList: React.FC<AchievementsListProps> = ({ unlockedItems }) =>
             <div className={`
                 pb-20 mt-1 transition-all duration-500
                 ${viewMode === 'grid' 
-                    ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6' 
+                    ? 'grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-2 md:gap-6' 
                     : viewMode === 'list' 
-                        ? 'flex flex-col gap-3 md:gap-4' 
-                        : 'grid grid-cols-3 xs:grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-2 md:gap-3'}
+                        ? 'flex flex-col gap-2 md:gap-4' 
+                        : 'grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3 md:gap-3'}
             `}>
                  {processedAchievements.length > 0 ? processedAchievements.map((ach) => {
                      const unlockInfo = unlockedItems.find(u => u.id === ach.id);
                      const isUnlocked = !!unlockInfo;
+                     const rarityName = (ach.rarity || Rarity.Common).toUpperCase();
                      
                      if (viewMode === 'compact') {
                         return (
                             <div 
                                 key={ach.id}
                                 className={`
-                                    aspect-square rounded-xl md:rounded-2xl border flex flex-col items-center justify-center gap-1 group/mini transition-all duration-300
+                                    aspect-square rounded-2xl md:rounded-3xl border flex flex-col items-center justify-center gap-1 group/mini transition-all duration-300 relative overflow-hidden active:scale-95 touch-manipulation
                                     ${isUnlocked 
-                                        ? 'bg-slate-800/40 border-white/10 hover:scale-105 hover:bg-slate-800/60' 
+                                        ? 'bg-slate-800/40 border-white/10 hover:scale-105 hover:bg-slate-800/60 shadow-xl' 
                                         : 'bg-black/20 border-white/5 opacity-40 grayscale'}
                                 `}
                                 style={{
-                                    boxShadow: isUnlocked ? `0 8px 16px -8px ${ach.color}30` : 'none',
-                                    borderColor: isUnlocked ? `${ach.color}20` : ''
+                                    boxShadow: isUnlocked ? `0 12px 24px -10px ${ach.color}40` : 'none',
+                                    borderColor: isUnlocked ? `${ach.color}30` : ''
                                 }}
-                                title={`${ach.title}: ${ach.description}`}
                             >
-                                <div className="p-1 md:p-2 rounded-lg md:rounded-xl transition-transform duration-500 group-hover/mini:rotate-12" style={{ color: isUnlocked ? ach.color : '#334155', backgroundColor: isUnlocked ? `${ach.color}15` : 'transparent' }}>
-                                    {isUnlocked ? <ach.icon size={16} className="md:size-5" /> : <Lock size={14} className="md:size-4" />}
+                                <div className="p-1.5 md:p-3 rounded-xl md:rounded-2xl transition-transform duration-500 group-hover/mini:rotate-12 group-active/mini:scale-110" style={{ color: isUnlocked ? ach.color : '#334155', backgroundColor: isUnlocked ? `${ach.color}15` : 'transparent' }}>
+                                    {isUnlocked ? <ach.icon className="size-6 md:size-8" /> : <Lock className="size-5 md:size-6" />}
                                 </div>
-                                <span className={`text-[7px] md:text-[8px] font-black tracking-tighter uppercase line-clamp-1 px-1 ${isUnlocked ? 'text-slate-300' : 'text-slate-700'}`}>
-                                    {ach.title}
-                                </span>
+                                
+                                {/* Info on Mobile Hold / Hover */}
+                                <div className="absolute inset-0 bg-slate-900/95 flex flex-col items-center justify-center p-3 text-center opacity-0 group-hover/mini:opacity-100 group-active/mini:opacity-100 transition-opacity duration-300 pointer-events-none backdrop-blur-md">
+                                    <span className="text-[10px] font-black text-white uppercase tracking-tighter leading-tight mb-1">{ach.title}</span>
+                                    <p className="text-[8px] text-slate-400 font-medium line-clamp-3">{ach.description}</p>
+                                    <div className="mt-2 px-1.5 py-0.5 rounded-full text-[7px] font-bold uppercase tracking-widest" style={{ backgroundColor: `${ach.color}20`, color: ach.color }}>
+                                        {rarityName}
+                                    </div>
+                                </div>
                             </div>
                         );
                      }
@@ -232,28 +272,30 @@ const AchievementsList: React.FC<AchievementsListProps> = ({ unlockedItems }) =>
                                 className={`
                                     relative p-4 rounded-2xl border transition-all duration-500 flex items-center gap-4 overflow-hidden group/list
                                     ${isUnlocked 
-                                        ? 'bg-slate-800/30 border-white/10 hover:bg-slate-800/40 hover:translate-x-1' 
+                                        ? 'bg-slate-800/30 border-white/10 hover:bg-slate-800/40 hover:translate-x-1 shadow-lg' 
                                         : 'bg-black/10 border-white/5 opacity-50 grayscale'}
                                 `}
                             >
                                 <div 
-                                    className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+                                    className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0 shadow-inner"
                                     style={{ 
                                         backgroundColor: isUnlocked ? `${ach.color}20` : '#0f172a', 
                                         color: isUnlocked ? ach.color : '#334155',
                                         border: isUnlocked ? `1px solid ${ach.color}30` : '1px solid #1e293b'
                                     }}
                                 >
-                                    {isUnlocked ? <ach.icon size={24} /> : <Lock size={20} />}
+                                    {isUnlocked ? <ach.icon size={28} /> : <Lock size={22} />}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-0.5">
-                                        <h4 className={`text-sm font-black uppercase tracking-tight leading-none ${isUnlocked ? 'text-white' : 'text-slate-600'}`}>
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <h4 className={`text-sm md:text-base font-black uppercase tracking-tight leading-none ${isUnlocked ? 'text-white' : 'text-slate-600'}`}>
                                             {ach.title}
                                         </h4>
-                                        {isUnlocked && <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: ach.color }} />}
+                                        <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-widest border" style={{ backgroundColor: isUnlocked ? `${ach.color}10` : 'transparent', color: isUnlocked ? ach.color : '#334155', borderColor: isUnlocked ? `${ach.color}20` : '#1e293b' }}>
+                                            {rarityName}
+                                        </span>
                                     </div>
-                                    <p className="text-[10px] text-slate-500 font-medium line-clamp-1 group-hover/list:text-slate-300">
+                                    <p className="text-[10px] md:text-xs text-slate-500 font-medium group-hover/list:text-slate-300">
                                         {ach.description}
                                     </p>
                                 </div>
@@ -271,9 +313,9 @@ const AchievementsList: React.FC<AchievementsListProps> = ({ unlockedItems }) =>
                          <div 
                             key={ach.id} 
                             className={`
-                                relative p-6 rounded-[2.5rem] border transition-all duration-700 flex flex-col gap-5 overflow-hidden group/card
+                                relative p-3 md:p-6 rounded-[1.5rem] md:rounded-[2.5rem] border transition-all duration-700 flex flex-col gap-3 md:gap-5 overflow-hidden group/card
                                 ${isUnlocked 
-                                    ? 'bg-slate-800/20 border-white/10 hover:border-amber-500/30 hover:bg-slate-800/40 hover:-translate-y-2' 
+                                    ? 'bg-slate-800/20 border-white/10 hover:border-amber-500/30 hover:bg-slate-800/40 md:hover:-translate-y-2 shadow-lg' 
                                     : 'bg-black/20 border-white/5 opacity-40 grayscale hover:opacity-100 hover:grayscale-0'
                                 }
                             `}
@@ -292,11 +334,11 @@ const AchievementsList: React.FC<AchievementsListProps> = ({ unlockedItems }) =>
                                 </>
                             )}
 
-                            <div className="flex items-start gap-5 relative z-20">
+                            <div className="flex items-start gap-3 md:gap-5 relative z-20">
                                 {/* Icon Box */}
                                 <div 
                                     className={`
-                                        w-16 h-16 rounded-[1.5rem] flex items-center justify-center shrink-0 transition-all duration-700 group-hover/card:scale-110 group-hover/card:rotate-6
+                                        w-12 h-12 md:w-16 md:h-16 rounded-[1.2rem] md:rounded-[1.5rem] flex items-center justify-center shrink-0 transition-all duration-700 md:group-hover/card:scale-110 md:group-hover/card:rotate-6
                                         relative
                                     `}
                                     style={{ 
@@ -311,14 +353,19 @@ const AchievementsList: React.FC<AchievementsListProps> = ({ unlockedItems }) =>
                                             style={{ backgroundColor: ach.color }}
                                         />
                                     )}
-                                    {isUnlocked ? <ach.icon size={32} className="drop-shadow-[0_0_10px_rgba(255,255,255,0.3)] filter relative z-10" /> : <Lock size={24} className="relative z-10" />}
+                                    {isUnlocked ? <ach.icon className="size-6 md:size-8 drop-shadow-[0_0_10px_rgba(255,255,255,0.3)] filter relative z-10" /> : <Lock size={20} className="md:size-6 relative z-10" />}
                                 </div>
 
                                 <div className="flex-1 min-w-0">
-                                    <h4 className={`text-base font-black uppercase tracking-tighter leading-none mb-2 ${isUnlocked ? 'text-white' : 'text-slate-500'}`}>
-                                        {ach.title}
-                                    </h4>
-                                    <p className="text-xs text-slate-400 font-medium leading-relaxed group-hover/card:text-slate-200 transition-colors line-clamp-3">
+                                    <div className="flex items-center gap-1.5 md:gap-2 mb-1 md:mb-2">
+                                        <h4 className={`text-xs md:text-base font-black uppercase tracking-tighter leading-none ${isUnlocked ? 'text-white' : 'text-slate-500'}`}>
+                                            {ach.title}
+                                        </h4>
+                                        <span className="px-1 md:px-1.5 py-0.5 rounded text-[7px] md:text-[8px] font-bold uppercase tracking-widest border" style={{ backgroundColor: isUnlocked ? `${ach.color}10` : 'transparent', color: isUnlocked ? ach.color : '#334155', borderColor: isUnlocked ? `${ach.color}20` : '#1e293b' }}>
+                                            {rarityName}
+                                        </span>
+                                    </div>
+                                    <p className="text-[10px] md:text-xs text-slate-400 font-medium leading-tight md:leading-relaxed group-hover/card:text-slate-200 transition-colors line-clamp-2 md:line-clamp-3">
                                         {ach.description}
                                     </p>
                                 </div>

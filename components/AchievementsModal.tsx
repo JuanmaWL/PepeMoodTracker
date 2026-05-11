@@ -16,11 +16,11 @@ const AchievementsModal: React.FC<AchievementsModalProps> = ({ isOpen, onClose, 
 
   return (
     <div 
-        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/95 backdrop-blur-md animate-in fade-in"
+        className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/95 backdrop-blur-md animate-in fade-in"
         onClick={onClose}
     >
       <div 
-        className="bg-slate-900/90 border border-slate-700/50 w-full max-w-5xl rounded-[2rem] md:rounded-[2.5rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col h-[92vh] max-h-[950px] relative ring-1 ring-white/10"
+        className="bg-slate-900/90 border border-slate-700/50 w-full max-w-5xl rounded-[1.5rem] sm:rounded-[2rem] md:rounded-[2.5rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col h-[96vh] sm:h-[92vh] max-h-[950px] relative ring-1 ring-white/10"
         onClick={(e) => e.stopPropagation()}
       >
         

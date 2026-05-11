@@ -30,6 +30,13 @@ export interface MoodConfig {
   image: string; // URL for the Pepe image
 }
 
+export enum Rarity {
+  Common = 'common',
+  Rare = 'rare',
+  Epic = 'epic',
+  Legendary = 'legendary'
+}
+
 export interface Achievement {
   id: string;
   title: string;
@@ -37,6 +44,7 @@ export interface Achievement {
   icon: React.ElementType;
   condition: (data: YearData) => boolean;
   color: string;
+  rarity?: Rarity;
 }
 
 // Interfaz actualizada para persistencia con fecha obligatoria (o null para legacy muy antiguo)
