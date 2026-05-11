@@ -37,12 +37,17 @@ export enum Rarity {
   Legendary = 'legendary'
 }
 
+export interface AchievementConfig {
+  particleCount?: number;
+  ecoMode?: boolean;
+}
+
 export interface Achievement {
   id: string;
   title: string;
   description: string;
   icon: React.ElementType;
-  condition: (data: YearData) => boolean;
+  condition: (data: YearData, config?: AchievementConfig) => boolean;
   color: string;
   rarity?: Rarity;
 }

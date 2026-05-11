@@ -162,9 +162,9 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Activa el Modo Ahorro (Eco Mode). "No es quien soy debajo, sino lo que hago lo que me define".',
     icon: Moon,
     color: '#cbd5e1', // Silver / Moonlight (Changed for visibility on dark mode)
-    condition: () => {
+    condition: (data, config) => {
         try {
-            const isEco = localStorage.getItem('pepe_eco_mode') === 'true';
+            const isEco = config?.ecoMode ?? (localStorage.getItem('pepe_eco_mode') === 'true');
             const wasUnlocked = localStorage.getItem('pepe_ach_dark_knight_unlocked') === 'true';
             if (isEco && !wasUnlocked) {
                  localStorage.setItem('pepe_ach_dark_knight_unlocked', 'true');
@@ -180,9 +180,10 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Configura las partículas a alta velocidad (>400). ¡Corre, Barry, corre!',
     icon: Zap,
     color: '#eab308', // Flash Yellow/Lightning
-    condition: () => {
+    condition: (data, config) => {
         try {
-            return parseInt(localStorage.getItem('pepe_particle_count') || '0') >= 400;
+            const count = config?.particleCount ?? parseInt(localStorage.getItem('pepe_particle_count') || '0');
+            return count >= 400;
         } catch(e) { return false; }
     },
     rarity: Rarity.Common
@@ -193,10 +194,10 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Configura las partículas a 0. La desolación absoluta de Darkseid.',
     icon: Bomb,
     color: '#475569', // Dark Grey
-    condition: () => {
+    condition: (data, config) => {
         try {
-            const val = localStorage.getItem('pepe_particle_count');
-            return val !== null && parseInt(val) === 0;
+            const val = config?.particleCount ?? parseInt(localStorage.getItem('pepe_particle_count') || '0');
+            return val !== null && val === 0;
         } catch(e) { return false; }
     },
     rarity: Rarity.Epic
@@ -630,7 +631,7 @@ function checkSpecificPattern(data: YearData, sequence: MoodLevel[]): boolean {
  * Iterates through all recorded dates chronologically, building a partial
  * view of the data, and checks the condition at each step.
  */
-export const calculateHistoricalUnlockDate = (achievement: Achievement, fullData: YearData): number => {
+export const calculateHistoricalUnlockDate = (achievement: Achievement, fullData: YearData, config?: AchievementConfig): number => {
     // 1. Get all chronological dates
     const dates = Object.keys(fullData).sort();
     
@@ -642,7 +643,7 @@ export const calculateHistoricalUnlockDate = (achievement: Achievement, fullData
         partialData[date] = fullData[date]; // Add current day to history
         
         // 4. Check if condition is met with this partial data
-        if (achievement.condition(partialData)) {
+        if (achievement.condition(partialData, config)) {
              // Found the trigger date!
              const [y, m, d] = date.split('-').map(Number);
              const resultDate = new Date(y, m - 1, d);
@@ -664,6 +665,6 @@ export const calculateHistoricalUnlockDate = (achievement: Achievement, fullData
     return Date.now();
 };
 
-export const getUnlockedAchievements = (data: YearData): string[] => {
-    return ACHIEVEMENTS.filter(ach => ach.condition(data)).map(ach => ach.id);
+export const getUnlockedAchievements = (data: YearData, config?: AchievementConfig): string[] => {
+    return ACHIEVEMENTS.filter(ach => ach.condition(data, config)).map(ach => ach.id);
 };

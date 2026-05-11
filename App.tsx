@@ -86,9 +86,23 @@ const App: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Estados de Configuración
-  const [ecoMode, setEcoMode] = useState(false);
-  const [pixelMode, setPixelMode] = useState(false); // NUEVO: Modo Píxel
-  const [particleCount, setParticleCount] = useState(() => window.innerWidth < 768 ? 40 : 150);
+  const [ecoMode, setEcoMode] = useState(() => {
+    try {
+      return localStorage.getItem('pepe_eco_mode') === 'true';
+    } catch (e) { return false; }
+  });
+  const [pixelMode, setPixelMode] = useState(() => {
+    try {
+      return localStorage.getItem('pepe_pixel_mode') === 'true';
+    } catch (e) { return false; }
+  });
+  const [particleCount, setParticleCount] = useState(() => {
+    try {
+      const saved = localStorage.getItem('pepe_particle_count');
+      if (saved) return parseInt(saved);
+    } catch (e) { }
+    return window.innerWidth < 768 ? 40 : 150;
+  });
 
   const [quickLogState, setQuickLogState] = useState<{
     isActive: boolean;
@@ -193,11 +207,13 @@ const App: React.FC = () => {
         } catch (e) { console.error(e); }
     }
 
-    // Load Config
+    // Load Config - Simplified as we now use initializers
     const storedEco = localStorage.getItem('pepe_eco_mode');
     if (storedEco) setEcoMode(storedEco === 'true');
     const storedPixel = localStorage.getItem('pepe_pixel_mode');
     if (storedPixel) setPixelMode(storedPixel === 'true');
+    const storedParticles = localStorage.getItem('pepe_particle_count');
+    if (storedParticles) setParticleCount(parseInt(storedParticles));
 
     // --- MIGRATION LOGIC (V1 String[] -> V2 UnlockedAchievement[]) ---
     try {
@@ -241,7 +257,7 @@ const App: React.FC = () => {
     }
 
     // 1. Calculate currently valid IDs based on YearData (current state)
-    const currentValidIDs = getUnlockedAchievements(yearData);
+    const currentValidIDs = getUnlockedAchievements(yearData, { particleCount, ecoMode });
     
     // 2. Identify strictly newly unlocked items (present in validIDs but NOT in state)
     const existingIDs = new Set(unlockedAchievements.map(ua => ua.id));
@@ -256,7 +272,7 @@ const App: React.FC = () => {
                 let unlockTimestamp = Date.now();
                 
                 if (definition) {
-                    unlockTimestamp = calculateHistoricalUnlockDate(definition, yearData);
+                    unlockTimestamp = calculateHistoricalUnlockDate(definition, yearData, { particleCount, ecoMode });
                 }
 
                 return {
@@ -286,7 +302,7 @@ const App: React.FC = () => {
             }
         }, 50); // Small delay to let React render and paint first
     }
-  }, [yearData, unlockedAchievements, triggerHaptic, closeAchievementToast]);
+  }, [yearData, unlockedAchievements, ecoMode, particleCount, triggerHaptic, closeAchievementToast]);
 
 
   // handleGlobalEnd ahora recibe la selección final desde QuickLogMenu
