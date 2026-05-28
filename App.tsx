@@ -8,7 +8,7 @@ import QuickLogMenu from './components/QuickLogMenu';
 import WelcomeModal from './components/WelcomeModal'; 
 import { YearData, DayData, MoodLevel, Achievement, UnlockedAchievement } from './types';
 import { STORAGE_KEY, BANNER_SLIDES, PEPE_ASSETS } from './constants';
-import { Plus, Trash2, AlertTriangle, Sliders, Loader2, BatteryCharging, FileJson, Save, Trophy, HelpCircle, BookOpen, BoxSelect, Bell, BellOff, Clock, Info } from 'lucide-react';
+import { Plus, Trash2, AlertTriangle, Sliders, Loader2, BatteryCharging, FileJson, Save, Trophy, HelpCircle, BookOpen, BoxSelect, Bell, BellOff, Clock, Info, X } from 'lucide-react';
 import SoundManager from './utils/sounds';
 import { ACHIEVEMENTS, getUnlockedAchievements, calculateHistoricalUnlockDate } from './utils/gamification';
 
@@ -73,6 +73,9 @@ const App: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false); // Estado elevado
+  
+  // Estado para la notificación in-app simulada (fines de diseño y auditoría)
+  const [activeInAppNotification, setActiveInAppNotification] = useState<null | { title: string; body: string; tag: string }>(null);
   
   // Achievements State (V2 with Dates)
   const [unlockedAchievements, setUnlockedAchievements] = useState<UnlockedAchievement[]>([]);
@@ -204,6 +207,9 @@ const App: React.FC = () => {
 
   // HELPER UNIFICADO DE NOTIFICACIÓN DE PEPE
   const sendPepeNotification = useCallback((title: string, body: string, tag: string = 'pepe-mood-reminder') => {
+    // A. Mostrar SIEMPRE la visualización in-app (Ideal para auditoría de diseño, bypass de bloqueos de OS, sin permisos o DND)
+    setActiveInAppNotification({ title, body, tag });
+
     if (!('Notification' in window)) {
       console.warn("Notificaciones no soportadas en este dispositivo/navegador.");
       return;
@@ -406,6 +412,16 @@ const App: React.FC = () => {
       );
     }, 5000);
   }, [triggerHaptic, sendPepeNotification]);
+
+  // Auto-descartar visualización de notificación in-app simulada tras 7 segundos
+  useEffect(() => {
+    if (activeInAppNotification) {
+      const timer = setTimeout(() => {
+        setActiveInAppNotification(null);
+      }, 7000);
+      return () => clearTimeout(timer);
+    }
+  }, [activeInAppNotification]);
 
   // Ejecutar agendamiento cada vez que cambien los datos o la configuración de notificaciones
   useEffect(() => {
@@ -1048,45 +1064,53 @@ const App: React.FC = () => {
         {isAchievementsModalOpen && <AchievementsModal isOpen={isAchievementsModalOpen} onClose={() => setIsAchievementsModalOpen(false)} unlockedItems={unlockedAchievements} />}
       </Suspense>
 
-      {/* Settings & other modals logic remains same ... (omitted for brevity, assume content is preserved) */}
-       {isSettingsOpen && (
+      {isSettingsOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300" onClick={() => setIsSettingsOpen(false)}>
            <div 
-             className="bg-slate-900 border border-slate-700 w-full max-w-sm rounded-[2rem] shadow-2xl overflow-y-auto max-h-[90vh] p-6 relative" 
+             className="bg-slate-900 border border-slate-700 w-full max-w-sm rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[85vh] relative" 
              onClick={(e) => e.stopPropagation()}
            >
-              {/* Settings content... */}
-              <div className="flex items-center gap-3 mb-6">
-                 <div className="p-3 bg-slate-800 rounded-xl text-slate-300">
-                    <Sliders size={20} />
-                 </div>
-                 <div>
-                    <h3 className="text-lg font-black text-white uppercase tracking-tight">Configuración</h3>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Ajustes & Datos</p>
-                 </div>
+              {/* HEADER DE AJUSTES */}
+              <div className="p-6 pb-4 border-b border-slate-800/60 shrink-0 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                     <div className="p-2.5 bg-slate-800 rounded-xl text-slate-300">
+                        <Sliders size={18} />
+                     </div>
+                     <div>
+                        <h3 className="text-sm font-black text-white uppercase tracking-tight leading-none">Configuración</h3>
+                        <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest leading-none mt-1">Ajustes & Datos</p>
+                     </div>
+                  </div>
+                  <button 
+                    onClick={() => { SoundManager.play('click'); setIsSettingsOpen(false); }}
+                    className="p-1.5 bg-slate-800 hover:bg-slate-700 hover:scale-105 active:scale-95 transition-all text-slate-400 hover:text-white rounded-xl"
+                  >
+                     <X size={16} />
+                  </button>
               </div>
 
-              <div className="space-y-6">
-                  {/* TUTORIAL RELOAD BUTTON */}
-                  <button 
-                    onClick={() => {
-                        SoundManager.play('click');
-                        setIsSettingsOpen(false);
-                        setIsWelcomeModalOpen(true);
-                    }}
-                    className="w-full flex items-center justify-between p-3 bg-indigo-500/10 hover:bg-indigo-500/20 rounded-xl border border-indigo-500/30 group transition-all"
-                  >
-                     <div className="flex items-center gap-3">
-                         <div className="p-2 rounded-lg bg-indigo-500/20 text-indigo-400 group-hover:scale-110 transition-transform">
-                             <BookOpen size={18} />
-                         </div>
-                         <div className="text-left">
-                             <div className="text-xs font-bold text-indigo-200 uppercase tracking-wider">Ver Tutorial / Guía</div>
-                             <div className="text-[9px] text-indigo-400/70 font-medium">Instrucciones y trucos</div>
-                         </div>
-                     </div>
-                     <HelpCircle size={18} className="text-indigo-400 opacity-50 group-hover:opacity-100" />
-                  </button>
+              {/* CUERPO CON SCROLL PERFECTO */}
+              <div className="overflow-y-auto p-6 space-y-6 flex-1 scrollbar-thin">
+                   {/* TUTORIAL RELOAD BUTTON */}
+                   <button 
+                     onClick={() => {
+                         SoundManager.play('click');
+                         setIsSettingsOpen(false);
+                         setIsWelcomeModalOpen(true);
+                     }}
+                     className="w-full flex items-center justify-between p-3 bg-indigo-500/10 hover:bg-indigo-500/20 rounded-xl border border-indigo-500/30 group transition-all"
+                   >
+                      <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-indigo-500/20 text-indigo-400 group-hover:scale-110 transition-transform">
+                              <BookOpen size={18} />
+                          </div>
+                          <div className="text-left">
+                              <div className="text-xs font-bold text-indigo-200 uppercase tracking-wider">Ver Tutorial / Guía</div>
+                              <div className="text-[9px] text-indigo-400/70 font-medium">Instrucciones y trucos</div>
+                          </div>
+                      </div>
+                      <HelpCircle size={18} className="text-indigo-400 opacity-50 group-hover:opacity-100" />
+                   </button>
 
                   {/* ECO MODE TOGGLE */}
                   <div className="flex items-center justify-between p-3 bg-slate-800/50 rounded-xl border border-slate-700">
@@ -1248,17 +1272,20 @@ const App: React.FC = () => {
                         </button>
                     </div>
                   </div>
+              </div>
 
+              {/* FOOTER DE AJUSTES */}
+              <div className="p-4 bg-slate-900/85 border-t border-slate-800/60 shrink-0">
                   <button 
-                    onClick={() => setIsSettingsOpen(false)}
-                    className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white font-black uppercase text-xs rounded-xl transition-colors"
+                    onClick={() => { SoundManager.play('click'); setIsSettingsOpen(false); }}
+                    className="w-full py-3 bg-slate-800 hover:bg-slate-700 active:scale-98 text-white font-black uppercase tracking-wider text-[11px] rounded-xl transition-all border border-slate-700"
                   >
-                    Listo
+                    Listo (Cerrar)
                   </button>
               </div>
            </div>
         </div>
-      )}
+       )}
 
       {showResetConfirm && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-xl animate-in fade-in duration-300">
