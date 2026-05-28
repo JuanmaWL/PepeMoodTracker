@@ -8,7 +8,7 @@ import QuickLogMenu from './components/QuickLogMenu';
 import WelcomeModal from './components/WelcomeModal'; 
 import { YearData, DayData, MoodLevel, Achievement, UnlockedAchievement } from './types';
 import { STORAGE_KEY, BANNER_SLIDES, PEPE_ASSETS } from './constants';
-import { Plus, Trash2, AlertTriangle, Sliders, Loader2, BatteryCharging, FileJson, Save, Trophy, HelpCircle, BookOpen, BoxSelect } from 'lucide-react';
+import { Plus, Trash2, AlertTriangle, Sliders, Loader2, BatteryCharging, FileJson, Save, Trophy, HelpCircle, BookOpen, BoxSelect, Bell, BellOff, Clock, Info } from 'lucide-react';
 import SoundManager from './utils/sounds';
 import { ACHIEVEMENTS, getUnlockedAchievements, calculateHistoricalUnlockDate } from './utils/gamification';
 
@@ -104,6 +104,20 @@ const App: React.FC = () => {
     return window.innerWidth < 768 ? 40 : 150;
   });
 
+  // Estados del sistema de Notificaciones Locales (PWA)
+  const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
+    try {
+      return localStorage.getItem('pepe_notifications_enabled') === 'true';
+    } catch (e) { return false; }
+  });
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      return Notification.permission;
+    }
+    return 'default';
+  });
+  const [nextScheduledInfo, setNextScheduledInfo] = useState<string>('No agendado');
+
   const [quickLogState, setQuickLogState] = useState<{
     isActive: boolean;
     dateStr: string | null;
@@ -187,6 +201,216 @@ const App: React.FC = () => {
       navigator.vibrate(patterns[type]);
     }
   }, []);
+
+  // AGENDAMIENTO DE NOTIFICACIÓN DIARIA LOCAL (A LAS 23:30)
+  const scheduleDailyReminder = useCallback((dataToUse?: YearData) => {
+    const activeData = dataToUse || yearData;
+    if (!notificationsEnabled || !('Notification' in window) || Notification.permission !== 'granted') {
+      setNextScheduledInfo('Desactivado');
+      return;
+    }
+
+    navigator.serviceWorker.ready.then((registration) => {
+      const now = new Date();
+      
+      // Creamos la fecha objetivo para las 23:30 de hoy
+      const targetTime = new Date();
+      targetTime.setHours(23, 30, 0, 0);
+
+      // Obtener el día de hoy en formato local YYYY-MM-DD
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const todayStr = `${year}-${month}-${day}`;
+
+      const hasRegisteredToday = !!activeData[todayStr];
+      const finalTargetDate = new Date(targetTime);
+      let scheduleMsg = '';
+
+      if (hasRegisteredToday) {
+        // Si ya completó el registro de hoy, agendamos la notificación para mañana a las 23:30
+        finalTargetDate.setDate(finalTargetDate.getDate() + 1);
+        scheduleMsg = `Mañana a las 23:30 (Hoy registrado)`;
+      } else {
+        // Si aún no ha completado el registro de hoy, miramos si ya pasó la hora límite
+        if (now.getTime() < targetTime.getTime()) {
+          // Agenda para hoy a las 23:30
+          scheduleMsg = `Hoy a las 23:30`;
+        } else {
+          // Ya pasaron las 23:30 de hoy. Agendamos para mañana
+          finalTargetDate.setDate(finalTargetDate.getDate() + 1);
+          scheduleMsg = `Mañana a las 23:30 (Hora de hoy vencida)`;
+        }
+      }
+
+      setNextScheduledInfo(scheduleMsg);
+
+      // 1. Limpiamos cualquier notificación anterior de tipo 'pepe-mood-reminder' para mantener limpio de duplicados
+      if (registration.getNotifications) {
+        registration.getNotifications().then(notifications => {
+          notifications.forEach(n => {
+            if (n.tag === 'pepe-mood-reminder') n.close();
+          });
+        });
+      }
+
+      const title = "🐸 Pepe Pixel Tracker";
+      const options = {
+        body: "¿Cómo te sientes hoy? No dejes el día en blanco en tu calendario de Pepe. Haz clic para puntuar.",
+        icon: 'https://sme2zz26xzjq57zw.public.blob.vercel-storage.com/favicon_2.png',
+        badge: 'https://sme2zz26xzjq57zw.public.blob.vercel-storage.com/favicon_2.png',
+        tag: 'pepe-mood-reminder',
+        requireInteraction: true,
+        vibrate: [100, 50, 100],
+        data: { url: window.location.origin + window.location.pathname },
+        showTrigger: undefined as any
+      };
+
+      // Intentamos usar Notification Triggers (estándar offline local puro)
+      if ('showTrigger' in Notification.prototype && (window as any).TimestampTrigger) {
+        try {
+          options.showTrigger = new (window as any).TimestampTrigger(finalTargetDate.getTime());
+          registration.showNotification(title, options);
+          console.log("Notificación local programada vía showTrigger para:", finalTargetDate);
+        } catch (e) {
+          console.warn("Fallo showTrigger nativo, usando almacenamiento local para fallback");
+        }
+      }
+      
+      // Siempre guardamos el timestamp objetivo en localStorage para el fallback del temporizador en segundo plano
+      localStorage.setItem('pepe_next_reminder_time', finalTargetDate.getTime().toString());
+    }).catch(err => {
+      console.warn("Service Worker no listo aún para agendar notificaciones:", err);
+    });
+  }, [notificationsEnabled, yearData]);
+
+  // Alternar notificaciones (Activar/Desactivar)
+  const toggleNotifications = useCallback(async () => {
+    SoundManager.play('click');
+    triggerHaptic('light');
+
+    if (!('Notification' in window)) {
+      alert("Tu dispositivo o navegador no soporta notificaciones de forma nativa.");
+      return;
+    }
+
+    if (notificationsEnabled) {
+      localStorage.setItem('pepe_notifications_enabled', 'false');
+      setNotificationsEnabled(false);
+      setNextScheduledInfo('Desactivado');
+      
+      // Limpiar notificaciones activas
+      navigator.serviceWorker.ready.then(reg => {
+        if (reg.getNotifications) {
+          reg.getNotifications().then(notifications => {
+            notifications.forEach(n => {
+              if (n.tag === 'pepe-mood-reminder') n.close();
+            });
+          });
+        }
+      });
+      return;
+    }
+
+    // Solicitar permisos de notificación
+    try {
+      const permission = await Notification.requestPermission();
+      setNotificationPermission(permission);
+
+      if (permission === 'granted') {
+        localStorage.setItem('pepe_notifications_enabled', 'true');
+        setNotificationsEnabled(true);
+        // Esperamos un momento para que el estado se actualice y agendamos
+        setTimeout(() => scheduleDailyReminder(), 300);
+      } else if (permission === 'denied') {
+        alert("Permisos de notificaciones bloqueados. Habilítalos manualmente en los ajustes del sitio de tu navegador móvil para que Pepe pueda recordarte.");
+      }
+    } catch (e) {
+      console.error("No se pudo solicitar permisos de notificación", e);
+    }
+  }, [notificationsEnabled, triggerHaptic, scheduleDailyReminder]);
+
+  // Lanzar notificación de prueba en 5 segundos
+  const testLocalNotification = useCallback(() => {
+    if (!('Notification' in window)) {
+      alert("Este navegador no tiene soporte de notificaciones.");
+      return;
+    }
+
+    if (Notification.permission !== 'granted') {
+      alert("Por favor, concede primero permisos de notificación activando la campana.");
+      return;
+    }
+
+    SoundManager.play('click');
+    triggerHaptic('light');
+    
+    // Alerta descriptiva y programación
+    alert("🐸 Pepe ha agendado la notificación de prueba. Minimiza la app o bloquea el móvil, ¡saldrá en exactamente 5 segundos!");
+
+    setTimeout(() => {
+      navigator.serviceWorker.ready.then(reg => {
+        reg.showNotification("🐸 ¡Éxito en la prueba de Pepe!", {
+          body: "¡Así de bien se verá tu recordatorio de las 23:30! Pulsa para entrar al pantano.",
+          icon: 'https://sme2zz26xzjq57zw.public.blob.vercel-storage.com/favicon_2.png',
+          badge: 'https://sme2zz26xzjq57zw.public.blob.vercel-storage.com/favicon_2.png',
+          tag: 'pepe-test-reminder',
+          vibrate: [150, 50, 150],
+          data: { url: window.location.origin + window.location.pathname }
+        });
+      });
+    }, 5000);
+  }, [triggerHaptic]);
+
+  // Ejecutar agendamiento cada vez que cambien los datos o la configuración de notificaciones
+  useEffect(() => {
+    scheduleDailyReminder();
+  }, [notificationsEnabled, yearData, scheduleDailyReminder]);
+
+  // Chequeo periódico residual en segundo plano (Fallback Timer)
+  useEffect(() => {
+    if (!notificationsEnabled) return;
+
+    const interval = setInterval(() => {
+      const savedTimeStr = localStorage.getItem('pepe_next_reminder_time');
+      if (savedTimeStr) {
+        const nextTime = parseInt(savedTimeStr);
+        const now = Date.now();
+
+        // Si ya nos pasamos de la hora calculada y aún no se ha registrado el día actual
+        if (now >= nextTime) {
+          const todayStr = new Date().toISOString().split('T')[0];
+          const hasRegistered = !!yearData[todayStr];
+
+          if (!hasRegistered) {
+            if ('Notification' in window && Notification.permission === 'granted') {
+              navigator.serviceWorker.ready.then(reg => {
+                reg.showNotification("🐸 ¡Tu estado de ánimo de hoy!", {
+                  body: "¿Cómo te ha ido el día? No olvides registrar tu humor diario en el calendario de Pepe.",
+                  icon: 'https://sme2zz26xzjq57zw.public.blob.vercel-storage.com/favicon_2.png',
+                  badge: 'https://sme2zz26xzjq57zw.public.blob.vercel-storage.com/favicon_2.png',
+                  tag: 'pepe-mood-reminder',
+                  requireInteraction: true,
+                  vibrate: [100, 50, 100],
+                  data: { url: window.location.origin + window.location.pathname }
+                });
+
+                // Calculamos y agendamos para mañana para no notificar repetidamente
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                tomorrow.setHours(23, 30, 0, 0);
+                localStorage.setItem('pepe_next_reminder_time', tomorrow.getTime().toString());
+                setNextScheduledInfo("Mañana a las 23:30");
+              });
+            }
+          }
+        }
+      }
+    }, 60000); // Chequea cada 60 segundos
+
+    return () => clearInterval(interval);
+  }, [notificationsEnabled, yearData]);
+
 
   // --- INITIAL DATA LOAD & ACHIEVEMENT MIGRATION ---
   useEffect(() => {
@@ -738,6 +962,31 @@ const App: React.FC = () => {
         <p className="text-[10px] font-black tracking-[0.3em] uppercase">developed by <span className="text-green-500">Juasmio</span></p>
       </footer>
 
+      {/* Developer Quick Audit Notification (Siempre visible para diagnóstico) */}
+      <button 
+        onClick={() => {
+          SoundManager.play('click');
+          triggerHaptic('heavy');
+          if (!('Notification' in window)) {
+            alert("API de Notificaciones no detectada en este contexto.");
+            return;
+          }
+          navigator.serviceWorker.ready.then(reg => {
+              reg.showNotification("🐸 Diagnóstico: " + Notification.permission, {
+                  body: "¿Puedes ver esto? Si estás en AI Studio, probablemente no.",
+                  icon: 'https://sme2zz26xzjq57zw.public.blob.vercel-storage.com/favicon_2.png',
+                  badge: 'https://sme2zz26xzjq57zw.public.blob.vercel-storage.com/favicon_2.png',
+                  tag: 'pepe-diagnostic',
+                  data: { url: window.location.origin + window.location.pathname }
+              }).catch(e => console.error(e));
+          });
+        }}
+        className="fixed top-4 right-4 z-[60] p-2 bg-slate-900/80 backdrop-blur-md rounded-full border border-white/10 text-amber-500 shadow-2xl active:scale-90 transition-all"
+        title="Audit Notification Design"
+      >
+        <Bell size={18} className={notificationsEnabled ? "animate-pulse" : "opacity-30"} />
+      </button>
+
       <FloatingMenu 
         onStats={() => { triggerHaptic('light'); setIsStatsModalOpen(true); }}
         onReset={() => { triggerHaptic('medium'); setShowResetConfirm(true); }}
@@ -821,6 +1070,84 @@ const App: React.FC = () => {
                       >
                           <div className={`w-4 h-4 bg-white rounded-full transition-transform duration-300 ${ecoMode ? 'translate-x-4' : ''}`}></div>
                       </button>
+                  </div>
+
+                  {/* NOTIFICACIONES RECORDATORIO LOCAL (23:30) */}
+                  <div className="flex flex-col p-4 bg-slate-800/40 rounded-2xl border border-slate-700/50 space-y-3 shadow-inner">
+                      <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                              <div className={`p-2 rounded-xl transition-all duration-300 ${notificationsEnabled ? 'bg-amber-500 text-slate-900 animate-pulse' : 'bg-slate-800 text-slate-500'}`}>
+                                  {notificationsEnabled ? <Bell size={18} /> : <BellOff size={18} />}
+                              </div>
+                              <div>
+                                  <div className="text-xs font-black text-slate-200 uppercase tracking-wider select-none">Recordatorio Diario</div>
+                                  <div className="text-[9px] text-slate-400 font-black uppercase tracking-widest leading-none mt-0.5 opacity-80">Aviso local (23:30)</div>
+                              </div>
+                          </div>
+                          
+                          <button 
+                            onClick={toggleNotifications}
+                            className={`w-11 h-6 rounded-full p-1 transition-colors duration-300 relative shrink-0 ${notificationsEnabled ? 'bg-amber-500' : 'bg-slate-700'}`}
+                          >
+                              <div className={`w-4 h-4 bg-slate-900 rounded-full transition-transform duration-300 ${notificationsEnabled ? 'translate-x-5' : ''}`}></div>
+                          </button>
+                      </div>
+
+                      {/* Botones de Test - Visibles siempre en desarrollo para auditoría */}
+                      <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                          {notificationsEnabled && (
+                              <div className="flex items-center gap-2.5 p-2.5 bg-slate-950/60 rounded-xl border border-slate-800 text-[10px] text-slate-300">
+                                  <Clock size={12} className="text-amber-400 shrink-0" />
+                                  <div className="min-w-0 flex-1">
+                                      <span className="text-slate-500 font-bold uppercase text-[8px] tracking-wider block">Siguiente Alarma</span>
+                                      <span className="font-mono text-amber-300 font-black">{nextScheduledInfo}</span>
+                                  </div>
+                              </div>
+                          )}
+
+                          {/* Info extra */}
+                          <div className="flex items-start gap-2 text-[9px] text-slate-400 leading-normal pl-1">
+                              <Info size={11} className="text-slate-500 shrink-0 mt-0.5" />
+                              <p className="font-bold uppercase tracking-wide text-slate-400/90">
+                                  {notificationsEnabled 
+                                    ? "Agenda automática offline. Te recordará si a las 23:30 no has puntuado."
+                                    : "Nota: Las notificaciones requieren permiso del navegador (usa 'Abrir en pestaña nueva' para activar)."}
+                              </p>
+                          </div>
+
+                          {/* Botones de Test */}
+                          <div className="grid grid-cols-2 gap-2">
+                              <button 
+                                onClick={() => {
+                                    SoundManager.play('click');
+                                    triggerHaptic('medium');
+                                    navigator.serviceWorker.ready.then(reg => {
+                                        reg.showNotification("🐸 Recordatorio de Pepe (Preview)", {
+                                            body: "¿Cómo te ha ido el día? No olvides registrar tu humor diario.",
+                                            icon: 'https://sme2zz26xzjq57zw.public.blob.vercel-storage.com/favicon_2.png',
+                                            badge: 'https://sme2zz26xzjq57zw.public.blob.vercel-storage.com/favicon_2.png',
+                                            tag: 'pepe-mood-reminder',
+                                            requireInteraction: true,
+                                            vibrate: [100, 50, 100],
+                                            data: { url: window.location.origin + window.location.pathname }
+                                        }).catch(e => alert("Error/Bloqueado: " + e.message));
+                                    });
+                                }}
+                                className="py-2.5 bg-slate-100/10 hover:bg-slate-100/20 active:scale-95 transition-all text-slate-200 font-black uppercase text-[9px] tracking-widest rounded-xl border border-white/10 flex flex-col items-center justify-center gap-1"
+                              >
+                                  <span>Ver Diseño</span>
+                                  <span className="text-[7px] opacity-60">(Ahora)</span>
+                              </button>
+
+                              <button 
+                                onClick={testLocalNotification}
+                                className="py-2.5 bg-amber-500/10 hover:bg-amber-500/20 active:scale-95 transition-all text-amber-500 font-black uppercase text-[9px] tracking-widest rounded-xl border border-amber-500/30 flex flex-col items-center justify-center gap-1"
+                              >
+                                  <span>Test Delay</span>
+                                  <span className="text-[7px] opacity-60">(En 5 seg)</span>
+                              </button>
+                          </div>
+                      </div>
                   </div>
                   
                   {/* PIXEL MODE TOGGLE */}

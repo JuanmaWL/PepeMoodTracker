@@ -52,3 +52,40 @@ self.addEventListener('fetch', (event) => {
       })
   );
 });
+
+// SERVICE WORKER NOTIFICATION HANDLERS
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  
+  // Custom action logic or custom target URL (e.g. to open at exact page or date)
+  const urlToOpen = event.notification.data?.url || './';
+  
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // If a window is already open, focus it and navigate
+      for (const client of clientList) {
+        if (client.url.includes(urlToOpen) && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(urlToOpen);
+      }
+    })
+  );
+});
+
+// Accept commands from the client (App)
+self.addEventListener('message', (event) => {
+  if (!event.data) return;
+  
+  if (event.data.action === 'show-notification') {
+    const { title, options } = event.data;
+    self.registration.showNotification(title, {
+      icon: './manifest.json' in caches ? './favicon-96x96.png' : undefined,
+      badge: './favicon-96x96.png',
+      ...options
+    });
+  }
+});
+
