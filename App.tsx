@@ -202,6 +202,55 @@ const App: React.FC = () => {
     }
   }, []);
 
+  // HELPER UNIFICADO DE NOTIFICACIÓN DE PEPE
+  const sendPepeNotification = useCallback((title: string, body: string, tag: string = 'pepe-mood-reminder') => {
+    if (!('Notification' in window)) {
+      console.warn("Notificaciones no soportadas en este dispositivo/navegador.");
+      return;
+    }
+
+    if (Notification.permission !== 'granted') {
+      console.warn("Permisos de notificaciones no concedidos.");
+      return;
+    }
+
+    const options: NotificationOptions = {
+      body,
+      icon: 'https://sme2zz26xzjq57zw.public.blob.vercel-storage.com/favicon_2.png',
+      badge: 'https://sme2zz26xzjq57zw.public.blob.vercel-storage.com/favicon_2.png',
+      tag,
+      requireInteraction: true,
+      vibrate: [150, 50, 150],
+      data: { url: window.location.origin + window.location.pathname }
+    };
+
+    // 1. Mostrar utilizando el constructor directo del navegador (Muy rápido en Android Chrome / Desktop Chrome / Firefox)
+    try {
+      new Notification(title, options);
+      console.log("Notificación detonada vía Window Notification.");
+    } catch (e) {
+      console.warn("Constructor tradicional incompatible o requiere Service Worker (ej. iOS/PWA). Intentando SW...", e);
+    }
+
+    // 2. Mostrar usando el registro activo de Service Worker (Obligatorio en iOS PWA y soporte de Background completo)
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistration().then(reg => {
+        if (reg) {
+          reg.showNotification(title, options)
+            .then(() => console.log("Notificación mostrada por Service Worker."))
+            .catch(err => console.error("Error al disparar notificación Service Worker:", err));
+        } else {
+          // Fallback ultra-seguro por si no está listo instantáneamente
+          navigator.serviceWorker.ready.then(activeReg => {
+            activeReg.showNotification(title, options).catch(err => console.error("Fallo definitivo SW ready:", err));
+          });
+        }
+      }).catch(err => {
+        console.warn("Fallo al obtener registro de Service Worker para notificación:", err);
+      });
+    }
+  }, []);
+
   // AGENDAMIENTO DE NOTIFICACIÓN DIARIA LOCAL (A LAS 23:30)
   const scheduleDailyReminder = useCallback((dataToUse?: YearData) => {
     const activeData = dataToUse || yearData;
@@ -210,78 +259,78 @@ const App: React.FC = () => {
       return;
     }
 
-    navigator.serviceWorker.ready.then((registration) => {
-      const now = new Date();
-      
-      // Creamos la fecha objetivo para las 23:30 de hoy
-      const targetTime = new Date();
-      targetTime.setHours(23, 30, 0, 0);
+    const now = new Date();
+    
+    // Creamos la fecha objetivo para las 23:30 de hoy
+    const targetTime = new Date();
+    targetTime.setHours(23, 30, 0, 0);
 
-      // Obtener el día de hoy en formato local YYYY-MM-DD
-      const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const day = String(now.getDate()).padStart(2, '0');
-      const todayStr = `${year}-${month}-${day}`;
+    // Obtener el día de hoy en formato local YYYY-MM-DD
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const todayStr = `${year}-${month}-${day}`;
 
-      const hasRegisteredToday = !!activeData[todayStr];
-      const finalTargetDate = new Date(targetTime);
-      let scheduleMsg = '';
+    const hasRegisteredToday = !!activeData[todayStr];
+    const finalTargetDate = new Date(targetTime);
+    let scheduleMsg = '';
 
-      if (hasRegisteredToday) {
-        // Si ya completó el registro de hoy, agendamos la notificación para mañana a las 23:30
-        finalTargetDate.setDate(finalTargetDate.getDate() + 1);
-        scheduleMsg = `Mañana a las 23:30 (Hoy registrado)`;
+    if (hasRegisteredToday) {
+      // Si ya completó el registro de hoy, agendamos la notificación para mañana a las 23:30
+      finalTargetDate.setDate(finalTargetDate.getDate() + 1);
+      scheduleMsg = `Mañana a las 23:30 (Hoy registrado)`;
+    } else {
+      // Si aún no ha completado el registro de hoy, miramos si ya pasó la hora límite
+      if (now.getTime() < targetTime.getTime()) {
+        // Agenda para hoy a las 23:30
+        scheduleMsg = `Hoy a las 23:30`;
       } else {
-        // Si aún no ha completado el registro de hoy, miramos si ya pasó la hora límite
-        if (now.getTime() < targetTime.getTime()) {
-          // Agenda para hoy a las 23:30
-          scheduleMsg = `Hoy a las 23:30`;
-        } else {
-          // Ya pasaron las 23:30 de hoy. Agendamos para mañana
-          finalTargetDate.setDate(finalTargetDate.getDate() + 1);
-          scheduleMsg = `Mañana a las 23:30 (Hora de hoy vencida)`;
+        // Ya pasaron las 23:30 de hoy. Agendamos para mañana
+        finalTargetDate.setDate(finalTargetDate.getDate() + 1);
+        scheduleMsg = `Mañana a las 23:30 (Hora de hoy vencida)`;
+      }
+    }
+
+    setNextScheduledInfo(scheduleMsg);
+    localStorage.setItem('pepe_next_reminder_time', finalTargetDate.getTime().toString());
+
+    // Agendar en Service Worker si está soportado (Notification Triggers nativos)
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistration().then(registration => {
+        if (registration) {
+          // Limpiamos cualquier notificación anterior duplicada
+          if (registration.getNotifications) {
+            registration.getNotifications().then(notifications => {
+              notifications.forEach(n => {
+                if (n.tag === 'pepe-mood-reminder') n.close();
+              });
+            });
+          }
+
+          const options: any = {
+            body: "¿Cómo te sientes hoy? No dejes el día en blanco en tu calendario de Pepe. Haz clic para puntuar.",
+            icon: 'https://sme2zz26xzjq57zw.public.blob.vercel-storage.com/favicon_2.png',
+            badge: 'https://sme2zz26xzjq57zw.public.blob.vercel-storage.com/favicon_2.png',
+            tag: 'pepe-mood-reminder',
+            requireInteraction: true,
+            vibrate: [100, 50, 100],
+            data: { url: window.location.origin + window.location.pathname }
+          };
+
+          if ('showTrigger' in Notification.prototype && (window as any).TimestampTrigger) {
+            try {
+              options.showTrigger = new (window as any).TimestampTrigger(finalTargetDate.getTime());
+              registration.showNotification("🐸 Pepe Pixel Tracker", options);
+              console.log("Notificación programada vía showTrigger para:", finalTargetDate);
+            } catch (e) {
+              console.warn("showTrigger no permitido hoy:", e);
+            }
+          }
         }
-      }
-
-      setNextScheduledInfo(scheduleMsg);
-
-      // 1. Limpiamos cualquier notificación anterior de tipo 'pepe-mood-reminder' para mantener limpio de duplicados
-      if (registration.getNotifications) {
-        registration.getNotifications().then(notifications => {
-          notifications.forEach(n => {
-            if (n.tag === 'pepe-mood-reminder') n.close();
-          });
-        });
-      }
-
-      const title = "🐸 Pepe Pixel Tracker";
-      const options = {
-        body: "¿Cómo te sientes hoy? No dejes el día en blanco en tu calendario de Pepe. Haz clic para puntuar.",
-        icon: 'https://sme2zz26xzjq57zw.public.blob.vercel-storage.com/favicon_2.png',
-        badge: 'https://sme2zz26xzjq57zw.public.blob.vercel-storage.com/favicon_2.png',
-        tag: 'pepe-mood-reminder',
-        requireInteraction: true,
-        vibrate: [100, 50, 100],
-        data: { url: window.location.origin + window.location.pathname },
-        showTrigger: undefined as any
-      };
-
-      // Intentamos usar Notification Triggers (estándar offline local puro)
-      if ('showTrigger' in Notification.prototype && (window as any).TimestampTrigger) {
-        try {
-          options.showTrigger = new (window as any).TimestampTrigger(finalTargetDate.getTime());
-          registration.showNotification(title, options);
-          console.log("Notificación local programada vía showTrigger para:", finalTargetDate);
-        } catch (e) {
-          console.warn("Fallo showTrigger nativo, usando almacenamiento local para fallback");
-        }
-      }
-      
-      // Siempre guardamos el timestamp objetivo en localStorage para el fallback del temporizador en segundo plano
-      localStorage.setItem('pepe_next_reminder_time', finalTargetDate.getTime().toString());
-    }).catch(err => {
-      console.warn("Service Worker no listo aún para agendar notificaciones:", err);
-    });
+      }).catch(err => {
+        console.warn("Fallo cargando Service Worker para agendar:", err);
+      });
+    }
   }, [notificationsEnabled, yearData]);
 
   // Alternar notificaciones (Activar/Desactivar)
@@ -300,15 +349,17 @@ const App: React.FC = () => {
       setNextScheduledInfo('Desactivado');
       
       // Limpiar notificaciones activas
-      navigator.serviceWorker.ready.then(reg => {
-        if (reg.getNotifications) {
-          reg.getNotifications().then(notifications => {
-            notifications.forEach(n => {
-              if (n.tag === 'pepe-mood-reminder') n.close();
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistration().then(reg => {
+          if (reg && reg.getNotifications) {
+            reg.getNotifications().then(notifications => {
+              notifications.forEach(n => {
+                if (n.tag === 'pepe-mood-reminder') n.close();
+              });
             });
-          });
-        }
-      });
+          }
+        });
+      }
       return;
     }
 
@@ -320,7 +371,6 @@ const App: React.FC = () => {
       if (permission === 'granted') {
         localStorage.setItem('pepe_notifications_enabled', 'true');
         setNotificationsEnabled(true);
-        // Esperamos un momento para que el estado se actualice y agendamos
         setTimeout(() => scheduleDailyReminder(), 300);
       } else if (permission === 'denied') {
         alert("Permisos de notificaciones bloqueados. Habilítalos manualmente en los ajustes del sitio de tu navegador móvil para que Pepe pueda recordarte.");
@@ -349,18 +399,13 @@ const App: React.FC = () => {
     alert("🐸 Pepe ha agendado la notificación de prueba. Minimiza la app o bloquea el móvil, ¡saldrá en exactamente 5 segundos!");
 
     setTimeout(() => {
-      navigator.serviceWorker.ready.then(reg => {
-        reg.showNotification("🐸 ¡Éxito en la prueba de Pepe!", {
-          body: "¡Así de bien se verá tu recordatorio de las 23:30! Pulsa para entrar al pantano.",
-          icon: 'https://sme2zz26xzjq57zw.public.blob.vercel-storage.com/favicon_2.png',
-          badge: 'https://sme2zz26xzjq57zw.public.blob.vercel-storage.com/favicon_2.png',
-          tag: 'pepe-test-reminder',
-          vibrate: [150, 50, 150],
-          data: { url: window.location.origin + window.location.pathname }
-        });
-      });
+      sendPepeNotification(
+        "🐸 ¡Éxito en la prueba de Pepe!",
+        "¡Así de bien se verá tu recordatorio de las 23:30! Pulsa para registrar tu día en el pantano.",
+        "pepe-test-reminder"
+      );
     }, 5000);
-  }, [triggerHaptic]);
+  }, [triggerHaptic, sendPepeNotification]);
 
   // Ejecutar agendamiento cada vez que cambien los datos o la configuración de notificaciones
   useEffect(() => {
@@ -384,24 +429,17 @@ const App: React.FC = () => {
 
           if (!hasRegistered) {
             if ('Notification' in window && Notification.permission === 'granted') {
-              navigator.serviceWorker.ready.then(reg => {
-                reg.showNotification("🐸 ¡Tu estado de ánimo de hoy!", {
-                  body: "¿Cómo te ha ido el día? No olvides registrar tu humor diario en el calendario de Pepe.",
-                  icon: 'https://sme2zz26xzjq57zw.public.blob.vercel-storage.com/favicon_2.png',
-                  badge: 'https://sme2zz26xzjq57zw.public.blob.vercel-storage.com/favicon_2.png',
-                  tag: 'pepe-mood-reminder',
-                  requireInteraction: true,
-                  vibrate: [100, 50, 100],
-                  data: { url: window.location.origin + window.location.pathname }
-                });
+              sendPepeNotification(
+                "🐸 ¡Tu estado de ánimo de hoy!",
+                "¿Cómo te ha ido el día? No olvides registrar tu humor diario en el calendario de Pepe."
+              );
 
-                // Calculamos y agendamos para mañana para no notificar repetidamente
-                const tomorrow = new Date();
-                tomorrow.setDate(tomorrow.getDate() + 1);
-                tomorrow.setHours(23, 30, 0, 0);
-                localStorage.setItem('pepe_next_reminder_time', tomorrow.getTime().toString());
-                setNextScheduledInfo("Mañana a las 23:30");
-              });
+              // Calculamos y agendamos para mañana para no notificar repetidamente
+              const tomorrow = new Date();
+              tomorrow.setDate(tomorrow.getDate() + 1);
+              tomorrow.setHours(23, 30, 0, 0);
+              localStorage.setItem('pepe_next_reminder_time', tomorrow.getTime().toString());
+              setNextScheduledInfo("Mañana a las 23:30");
             }
           }
         }
@@ -409,7 +447,7 @@ const App: React.FC = () => {
     }, 60000); // Chequea cada 60 segundos
 
     return () => clearInterval(interval);
-  }, [notificationsEnabled, yearData]);
+  }, [notificationsEnabled, yearData, sendPepeNotification]);
 
 
   // --- INITIAL DATA LOAD & ACHIEVEMENT MIGRATION ---
@@ -971,15 +1009,12 @@ const App: React.FC = () => {
             alert("API de Notificaciones no detectada en este contexto.");
             return;
           }
-          navigator.serviceWorker.ready.then(reg => {
-              reg.showNotification("🐸 Diagnóstico: " + Notification.permission, {
-                  body: "¿Puedes ver esto? Si estás en AI Studio, probablemente no.",
-                  icon: 'https://sme2zz26xzjq57zw.public.blob.vercel-storage.com/favicon_2.png',
-                  badge: 'https://sme2zz26xzjq57zw.public.blob.vercel-storage.com/favicon_2.png',
-                  tag: 'pepe-diagnostic',
-                  data: { url: window.location.origin + window.location.pathname }
-              }).catch(e => console.error(e));
-          });
+          // Usar helper unificado para diagnosticar mostrando la notificación de forma segura
+          sendPepeNotification(
+            "🐸 Diagnóstico: " + Notification.permission,
+            "¿Puedes ver esto? Si estás en una pestaña independiente (PWA) de forma nativa sí saldrá.",
+            "pepe-diagnostic"
+          );
         }}
         className="fixed top-4 right-4 z-[60] p-2 bg-slate-900/80 backdrop-blur-md rounded-full border border-white/10 text-amber-500 shadow-2xl active:scale-90 transition-all"
         title="Audit Notification Design"
@@ -1017,8 +1052,8 @@ const App: React.FC = () => {
        {isSettingsOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300" onClick={() => setIsSettingsOpen(false)}>
            <div 
-            className="bg-slate-900 border border-slate-700 w-full max-w-sm rounded-[2rem] shadow-2xl overflow-hidden p-6 relative" 
-            onClick={(e) => e.stopPropagation()}
+             className="bg-slate-900 border border-slate-700 w-full max-w-sm rounded-[2rem] shadow-2xl overflow-y-auto max-h-[90vh] p-6 relative" 
+             onClick={(e) => e.stopPropagation()}
            >
               {/* Settings content... */}
               <div className="flex items-center gap-3 mb-6">
@@ -1121,17 +1156,10 @@ const App: React.FC = () => {
                                 onClick={() => {
                                     SoundManager.play('click');
                                     triggerHaptic('medium');
-                                    navigator.serviceWorker.ready.then(reg => {
-                                        reg.showNotification("🐸 Recordatorio de Pepe (Preview)", {
-                                            body: "¿Cómo te ha ido el día? No olvides registrar tu humor diario.",
-                                            icon: 'https://sme2zz26xzjq57zw.public.blob.vercel-storage.com/favicon_2.png',
-                                            badge: 'https://sme2zz26xzjq57zw.public.blob.vercel-storage.com/favicon_2.png',
-                                            tag: 'pepe-mood-reminder',
-                                            requireInteraction: true,
-                                            vibrate: [100, 50, 100],
-                                            data: { url: window.location.origin + window.location.pathname }
-                                        }).catch(e => alert("Error/Bloqueado: " + e.message));
-                                    });
+                                    sendPepeNotification(
+                                        "🐸 Recordatorio de Pepe (Preview)",
+                                        "¿Cómo te ha ido el día? No olvides registrar tu humor diario."
+                                    );
                                 }}
                                 className="py-2.5 bg-slate-100/10 hover:bg-slate-100/20 active:scale-95 transition-all text-slate-200 font-black uppercase text-[9px] tracking-widest rounded-xl border border-white/10 flex flex-col items-center justify-center gap-1"
                               >
