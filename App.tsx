@@ -255,6 +255,24 @@ const App: React.FC = () => {
       }).catch(err => {
         console.warn("Fallo al obtener registro de Service Worker para notificación:", err);
       });
+
+      // 3. Dual-Activation: Enviar también un mensaje directo al SW activo.
+      // En algunos dispositivos móviles, llamar directametne a navigator.serviceWorker.controller.postMessage
+      // fuerza al Service Worker a despertar y lanzar la notificación desde su propio hilo de fondo.
+      if (navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+          action: 'show-notification',
+          title,
+          options: {
+            body,
+            tag,
+            vibrate: [150, 50, 150],
+            requireInteraction: true,
+            data: { url: window.location.origin + window.location.pathname }
+          }
+        });
+        console.log("Notificación enviada vía postMessage al Service Worker activo.");
+      }
     }
   }, []);
 
@@ -395,7 +413,7 @@ const App: React.FC = () => {
     }
 
     if (Notification.permission !== 'granted') {
-      alert("Por favor, concede primero permisos de notificación activando la campana.");
+      alert("Por favor, concede primero permisos de notificación habilitando los recordatorios en la Configuración de la app.");
       return;
     }
 
@@ -1017,28 +1035,6 @@ const App: React.FC = () => {
         <p className="text-[10px] font-black tracking-[0.3em] uppercase">developed by <span className="text-green-500">Juasmio</span></p>
       </footer>
 
-      {/* Developer Quick Audit Notification (Siempre visible para diagnóstico) */}
-      <button 
-        onClick={() => {
-          SoundManager.play('click');
-          triggerHaptic('heavy');
-          if (!('Notification' in window)) {
-            alert("API de Notificaciones no detectada en este contexto.");
-            return;
-          }
-          // Usar helper unificado para diagnosticar mostrando la notificación de forma segura
-          sendPepeNotification(
-            "🐸 Diagnóstico: " + Notification.permission,
-            "¿Puedes ver esto? Si estás en una pestaña independiente (PWA) de forma nativa sí saldrá.",
-            "pepe-diagnostic"
-          );
-        }}
-        className="fixed top-4 right-4 z-[60] p-2 bg-slate-900/80 backdrop-blur-md rounded-full border border-white/10 text-amber-500 shadow-2xl active:scale-90 transition-all"
-        title="Audit Notification Design"
-      >
-        <Bell size={18} className={notificationsEnabled ? "animate-pulse" : "opacity-30"} />
-      </button>
-
       <FloatingMenu 
         onStats={() => { triggerHaptic('light'); setIsStatsModalOpen(true); }}
         onReset={() => { triggerHaptic('medium'); setShowResetConfirm(true); }}
@@ -1336,11 +1332,11 @@ const App: React.FC = () => {
           className="fixed top-6 left-1/2 -translate-x-1/2 z-[150] w-[92%] max-w-sm bg-slate-900/95 border border-emerald-500/40 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.85),0_0_40px_rgba(34,197,94,0.2)] rounded-3xl backdrop-blur-xl p-4 flex gap-3.5 items-center animate-in fade-in slide-in-from-top-4 duration-500"
           style={{ contentVisibility: 'auto' }}
         >
-          <div className="w-[42px] h-[42px] rounded-2xl bg-slate-950 border border-emerald-500/20 shadow-inner flex items-center justify-center shrink-0 overflow-hidden">
+          <div className="w-[42px] h-[42px] rounded-2xl bg-slate-950 border border-emerald-500/20 shadow-inner flex items-center justify-center shrink-0 overflow-hidden p-1.5">
             <img 
                src="https://sme2zz26xzjq57zw.public.blob.vercel-storage.com/favicon_2.png" 
                alt="Pepe" 
-               className="w-full h-full object-cover"
+               className="w-full h-full object-contain"
                referrerPolicy="no-referrer"
             />
           </div>
