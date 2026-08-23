@@ -61,7 +61,7 @@ export const usePepeJudge = ({ stats, getRangeLabel }: UsePepeJudgeProps) => {
     }, 2000);
 
     try {
-        const apiKey = (import.meta as any).env?.VITE_PEPE_MOOD_KEY || (process as any).env?.NEXT_PUBLIC_PEPE_MOOD_KEY || process.env.API_KEY;
+        const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || (import.meta as any).env?.VITE_PEPE_MOOD_KEY || (process as any).env?.GEMINI_API_KEY || (process as any).env?.NEXT_PUBLIC_PEPE_MOOD_KEY || process.env.API_KEY;
         
         if (!apiKey) throw new Error("API Key no configurada");
 
@@ -138,7 +138,7 @@ export const usePepeJudge = ({ stats, getRangeLabel }: UsePepeJudgeProps) => {
         `;
 
         const response = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
+            model: 'gemini-3.7-flash',
             contents: prompt,
             config: {
                 responseMimeType: "application/json",

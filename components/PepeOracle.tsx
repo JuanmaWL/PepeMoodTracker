@@ -86,7 +86,7 @@ const PepeOracle: React.FC<PepeOracleProps> = ({ data }) => {
     setIsMagicActive(true);
 
     try {
-      const apiKey = (import.meta as any).env?.VITE_PEPE_MOOD_KEY || (process as any).env?.NEXT_PUBLIC_PEPE_MOOD_KEY || process.env.API_KEY;
+      const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || (import.meta as any).env?.VITE_PEPE_MOOD_KEY || (process as any).env?.GEMINI_API_KEY || (process as any).env?.NEXT_PUBLIC_PEPE_MOOD_KEY || process.env.API_KEY;
       const ai = new GoogleGenAI({ apiKey: apiKey });
       
       const prompt = `
@@ -104,7 +104,7 @@ const PepeOracle: React.FC<PepeOracleProps> = ({ data }) => {
       `;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-3.7-flash',
         contents: prompt,
       });
       setAdvice(response.text || "Pepe se ha quedado sin palabras.");
