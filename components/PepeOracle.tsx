@@ -5,6 +5,7 @@ import { GoogleGenAI } from "@google/genai";
 import { YearData } from '../types';
 import { MOODS, PEPE_ASSETS } from '../constants';
 import SoundManager from '../utils/sounds';
+import { getGeminiApiKey, GEMINI_MODEL_TEXT, GEMINI_FALLBACK_TEXT } from '../utils/gemini';
 
 interface PepeOracleProps {
   data: YearData;
@@ -86,7 +87,10 @@ const PepeOracle: React.FC<PepeOracleProps> = ({ data }) => {
     setIsMagicActive(true);
 
     try {
-      const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || (import.meta as any).env?.VITE_PEPE_MOOD_KEY || (process as any).env?.GEMINI_API_KEY || (process as any).env?.NEXT_PUBLIC_PEPE_MOOD_KEY || process.env.API_KEY;
+      const apiKey = getGeminiApiKey();
+      if (!apiKey) {
+        throw new Error("No se detectó API Key para Gemini.");
+      }
       const ai = new GoogleGenAI({ apiKey: apiKey });
       
       const prompt = `
@@ -103,12 +107,21 @@ const PepeOracle: React.FC<PepeOracleProps> = ({ data }) => {
         4. Si el mood es malo, sé sarcásticamente comprensivo (tipo: "te entiendo, tío, ya lo siento."). Si es bueno, celebra pero con ironía (tipo: "aprovéchalo antes de que se rompa algo").
       `;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
-        contents: prompt,
-      });
+      let response;
+      try {
+        response = await ai.models.generateContent({
+          model: GEMINI_MODEL_TEXT,
+          contents: prompt,
+        });
+      } catch (modelErr) {
+        console.warn(`Oracle fallback to ${GEMINI_FALLBACK_TEXT}:`, modelErr);
+        response = await ai.models.generateContent({
+          model: GEMINI_FALLBACK_TEXT,
+          contents: prompt,
+        });
+      }
       setAdvice(response.text || "Pepe se ha quedado sin palabras.");
-    } catch (e) {
+    } catch (e: any) {
       console.error("Oracle Error:", e);
       setAdvice("El Oráculo está saturado o la conexión ha petado. Inténtalo luego.");
     } finally {

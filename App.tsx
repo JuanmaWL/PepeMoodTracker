@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback, Suspense, useRef, useMemo } fr
 import Calendar from './components/Calendar';
 import FloatingMenu from './components/FloatingMenu';
 import PepeOracle from './components/PepeOracle';
+import GeminiStatusBulb from './components/GeminiStatusBulb';
 import Particles from './components/Particles';
 import QuickLogMenu from './components/QuickLogMenu'; 
 import WelcomeModal from './components/WelcomeModal'; 
@@ -1031,8 +1032,12 @@ const App: React.FC = () => {
         highlightedDates={highlightedDates}
       />
 
-      <footer className="mt-auto py-10 opacity-30">
-        <p className="text-[10px] font-black tracking-[0.3em] uppercase">developed by <span className="text-green-500">Juasmio</span></p>
+      <footer className="mt-auto py-10 flex items-center justify-center gap-3 opacity-60 hover:opacity-100 transition-opacity">
+        <p className="text-[10px] font-black tracking-[0.3em] uppercase opacity-70">
+          developed by <span className="text-green-500">Juasmio</span>
+        </p>
+        <div className="w-1 h-1 rounded-full bg-slate-700"></div>
+        <GeminiStatusBulb />
       </footer>
 
       <FloatingMenu 

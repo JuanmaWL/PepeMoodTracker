@@ -3,6 +3,7 @@ import { useState, useCallback, useRef } from 'react';
 import { MOODS, PEPE_ASSETS } from '../constants';
 import { MoodLevel } from '../types';
 import SoundManager from '../utils/sounds';
+import { getGeminiApiKey, GEMINI_MODEL_TEXT, GEMINI_FALLBACK_TEXT } from '../utils/gemini';
 
 const LOADING_PHRASES = [
   "PROCESANDO PECADOS...",
@@ -61,7 +62,7 @@ export const usePepeJudge = ({ stats, getRangeLabel }: UsePepeJudgeProps) => {
     }, 2000);
 
     try {
-        const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || (import.meta as any).env?.VITE_PEPE_MOOD_KEY || (process as any).env?.GEMINI_API_KEY || (process as any).env?.NEXT_PUBLIC_PEPE_MOOD_KEY || process.env.API_KEY;
+        const apiKey = getGeminiApiKey();
         
         if (!apiKey) throw new Error("API Key no configurada");
 
@@ -137,28 +138,40 @@ export const usePepeJudge = ({ stats, getRangeLabel }: UsePepeJudgeProps) => {
             - Máximo 130 palabras total.
         `;
 
-        const response = await ai.models.generateContent({
-            model: 'gemini-3.7-flash',
-            contents: prompt,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: Type.OBJECT,
-                    properties: {
-                        diagnosis: { type: Type.STRING },
-                        soundtrack: { type: Type.STRING },
-                        achievement: { type: Type.STRING }
-                    },
-                    required: ["diagnosis", "soundtrack", "achievement"]
+        const requestConfig = {
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                    diagnosis: { type: Type.STRING },
+                    soundtrack: { type: Type.STRING },
+                    achievement: { type: Type.STRING }
                 },
-                safetySettings: [
-                    { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-                    { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
-                    { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
-                    { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE }
-                ]
-            }
-        });
+                required: ["diagnosis", "soundtrack", "achievement"]
+            },
+            safetySettings: [
+                { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+                { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+                { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+                { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE }
+            ]
+        };
+
+        let response;
+        try {
+            response = await ai.models.generateContent({
+                model: GEMINI_MODEL_TEXT,
+                contents: prompt,
+                config: requestConfig
+            });
+        } catch (modelErr) {
+            console.warn(`Error con ${GEMINI_MODEL_TEXT}, intentando fallback a ${GEMINI_FALLBACK_TEXT}:`, modelErr);
+            response = await ai.models.generateContent({
+                model: GEMINI_FALLBACK_TEXT,
+                contents: prompt,
+                config: requestConfig
+            });
+        }
 
         const text = response.text;
 
@@ -169,9 +182,10 @@ export const usePepeJudge = ({ stats, getRangeLabel }: UsePepeJudgeProps) => {
              throw new Error("Pepe se quedó mudo.");
         }
 
-    } catch (e) {
-        console.error(e);
-        setErrorAi("Error conectando con el tribunal supremo.");
+    } catch (e: any) {
+        console.error("Tribunal error:", e);
+        const errorMsg = e?.message ? ` (${e.message.slice(0, 50)}...)` : '';
+        setErrorAi(`Error conectando con el tribunal supremo${errorMsg}`);
         SoundManager.play('trash');
     } finally {
         if (intervalRef.current) clearInterval(intervalRef.current);
