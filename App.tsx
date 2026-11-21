@@ -6,7 +6,7 @@ import PepeOracle from './components/PepeOracle';
 import GeminiStatusBulb from './components/GeminiStatusBulb';
 import Particles from './components/Particles';
 import QuickLogMenu from './components/QuickLogMenu';
-import WelcomeModal from './components/WelcomeModal';
+import WelcomeModal, { WelcomeTab } from './components/WelcomeModal';
 import BannerShowcase from './components/BannerShowcase';
 import AchievementToast from './components/AchievementToast';
 import InAppNotificationBanner from './components/InAppNotificationBanner';
@@ -14,6 +14,8 @@ import { DayData, MoodLevel } from './types';
 import { PEPE_ASSETS } from './constants';
 import SoundManager from './utils/sounds';
 import { getLocalDateStr } from './utils/date';
+import { APP_VERSION, SEEN_VERSION_KEY, TUTORIAL_KEY } from './utils/changelog';
+import { computeStreakStats } from './utils/streak';
 import { useAppSettings } from './hooks/useAppSettings';
 import { useYearData } from './hooks/useYearData';
 import { useAchievements } from './hooks/useAchievements';
@@ -26,8 +28,8 @@ const CloudModal = React.lazy(() => import('./components/CloudModal'));
 const AchievementsModal = React.lazy(() => import('./components/AchievementsModal'));
 const SettingsModal = React.lazy(() => import('./components/SettingsModal'));
 const ResetConfirmModal = React.lazy(() => import('./components/ResetConfirmModal'));
-
-const TUTORIAL_KEY = 'pepe_tutorial_seen_v1';
+const TimeCapsuleModal = React.lazy(() => import('./components/TimeCapsuleModal'));
+const PepeWrappedModal = React.lazy(() => import('./components/PepeWrappedModal'));
 
 const ModalLoader = () => {
   const gif = useMemo(() => {
@@ -64,10 +66,38 @@ const App: React.FC = () => {
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [isCloudModalOpen, setIsCloudModalOpen] = useState(false);
   const [isAchievementsModalOpen, setIsAchievementsModalOpen] = useState(false);
+  const [isTimeCapsuleOpen, setIsTimeCapsuleOpen] = useState(false);
+  const [isWrappedOpen, setIsWrappedOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
-  const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false);
   const [highlightedDates, setHighlightedDates] = useState<string[]>([]);
+
+  const [hasUnseenVersion, setHasUnseenVersion] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(SEEN_VERSION_KEY) !== APP_VERSION;
+    } catch {
+      return false;
+    }
+  });
+
+  const [welcomeState, setWelcomeState] = useState<{
+    isOpen: boolean;
+    initialTab: WelcomeTab;
+  }>(() => {
+    try {
+      const hasSeenTutorial = localStorage.getItem(TUTORIAL_KEY) === 'true';
+      if (!hasSeenTutorial) {
+        return { isOpen: true, initialTab: 'guide' };
+      }
+      const seenVersion = localStorage.getItem(SEEN_VERSION_KEY);
+      if (seenVersion !== APP_VERSION) {
+        return { isOpen: true, initialTab: 'changelog' };
+      }
+    } catch {
+      // Ignore storage access restrictions
+    }
+    return { isOpen: false, initialTab: 'guide' };
+  });
 
   const [quickLogState, setQuickLogState] = useState<{
     isActive: boolean;
@@ -103,6 +133,11 @@ const App: React.FC = () => {
     importData
   } = useYearData({ currentYear, triggerHaptic });
 
+  const streakStats = useMemo(
+    () => computeStreakStats(yearData, currentYear),
+    [yearData, currentYear]
+  );
+
   const {
     unlockedAchievements,
     newlyUnlocked,
@@ -125,22 +160,37 @@ const App: React.FC = () => {
 
   useEffect(() => {
     SoundManager.preload();
-    const hasSeenTutorial = localStorage.getItem(TUTORIAL_KEY);
-    if (!hasSeenTutorial) {
-      const timer = setTimeout(() => setIsWelcomeModalOpen(true), 1000);
-      return () => clearTimeout(timer);
-    }
   }, []);
+
+  const handleCloseWelcome = useCallback(() => {
+    try {
+      localStorage.setItem(SEEN_VERSION_KEY, APP_VERSION);
+    } catch {
+      // Ignore storage access errors
+    }
+    setHasUnseenVersion(false);
+    setWelcomeState((prev) => ({ ...prev, isOpen: false }));
+  }, []);
+
+  const handleOpenWelcome = useCallback(
+    (tab: WelcomeTab) => {
+      triggerHaptic('light');
+      setWelcomeState({ isOpen: true, initialTab: tab });
+    },
+    [triggerHaptic]
+  );
 
   const isAnyModalOpen =
     isMoodModalOpen ||
     isStatsModalOpen ||
     isSearchModalOpen ||
     isCloudModalOpen ||
+    isTimeCapsuleOpen ||
+    isWrappedOpen ||
     isSettingsOpen ||
     showResetConfirm ||
     quickLogState.isActive ||
-    isWelcomeModalOpen ||
+    welcomeState.isOpen ||
     isAchievementsModalOpen;
 
   useEffect(() => {
@@ -158,9 +208,11 @@ const App: React.FC = () => {
       if (isSearchModalOpen) setIsSearchModalOpen(false);
       if (isCloudModalOpen) setIsCloudModalOpen(false);
       if (isAchievementsModalOpen) setIsAchievementsModalOpen(false);
+      if (isTimeCapsuleOpen) setIsTimeCapsuleOpen(false);
+      if (isWrappedOpen) setIsWrappedOpen(false);
       if (isSettingsOpen) setIsSettingsOpen(false);
       if (showResetConfirm) setShowResetConfirm(false);
-      if (isWelcomeModalOpen) setIsWelcomeModalOpen(false);
+      if (welcomeState.isOpen) handleCloseWelcome();
       if (newlyUnlocked) closeAchievementToast();
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -171,9 +223,12 @@ const App: React.FC = () => {
     isSearchModalOpen,
     isCloudModalOpen,
     isAchievementsModalOpen,
+    isTimeCapsuleOpen,
+    isWrappedOpen,
     isSettingsOpen,
     showResetConfirm,
-    isWelcomeModalOpen,
+    welcomeState.isOpen,
+    handleCloseWelcome,
     newlyUnlocked,
     closeAchievementToast
   ]);
@@ -282,6 +337,16 @@ const App: React.FC = () => {
     setIsAchievementsModalOpen(true);
   }, [triggerHaptic]);
 
+  const handleOpenTimeCapsule = useCallback(() => {
+    triggerHaptic('light');
+    setIsTimeCapsuleOpen(true);
+  }, [triggerHaptic]);
+
+  const handleOpenWrapped = useCallback(() => {
+    triggerHaptic('light');
+    setIsWrappedOpen(true);
+  }, [triggerHaptic]);
+
   const handleOpenSettings = useCallback(() => {
     triggerHaptic('light');
     clearNotificationFeedback();
@@ -306,7 +371,12 @@ const App: React.FC = () => {
     <div className="flex flex-col items-center min-h-screen pb-24 overflow-x-hidden text-slate-100 relative">
       <Particles count={particleCount} enabled={!ecoMode} pixelMode={pixelMode} />
 
-      <WelcomeModal isOpen={isWelcomeModalOpen} onClose={() => setIsWelcomeModalOpen(false)} />
+      <WelcomeModal
+        isOpen={welcomeState.isOpen}
+        onClose={handleCloseWelcome}
+        initialTab={welcomeState.initialTab}
+        hasUnseenVersion={hasUnseenVersion}
+      />
 
       <input
         type="file"
@@ -334,6 +404,10 @@ const App: React.FC = () => {
         currentYear={currentYear}
         ecoMode={ecoMode}
         isPaused={isAnyModalOpen}
+        streakStats={streakStats}
+        hasUnseenVersion={hasUnseenVersion}
+        onOpenGuide={() => handleOpenWelcome(hasUnseenVersion ? 'changelog' : 'guide')}
+        onLogToday={handleToday}
       />
 
       <PepeOracle data={yearData} />
@@ -353,12 +427,12 @@ const App: React.FC = () => {
         currentYear={currentYear}
         highlightedDates={highlightedDates}
         ecoMode={ecoMode}
-        deferInitialScroll={isWelcomeModalOpen}
+        deferInitialScroll={welcomeState.isOpen}
       />
 
       <footer className="mt-auto py-10 flex items-center justify-center gap-3 opacity-60 hover:opacity-100 transition-opacity">
-        <p className="text-[10px] font-black tracking-[0.3em] uppercase opacity-70">
-          developed by <span className="text-green-500">Juasmio</span>
+        <p className="text-[10px] font-black tracking-[0.3em] uppercase opacity-70 tabular-nums">
+          developed by <span className="text-green-500">Juasmio</span> · v{APP_VERSION}
         </p>
         <div className="w-1 h-1 rounded-full bg-slate-700"></div>
         <GeminiStatusBulb />
@@ -370,6 +444,8 @@ const App: React.FC = () => {
         onSearch={handleOpenSearch}
         onCloud={handleOpenCloud}
         onAchievements={handleOpenAchievements}
+        onTimeCapsule={handleOpenTimeCapsule}
+        onWrapped={handleOpenWrapped}
         onSettings={handleOpenSettings}
       />
 
@@ -414,11 +490,30 @@ const App: React.FC = () => {
             unlockedItems={unlockedAchievements}
           />
         )}
+        {isTimeCapsuleOpen && (
+          <TimeCapsuleModal
+            isOpen={isTimeCapsuleOpen}
+            onClose={() => setIsTimeCapsuleOpen(false)}
+            data={yearData}
+            currentYear={currentYear}
+            onSelectDate={handleJumpToDate}
+            onLogToday={handleToday}
+          />
+        )}
+        {isWrappedOpen && (
+          <PepeWrappedModal
+            isOpen={isWrappedOpen}
+            onClose={() => setIsWrappedOpen(false)}
+            data={yearData}
+            unlockedAchievements={unlockedAchievements}
+            currentYear={currentYear}
+          />
+        )}
         {isSettingsOpen && (
           <SettingsModal
             isOpen={isSettingsOpen}
             onClose={() => setIsSettingsOpen(false)}
-            onOpenTutorial={() => setIsWelcomeModalOpen(true)}
+            onOpenTutorial={() => handleOpenWelcome('guide')}
             ecoMode={ecoMode}
             onToggleEcoMode={() => setEcoMode(prev => !prev)}
             pixelMode={pixelMode}

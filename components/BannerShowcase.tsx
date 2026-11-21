@@ -1,10 +1,18 @@
 import React, { useState, useEffect, useMemo, memo } from 'react';
+import { BookOpen, Flame } from 'lucide-react';
 import { BANNER_SLIDES, PEPE_ASSETS } from '../constants';
+import { StreakStats } from '../utils/streak';
+import { APP_VERSION } from '../utils/changelog';
+import SoundManager from '../utils/sounds';
 
 interface BannerShowcaseProps {
   currentYear: number;
   ecoMode: boolean;
   isPaused: boolean;
+  streakStats: StreakStats;
+  hasUnseenVersion: boolean;
+  onOpenGuide: () => void;
+  onLogToday: () => void;
 }
 
 const PIXEL_COLORS = [
@@ -19,7 +27,15 @@ const PIXEL_COLORS = [
   '#38bdf8'
 ];
 
-const BannerShowcase: React.FC<BannerShowcaseProps> = memo(({ currentYear, ecoMode, isPaused }) => {
+const BannerShowcase: React.FC<BannerShowcaseProps> = memo(({
+  currentYear,
+  ecoMode,
+  isPaused,
+  streakStats,
+  hasUnseenVersion,
+  onOpenGuide,
+  onLogToday
+}) => {
   const [bannerIndex, setBannerIndex] = useState(0);
 
   const activePixels = useMemo(() => {
@@ -45,9 +61,31 @@ const BannerShowcase: React.FC<BannerShowcaseProps> = memo(({ currentYear, ecoMo
     return () => clearInterval(interval);
   }, [isPaused]);
 
+  const handleGuideClick = () => {
+    SoundManager.play('click');
+    onOpenGuide();
+  };
+
   return (
-    <header className="mt-8 mb-6 text-center flex flex-col items-center relative w-full px-4">
-      <div className="relative group mb-8 mt-4">
+    <header className="mt-4 md:mt-6 mb-6 text-center flex flex-col items-center relative w-full max-w-5xl px-4">
+      <div className="w-full flex justify-end mb-2">
+        <button
+          type="button"
+          onClick={handleGuideClick}
+          className="min-h-[44px] px-3.5 py-2 rounded-2xl bg-slate-900/75 hover:bg-slate-800/90 border border-slate-700/70 hover:border-emerald-500/40 text-slate-300 hover:text-white transition-all inline-flex items-center gap-2 text-xs font-bold shadow-sm active:scale-95 whitespace-nowrap"
+          aria-label="Abrir guía rápida y novedades"
+        >
+          <BookOpen size={15} className="text-emerald-400 shrink-0" />
+          <span>Guía · v{APP_VERSION}</span>
+          {hasUnseenVersion && (
+            <span className="text-emerald-300 font-black uppercase text-[10px] tracking-wider">
+              Nuevo
+            </span>
+          )}
+        </button>
+      </div>
+
+      <div className="relative group mb-8 mt-2">
         <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[180%] h-[180%] pointer-events-none opacity-80 ${ecoMode ? 'hidden' : ''}`}>
           <div className="absolute inset-0 border-2 border-green-500/30 rounded-full border-dashed animate-[spin_20s_linear_infinite]"></div>
           <div className="absolute inset-8 border-2 border-emerald-400/40 rounded-full border-dotted animate-[spin_15s_linear_infinite_reverse]"></div>
@@ -122,6 +160,46 @@ const BannerShowcase: React.FC<BannerShowcaseProps> = memo(({ currentYear, ecoMo
       <p className="text-slate-400 font-bold tracking-[0.2em] text-[10px] md:text-sm mt-1 italic opacity-90 uppercase text-center max-w-lg mx-auto">
         {currentYear} EDITION
       </p>
+
+      <div className="mt-3 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 text-xs md:text-sm font-bold text-slate-300 tabular-nums">
+        <span className="inline-flex items-center gap-1.5">
+          <Flame
+            size={15}
+            className={
+              streakStats.isTodayLogged
+                ? 'text-emerald-400 shrink-0'
+                : streakStats.currentStreak > 0
+                  ? 'text-amber-400 shrink-0'
+                  : 'text-slate-500 shrink-0'
+            }
+          />
+          <span>
+            Racha actual: <strong className="text-white">{streakStats.currentStreak}</strong>{' '}
+            {streakStats.currentStreak === 1 ? 'día' : 'días'}
+          </span>
+        </span>
+
+        <span className="text-slate-600" aria-hidden="true">·</span>
+
+        <span className="text-slate-400">
+          Récord: <strong className="text-slate-200">{streakStats.bestStreak}</strong>{' '}
+          {streakStats.bestStreak === 1 ? 'día' : 'días'}
+        </span>
+
+        <span className="text-slate-600" aria-hidden="true">·</span>
+
+        {streakStats.isTodayLogged ? (
+          <span className="text-emerald-400">Hoy registrado</span>
+        ) : (
+          <button
+            type="button"
+            onClick={onLogToday}
+            className="min-h-[44px] px-2 -my-2 inline-flex items-center text-amber-300 hover:text-amber-200 underline underline-offset-4 decoration-amber-400/50 transition-colors"
+          >
+            {streakStats.isAtRisk ? 'Hoy pendiente (mantener racha)' : 'Registrar hoy'}
+          </button>
+        )}
+      </div>
     </header>
   );
 });

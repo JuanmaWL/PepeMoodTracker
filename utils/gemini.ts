@@ -113,6 +113,15 @@ export async function requestJudgeVerdict(payload: JudgeVerdictRequest): Promise
   return data.analysis;
 }
 
+export interface WrappedTaglineRequest {
+  periodTitle: string;
+  totalDays: number;
+  averageScore: number;
+  dominantMood: string;
+  bestStreak: number;
+  topWords: string[];
+}
+
 export async function requestMemeEdit(payload: MemeEditRequest): Promise<string> {
   const res = await fetch('/api/gemini/meme', {
     method: 'POST',
@@ -127,4 +136,20 @@ export async function requestMemeEdit(payload: MemeEditRequest): Promise<string>
     throw new Error('No se generó imagen');
   }
   return data.imageDataUrl;
+}
+
+export async function requestWrappedTagline(payload: WrappedTaglineRequest): Promise<string> {
+  const res = await fetch('/api/gemini/wrapped', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await parseJsonSafe(res);
+  if (!res.ok) {
+    throw new Error(data.error || `Error HTTP ${res.status}`);
+  }
+  if (typeof data.tagline !== 'string' || !data.tagline) {
+    throw new Error('Pepe no encontró palabras para este periodo.');
+  }
+  return data.tagline;
 }

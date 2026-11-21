@@ -430,6 +430,58 @@ app.post('/api/gemini/meme', async (req: Request, res: Response) => {
   }
 });
 
+app.post('/api/gemini/wrapped', async (req: Request, res: Response) => {
+  try {
+    if (!req.body || typeof req.body !== 'object') {
+      throw new ApiError(400, 'Datos inválidos para generar el resumen Wrapped.');
+    }
+
+    const totalDays = Number(req.body.totalDays);
+    if (!Number.isFinite(totalDays) || totalDays <= 0) {
+      throw new ApiError(400, 'Necesitas al menos 1 día registrado para pedir un veredicto Wrapped.');
+    }
+
+    const periodTitle = sanitizeShortString(req.body.periodTitle, 60, 'Este periodo');
+    const dominantMood = sanitizeShortString(req.body.dominantMood, 40, 'Normal');
+    const averageScore = Number(req.body.averageScore);
+    const safeAverage = Number.isFinite(averageScore)
+      ? Math.max(0, Math.min(6, Number(averageScore.toFixed(2))))
+      : 0;
+    const bestStreak = Number(req.body.bestStreak);
+    const safeStreak = Number.isFinite(bestStreak) ? Math.max(0, Math.min(366, Math.round(bestStreak))) : 0;
+    const rawWords = Array.isArray(req.body.topWords) ? req.body.topWords : [];
+    const topWords = rawWords
+      .slice(0, 6)
+      .map((w: unknown) => sanitizeShortString(w, 24, ''))
+      .filter(Boolean);
+
+    const ai = getGeminiClient();
+    const prompt = `
+      ACTÚA COMO: Pepe the Frog versión Millennial redactando el veredicto de una tarjeta "Pepe Wrapped".
+      DATOS DEL RESUMEN:
+      - Periodo: ${periodTitle}
+      - Días registrados: ${Math.round(totalDays)}
+      - Mood dominante: ${dominantMood}
+      - Media emocional: ${safeAverage}/6
+      - Racha récord: ${safeStreak} días
+      - Temas frecuentes en notas: ${topWords.length > 0 ? topWords.join(', ') : 'sin notas destacadas'}
+
+      REGLAS ESTRICTAS:
+      1. Devuelve UNA única frase o veredicto breve (máximo 28 palabras).
+      2. Texto plano natural en español. PROHIBIDO usar markdown, asteriscos, comillas envolventes o listas.
+      3. Tono irónico pero cercano (humor Millennial internet, sin usar "basado", "crack", "fiera" ni "máquina").
+    `;
+
+    const { text } = await generateTextWithFallback(ai, prompt);
+    const cleaned = text.trim().replace(/\*\*/g, '').replace(/^["'«]|["'»]$/g, '');
+    res.json({ tagline: cleaned || 'Pepe observó tu lore y asintió en silencio.' });
+  } catch (err) {
+    console.error('Wrapped API error:', err);
+    const { status, message } = formatGeminiError(err);
+    res.status(status).json({ error: message });
+  }
+});
+
 // Handle malformed JSON bodies cleanly without leaking Express HTML error pages
 app.use((err: Error, _req: Request, res: Response, next: NextFunction) => {
   if (err instanceof SyntaxError && 'body' in err) {
