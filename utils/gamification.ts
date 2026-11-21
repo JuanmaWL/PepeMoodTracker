@@ -1,5 +1,5 @@
 
-import { Achievement, YearData, MoodLevel, Rarity } from '../types';
+import { Achievement, AchievementConfig, YearData, MoodLevel, Rarity } from '../types';
 import { Flame, BookOpen, Crown, Skull, Zap, TrendingUp, TrendingDown, Gem, Bomb, Rocket, Ghost, Cat, Leaf, Activity, CheckCircle2, Mic2, Medal, Music, Gamepad2, Twitter, Waves, Sun, CloudRain, Shield, Atom, Clock, CloudFog, Dna, Feather, HandMetal, Scroll, Map, Smile, ShieldCheck, Moon, Swords, Droplets, Sprout, Fingerprint } from 'lucide-react';
 
 export const ACHIEVEMENTS: Achievement[] = [
@@ -505,72 +505,70 @@ export const ACHIEVEMENTS: Achievement[] = [
 
 // --- HELPER FUNCTIONS ---
 
-function checkStreak(data: YearData, requiredStreak: number): boolean {
+function getSortedDayData(data: YearData): { dates: string[]; dayNums: number[] } {
     const dates = Object.keys(data).sort();
+    const dayNums = new Array<number>(dates.length);
+    for (let i = 0; i < dates.length; i++) {
+        const [y, m, d] = dates[i].split('-').map(Number);
+        dayNums[i] = Math.floor(Date.UTC(y, m - 1, d) / 86400000);
+    }
+    return { dates, dayNums };
+}
+
+function checkStreak(data: YearData, requiredStreak: number): boolean {
+    const { dates, dayNums } = getSortedDayData(data);
     if (dates.length < requiredStreak) return false;
     
-    let currentStreak = 0;
-    let maxStreak = 0;
+    let currentStreak = 1;
+    let maxStreak = 1;
     
-    for (let i = 0; i < dates.length; i++) {
-        if (i === 0) {
-            currentStreak = 1;
-            continue;
-        }
-        const prev = new Date(dates[i-1]);
-        const curr = new Date(dates[i]);
-        const diffDays = Math.round(Math.abs(curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
-        
-        if (diffDays === 1) {
+    for (let i = 1; i < dates.length; i++) {
+        if (dayNums[i] - dayNums[i - 1] === 1) {
             currentStreak++;
+            if (currentStreak > maxStreak) maxStreak = currentStreak;
         } else {
-            maxStreak = Math.max(maxStreak, currentStreak);
             currentStreak = 1;
         }
     }
-    maxStreak = Math.max(maxStreak, currentStreak);
     return maxStreak >= requiredStreak;
 }
 
 function checkStreakWithCondition(data: YearData, requiredStreak: number, predicate: (d: any) => boolean): boolean {
-    const dates = Object.keys(data).sort();
+    const { dates, dayNums } = getSortedDayData(data);
     let currentStreak = 0;
     let maxStreak = 0;
     
     for (let i = 0; i < dates.length; i++) {
         const entry = data[dates[i]];
         if (predicate(entry)) {
-            if (i > 0) {
-                const prev = new Date(dates[i-1]);
-                const curr = new Date(dates[i]);
-                const diffDays = Math.round(Math.abs(curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
-                if (diffDays === 1) currentStreak++;
-                else currentStreak = 1;
+            if (i > 0 && dayNums[i] - dayNums[i - 1] === 1) {
+                currentStreak++;
             } else {
                 currentStreak = 1;
             }
+            if (currentStreak > maxStreak) maxStreak = currentStreak;
         } else {
             currentStreak = 0;
         }
-        maxStreak = Math.max(maxStreak, currentStreak);
     }
     return maxStreak >= requiredStreak;
 }
 
 function checkPattern(data: YearData, sequence: MoodLevel[]): boolean {
-    const dates = Object.keys(data).sort();
+    const { dates, dayNums } = getSortedDayData(data);
     if (dates.length < sequence.length) return false;
     
     for (let i = 0; i <= dates.length - sequence.length; i++) {
         let match = true;
         for (let j = 0; j < sequence.length; j++) {
-            if (j > 0) {
-                const prev = new Date(dates[i+j-1]);
-                const curr = new Date(dates[i+j]);
-                const diffDays = Math.round(Math.abs(curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
-                if (diffDays !== 1) { match = false; break; }
+            if (j > 0 && dayNums[i + j] - dayNums[i + j - 1] !== 1) {
+                match = false;
+                break;
             }
-            if (data[dates[i+j]].level !== sequence[j]) { match = false; break; }
+            if (data[dates[i + j]].level !== sequence[j]) {
+                match = false;
+                break;
+            }
         }
         if (match) return true;
     }
@@ -578,44 +576,38 @@ function checkPattern(data: YearData, sequence: MoodLevel[]): boolean {
 }
 
 function checkSameMoodStreak(data: YearData, length: number): boolean {
-    const dates = Object.keys(data).sort();
+    const { dates, dayNums } = getSortedDayData(data);
     if (dates.length < length) return false;
     let currentStreak = 1;
     let maxStreak = 1;
 
     for (let i = 1; i < dates.length; i++) {
-        const prevDate = new Date(dates[i-1]);
-        const currDate = new Date(dates[i]);
-        const diffDays = Math.round(Math.abs(currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
-        
-        if (diffDays === 1 && data[dates[i]].level === data[dates[i-1]].level) {
+        if (dayNums[i] - dayNums[i - 1] === 1 && data[dates[i]].level === data[dates[i - 1]].level) {
             currentStreak++;
+            if (currentStreak > maxStreak) maxStreak = currentStreak;
         } else {
             currentStreak = 1;
         }
-        maxStreak = Math.max(maxStreak, currentStreak);
     }
     return maxStreak >= length;
 }
 
 function checkUniqueMoodsInWindow(data: YearData, windowSize: number): boolean {
-    const dates = Object.keys(data).sort();
+    const { dates, dayNums } = getSortedDayData(data);
     if (dates.length < windowSize) return false;
     
     for (let i = 0; i <= dates.length - windowSize; i++) {
-        const slice = dates.slice(i, i + windowSize);
-        const isConsecutive = slice.every((date, idx) => {
-            if (idx === 0) return true;
-            const prev = new Date(slice[idx-1]);
-            const curr = new Date(date);
-            const diffDays = Math.round(Math.abs(curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
-            return diffDays === 1;
-        });
-
-        if (isConsecutive) {
-            const moods = new Set(slice.map(d => data[d].level));
-            if (moods.size === windowSize) return true;
+        let consecutive = true;
+        const moods = new Set<MoodLevel>();
+        for (let j = 0; j < windowSize; j++) {
+            if (j > 0 && dayNums[i + j] - dayNums[i + j - 1] !== 1) {
+                consecutive = false;
+                break;
+            }
+            moods.add(data[dates[i + j]].level);
         }
+
+        if (consecutive && moods.size === windowSize) return true;
     }
     return false;
 }
@@ -626,42 +618,25 @@ function checkSpecificPattern(data: YearData, sequence: MoodLevel[]): boolean {
 
 // --- HISTORICAL REPLAY LOGIC ---
 
-/**
- * Calculates the exact date an achievement was unlocked by replaying history.
- * Iterates through all recorded dates chronologically, building a partial
- * view of the data, and checks the condition at each step.
- */
 export const calculateHistoricalUnlockDate = (achievement: Achievement, fullData: YearData, config?: AchievementConfig): number => {
-    // 1. Get all chronological dates
     const dates = Object.keys(fullData).sort();
-    
-    // 2. Accumulator for partial history
     const partialData: YearData = {};
 
-    // 3. Replay history day by day
     for (const date of dates) {
-        partialData[date] = fullData[date]; // Add current day to history
+        partialData[date] = fullData[date];
         
-        // 4. Check if condition is met with this partial data
         if (achievement.condition(partialData, config)) {
-             // Found the trigger date!
              const [y, m, d] = date.split('-').map(Number);
              const resultDate = new Date(y, m - 1, d);
              
-             // 5. Assign a realistic "night time" (22:00 - 23:59)
-             // Use a pseudo-random seed based on date to be deterministic but varied
              const seed = y + m + d;
-             const randomMinutes = seed % 60;
-             const randomHour = 22 + (seed % 2); // 22 or 23
-             
-             resultDate.setHours(randomHour);
-             resultDate.setMinutes(randomMinutes);
+             resultDate.setHours(22 + (seed % 2));
+             resultDate.setMinutes(seed % 60);
              
              return resultDate.getTime();
         }
     }
 
-    // Fallback: If condition met in fullData but logic failed (shouldn't happen), return now.
     return Date.now();
 };
 

@@ -1,10 +1,11 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { X, Brain, PieChart as PieChartIcon, BarChart3, Hexagon, Waves, CalendarRange, Filter, ListFilter, TrendingUp } from 'lucide-react';
-import { YearData, MoodLevel, DayData } from '../types';
+import { YearData, MoodLevel } from '../types';
 import { MOODS, MONTHS, PEPE_ASSETS } from '../constants';
 import Heatmap from './Heatmap';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
+import { filterEntriesByRange } from '../utils/date';
 import { usePepeJudge } from '../hooks/usePepeJudge';
 import JudgeSection from './stats/JudgeSection';
 import EvolutionCharts, { ChartType } from './stats/EvolutionCharts';
@@ -46,35 +47,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
 
   // Heavy calculation memoized
   const stats = useMemo(() => {
-    const entries = Object.entries(data) as [string, DayData][];
-    const allValidEntries = entries.filter(([_, d]) => d.level > 0).sort((a, b) => a[0].localeCompare(b[0]));
-    
-    let filteredEntries: [string, DayData][] = [];
-
-    if (timeRange === 'all') {
-        filteredEntries = allValidEntries;
-    } else if (timeRange === 'last_7') {
-        filteredEntries = allValidEntries.slice(-7);
-    } else if (timeRange === 'last_30') {
-        filteredEntries = allValidEntries.slice(-30);
-    } else {
-        const monthIndex = parseInt(timeRange);
-        filteredEntries = allValidEntries.filter(([date]) => {
-             const [_, m] = date.split('-');
-             return parseInt(m) - 1 === monthIndex;
-        });
-
-        if (weekRange !== 'all') {
-            filteredEntries = filteredEntries.filter(([date]) => {
-                const day = parseInt(date.split('-')[2]);
-                if (weekRange === '1') return day >= 1 && day <= 7;
-                if (weekRange === '2') return day >= 8 && day <= 14;
-                if (weekRange === '3') return day >= 15 && day <= 21;
-                if (weekRange === '4') return day >= 22;
-                return true;
-            });
-        }
-    }
+    const filteredEntries = filterEntriesByRange(data, timeRange, weekRange, false);
 
     if (filteredEntries.length === 0) return null;
 
@@ -282,12 +255,6 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, data }) => {
                                           className="w-16 h-16 object-contain opacity-90"
                                           style={{ animation: 'pepe-breath 3s ease-in-out infinite' }}
                                       />
-                                      <style>{`
-                                      @keyframes pepe-breath {
-                                          0%, 100% { transform: scale(0.95); opacity: 0.8; }
-                                          50% { transform: scale(1.05); opacity: 1; }
-                                      }
-                                      `}</style>
                                   </div>
 
                                   <ResponsiveContainer width="100%" height="100%">

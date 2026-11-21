@@ -69,10 +69,10 @@ Este proyecto ha sido forjado con las herramientas más frescas del mercado:
     npm install
     ```
 
-3.  **Configura la API Key:**
+3.  **Configura la API Key (solo servidor):**
     Crea un archivo `.env` en la raíz y añade tu clave de Google AI Studio:
     ```env
-    VITE_PEPE_MOOD_KEY=tu_api_key_aqui
+    GEMINI_API_KEY=tu_api_key_aqui
     ```
 
 4.  **Arranca el servidor:**
@@ -82,11 +82,11 @@ Este proyecto ha sido forjado con las herramientas más frescas del mercado:
 
 ## 🌍 Variables de Entorno (Deploy)
 
-Si lo subes a **Vercel** o **Netlify**, asegúrate de configurar las variables de entorno en el panel de control de la plataforma:
+Si lo subes a **Vercel**, asegúrate de configurar la variable de entorno de servidor en *Project Settings → Environment Variables* (sin prefijo `VITE_` ni `NEXT_PUBLIC_`):
 
 | Variable | Descripción |
 | :--- | :--- |
-| `VITE_PEPE_MOOD_KEY` | Tu API Key de Google Gemini (AI Studio). |
+| `PEPE_VAULT_TOKEN` (o `GEMINI_API_KEY`) | Tu API Key de Google Gemini (AI Studio), leída únicamente desde el servidor. |
 
 ## 📸 Capturas
 

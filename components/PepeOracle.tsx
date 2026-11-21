@@ -1,11 +1,10 @@
 
 import React, { useState } from 'react';
 import { Sparkles, BrainCircuit, Quote, Zap, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
-import { GoogleGenAI } from "@google/genai";
 import { YearData } from '../types';
 import { MOODS, PEPE_ASSETS } from '../constants';
 import SoundManager from '../utils/sounds';
-import { getGeminiApiKey, GEMINI_MODEL_TEXT, GEMINI_FALLBACK_TEXT } from '../utils/gemini';
+import { requestOracleVerdict } from '../utils/gemini';
 
 interface PepeOracleProps {
   data: YearData;
@@ -87,40 +86,8 @@ const PepeOracle: React.FC<PepeOracleProps> = ({ data }) => {
     setIsMagicActive(true);
 
     try {
-      const apiKey = getGeminiApiKey();
-      if (!apiKey) {
-        throw new Error("No se detectó API Key para Gemini.");
-      }
-      const ai = new GoogleGenAI({ apiKey: apiKey });
-      
-      const prompt = `
-        ACTÚA COMO: Pepe el Oráculo Millennial.
-        PERSONALIDAD: Eres un sabio de Internet, milleniall, nostálgico, irónico y un poco cansado de la "vida moderna".
-        
-        CONTEXTO: Vas a dar un "Veredicto de Vida", un oráculo futuro basado en los últimos días del usuario, como algo premonitorio.
-        LORE RECIENTE: ${JSON.stringify(recent)}
-        
-        REGLAS DE ORO:
-        1. Sé breve (máximo 50 palabras).
-        2. NO USES MARKDOWN. Prohibido usar asteriscos (**), negritas o cursivas. Escribe texto plano natural.
-        3. Usa jerga Millennial natural, no forzada): Puedes usar "Cringe", "Mood" o referencias a que "cualquier tiempo pasado fue mejor".
-        4. Si el mood es malo, sé sarcásticamente comprensivo (tipo: "te entiendo, tío, ya lo siento."). Si es bueno, celebra pero con ironía (tipo: "aprovéchalo antes de que se rompa algo").
-      `;
-
-      let response;
-      try {
-        response = await ai.models.generateContent({
-          model: GEMINI_MODEL_TEXT,
-          contents: prompt,
-        });
-      } catch (modelErr) {
-        console.warn(`Oracle fallback to ${GEMINI_FALLBACK_TEXT}:`, modelErr);
-        response = await ai.models.generateContent({
-          model: GEMINI_FALLBACK_TEXT,
-          contents: prompt,
-        });
-      }
-      setAdvice(response.text || "Pepe se ha quedado sin palabras.");
+      const text = await requestOracleVerdict(recent);
+      setAdvice(text || "Pepe se ha quedado sin palabras.");
     } catch (e: any) {
       console.error("Oracle Error:", e);
       setAdvice("El Oráculo está saturado o la conexión ha petado. Inténtalo luego.");
@@ -330,4 +297,4 @@ const PepeOracle: React.FC<PepeOracleProps> = ({ data }) => {
   );
 };
 
-export default PepeOracle;
+export default React.memo(PepeOracle);

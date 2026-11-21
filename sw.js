@@ -1,5 +1,5 @@
 
-const CACHE_NAME = 'pepe-mood-v1';
+const CACHE_NAME = 'pepe-mood-v2';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -26,6 +26,11 @@ self.addEventListener('fetch', (event) => {
   // CRITICAL FIX: Ignore non-GET requests (like POST to Gemini API)
   // Service Workers cannot cache POST requests and will throw an error if attempted.
   if (event.request.method !== 'GET') {
+    return;
+  }
+
+  const reqUrl = new URL(event.request.url);
+  if (reqUrl.pathname.startsWith('/api/')) {
     return;
   }
 

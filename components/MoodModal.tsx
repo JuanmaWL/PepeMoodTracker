@@ -3,8 +3,7 @@ import { X, Save, MessageSquareText, Trash2, Download, Loader2, Image as ImageIc
 import { MOODS, PEPE_ASSETS } from '../constants';
 import { MoodLevel, DayData } from '../types';
 import SoundManager from '../utils/sounds';
-import { GoogleGenAI } from "@google/genai";
-import { getGeminiApiKey } from '../utils/gemini';
+import { requestMemeEdit } from '../utils/gemini';
 
 interface MoodModalProps {
   isOpen: boolean;
@@ -100,96 +99,23 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
     return lower.charAt(0).toUpperCase() + lower.slice(1);
   };
 
-  const getBase64FromUrl = async (url: string): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.crossOrigin = "Anonymous";
-        img.src = url;
-        img.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = img.width;
-            canvas.height = img.height;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) return reject("No canvas context");
-            ctx.drawImage(img, 0, 0);
-            try {
-                const dataURL = canvas.toDataURL('image/png');
-                resolve(dataURL);
-            } catch (error) {
-                reject("CORS Error al convertir imagen");
-            }
-        };
-        img.onerror = (e) => reject(e);
-    });
-  };
-
   const generateAutoEdit = async () => {
     setGeneratingMeme(true);
     setMemeUrl(null);
     setMagicExcuse(null);
     SoundManager.play('magic');
 
-    const apiKey = getGeminiApiKey();
-
     try {
-        if (!apiKey) throw new Error("API Key faltante");
-
-        const ai = new GoogleGenAI({ apiKey: apiKey });
-
-        let base64Image = "";
-        try {
-             base64Image = await getBase64FromUrl(PEPE_BASE_SOURCE);
-        } catch (e) {
-             console.error("Error cargando imagen base, usando fallback local de emergencia");
-             base64Image = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mM8c+ZMPQAJ0AOuZ402wAAAAABJRU5ErkJggg==";
-        }
-
-        const cleanBase64 = base64Image.split(',')[1];
-        
-        const moodLabel = MOODS[level].label;
-        const contextPrompt = note.trim() 
-            ? `Edita esta imagen de Pepe para que visualmente represente esta historia: "${note}". Mantén el estilo de Pepe.` 
-            : `Edita esta imagen de Pepe para que represente un estado de ánimo: ${moodLabel}.`;
-
-        const finalPrompt = `${contextPrompt} IMPORTANTE: Mantén al personaje de la rana Pepe, pero cambia su expresión, ropa o fondo según el contexto. Hazlo divertido y estilo meme.`;
-
-        const response = await ai.models.generateContent({
-            model: 'gemini-3.1-flash-image',
-            contents: {
-                parts: [
-                    { 
-                        inlineData: { 
-                            mimeType: 'image/png', 
-                            data: cleanBase64 
-                        } 
-                    },
-                    { text: finalPrompt }
-                ]
-            }
-        });
-
-        let generatedImageBase64 = null;
-        if (response.candidates && response.candidates[0].content && response.candidates[0].content.parts) {
-            for (const part of response.candidates[0].content.parts) {
-                if (part.inlineData && part.inlineData.data) {
-                    generatedImageBase64 = part.inlineData.data;
-                    break;
-                }
-            }
-        }
-
-        if (generatedImageBase64) {
-            setMemeUrl(`data:image/png;base64,${generatedImageBase64}`);
-        } else {
-            throw new Error("No se generó imagen");
-        }
-
-    } catch (e) {
-        console.error("Error editando imagen", e);
-        setMemeUrl(PEPE_FAIL_SOURCE); 
-        setMagicExcuse("La IA está durmiendo la siesta o te falta API Key. Toma este payaso de consolación.");
+      const imageDataUrl = await requestMemeEdit({ level, note });
+      setMemeUrl(imageDataUrl);
+    } catch (e: any) {
+      console.error("Error editando imagen", e);
+      setMemeUrl(PEPE_FAIL_SOURCE);
+      setMagicExcuse(
+        e?.message || "La IA está durmiendo la siesta o la función de imagen requiere clave de pago en el servidor. Toma este payaso de consolación."
+      );
     } finally {
-        setGeneratingMeme(false);
+      setGeneratingMeme(false);
     }
   };
 
@@ -220,72 +146,6 @@ const MoodModal: React.FC<MoodModalProps> = ({ isOpen, onClose, onSave, onDelete
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/95 backdrop-blur-md animate-in fade-in duration-300">
-      
-      {/* ANIMACIONES CSS PURAS (Inyectadas localmente para portabilidad) */}
-      <style>{`
-        /* Efecto Gelatina al seleccionar */
-        @keyframes jelly-pop {
-            0% { transform: scale(1); }
-            30% { transform: scale(1.15, 0.85); }
-            40% { transform: scale(0.85, 1.15); }
-            50% { transform: scale(1.05, 0.95); }
-            65% { transform: scale(0.98, 1.02); }
-            75% { transform: scale(1.02, 0.98); }
-            100% { transform: scale(1); }
-        }
-
-        /* Efecto de Palpitación (Glow Pulse) */
-        @keyframes card-pulse-shadow {
-            0%, 100% { box-shadow: 0 0 15px var(--pulse-color); }
-            50% { box-shadow: 0 0 35px var(--pulse-color); }
-        }
-        
-        /* Plasma/Líquido rotatorio para el fondo */
-        @keyframes liquid-rotate {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Flotación orgánica de la imagen */
-        @keyframes organic-float {
-            0%, 100% { transform: translate3d(0,0,0) translateY(0) rotate(0deg); }
-            33% { transform: translate3d(0,0,0) translateY(-6px) rotate(2deg); }
-            66% { transform: translate3d(0,0,0) translateY(3px) rotate(-1deg); }
-        }
-        
-        /* Brillo pulsante del borde */
-        @keyframes border-glow-pulse {
-            0%, 100% { opacity: 0.5; box-shadow: 0 0 10px currentColor; }
-            50% { opacity: 1; box-shadow: 0 0 25px currentColor; }
-        }
-
-        /* Partículas ascendentes (burbujas) */
-        @keyframes bubble-rise {
-            0% { transform: translateY(100%) scale(0.5); opacity: 0; }
-            20% { opacity: 0.5; }
-            80% { opacity: 0.5; }
-            100% { transform: translateY(-20%) scale(1.2); opacity: 0; }
-        }
-
-        .mood-card-selected {
-            /* Combinamos jelly-pop (una vez) con el pulso (infinito) */
-            /* Eliminamos el delay de 0.6s en card-pulse-shadow para que el glow salga al instante */
-            animation: 
-                jelly-pop 0.6s cubic-bezier(0.25, 1, 0.5, 1) forwards,
-                card-pulse-shadow 3s infinite ease-in-out;
-            
-            /* Fix para el cuadrado transparente: forzar renderizado de capa */
-            backface-visibility: hidden;
-            transform: translate3d(0,0,0);
-            will-change: transform, box-shadow;
-        }
-
-        .liquid-bg {
-            background-size: 200% 200%;
-            animation: liquid-rotate 10s linear infinite;
-        }
-      `}</style>
-
       <div 
         className="absolute inset-0 z-0 transition-colors duration-1000 ease-in-out opacity-20 pointer-events-none"
         style={{ background: `radial-gradient(circle at 50% 30%, ${activeColor}, transparent 70%)` }}

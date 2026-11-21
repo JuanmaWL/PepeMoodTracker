@@ -1,126 +1,73 @@
-
 import React, { useState, useEffect, useCallback, Suspense, useRef, useMemo } from 'react';
+import { Plus } from 'lucide-react';
 import Calendar from './components/Calendar';
 import FloatingMenu from './components/FloatingMenu';
 import PepeOracle from './components/PepeOracle';
 import GeminiStatusBulb from './components/GeminiStatusBulb';
 import Particles from './components/Particles';
-import QuickLogMenu from './components/QuickLogMenu'; 
-import WelcomeModal from './components/WelcomeModal'; 
-import { YearData, DayData, MoodLevel, Achievement, UnlockedAchievement } from './types';
-import { STORAGE_KEY, BANNER_SLIDES, PEPE_ASSETS } from './constants';
-import { Plus, Trash2, AlertTriangle, Sliders, Loader2, BatteryCharging, FileJson, Save, Trophy, HelpCircle, BookOpen, BoxSelect, Bell, BellOff, Clock, Info, X } from 'lucide-react';
+import QuickLogMenu from './components/QuickLogMenu';
+import WelcomeModal from './components/WelcomeModal';
+import BannerShowcase from './components/BannerShowcase';
+import AchievementToast from './components/AchievementToast';
+import InAppNotificationBanner from './components/InAppNotificationBanner';
+import { DayData, MoodLevel } from './types';
+import { PEPE_ASSETS } from './constants';
 import SoundManager from './utils/sounds';
-import { ACHIEVEMENTS, getUnlockedAchievements, calculateHistoricalUnlockDate } from './utils/gamification';
+import { getLocalDateStr } from './utils/date';
+import { useAppSettings } from './hooks/useAppSettings';
+import { useYearData } from './hooks/useYearData';
+import { useAchievements } from './hooks/useAchievements';
+import { useNotifications } from './hooks/useNotifications';
 
 const MoodModal = React.lazy(() => import('./components/MoodModal'));
 const StatsModal = React.lazy(() => import('./components/StatsModal'));
 const SearchModal = React.lazy(() => import('./components/SearchModal'));
 const CloudModal = React.lazy(() => import('./components/CloudModal'));
 const AchievementsModal = React.lazy(() => import('./components/AchievementsModal'));
+const SettingsModal = React.lazy(() => import('./components/SettingsModal'));
+const ResetConfirmModal = React.lazy(() => import('./components/ResetConfirmModal'));
+
+const TUTORIAL_KEY = 'pepe_tutorial_seen_v1';
 
 const ModalLoader = () => {
   const gif = useMemo(() => {
-    const gifs = [
-      PEPE_ASSETS.LOADING,
-      PEPE_ASSETS.LOADING_2,
-      PEPE_ASSETS.LOADING_3
-    ];
+    const gifs = [PEPE_ASSETS.LOADING, PEPE_ASSETS.LOADING_2, PEPE_ASSETS.LOADING_3];
     return gifs[Math.floor(Math.random() * gifs.length)];
   }, []);
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/90 backdrop-blur-md">
       <div className="flex flex-col items-center gap-6 animate-in fade-in zoom-in duration-300">
-          <div className="relative w-28 h-28">
-             <div className="absolute inset-0 bg-green-500/20 rounded-full blur-xl animate-pulse"></div>
-             <div className="w-full h-full rounded-full overflow-hidden border-4 border-slate-800 bg-slate-900 shadow-2xl relative z-10">
-                 <img 
-                   src={gif} 
-                   alt="Loading..." 
-                   className="w-full h-full object-cover"
-                 />
-             </div>
-             {/* Spinning border */}
-             <div className="absolute -inset-2 border-2 border-dashed border-green-500/30 rounded-full animate-[spin_4s_linear_infinite]"></div>
+        <div className="relative w-28 h-28">
+          <div className="absolute inset-0 bg-green-500/20 rounded-full blur-xl animate-pulse"></div>
+          <div className="w-full h-full rounded-full overflow-hidden border-4 border-slate-800 bg-slate-900 shadow-2xl relative z-10">
+            <img src={gif} alt="Loading..." className="w-full h-full object-cover" />
           </div>
-          
-          <div className="flex flex-col items-center gap-2 text-center">
-              <span className="text-xs font-black text-green-400 uppercase tracking-[0.25em] animate-pulse">Cargando...</span>
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Procesando Lore</span>
-          </div>
+          <div className="absolute -inset-2 border-2 border-dashed border-green-500/30 rounded-full animate-[spin_4s_linear_infinite]"></div>
+        </div>
+        <div className="flex flex-col items-center gap-2 text-center">
+          <span className="text-xs font-black text-green-400 uppercase tracking-[0.25em] animate-pulse">Cargando...</span>
+          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Procesando Lore</span>
+        </div>
       </div>
     </div>
   );
 };
 
-const TUTORIAL_KEY = 'pepe_tutorial_seen_v1';
-const ACHIEVEMENTS_STORAGE_KEY_V1 = 'pepe_achievements_unlocked_v1';
-const ACHIEVEMENTS_STORAGE_KEY_V2 = 'pepe_achievements_unlocked_v2'; // Nuevo storage con fechas
-
 const App: React.FC = () => {
-  const currentYear = new Date().getFullYear();
-  const [yearData, setYearData] = useState<YearData>({});
-  
-  // Banner Slideshow State
-  const [bannerIndex, setBannerIndex] = useState(0);
+  const currentYear = useMemo(() => new Date().getFullYear(), []);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [isMoodModalOpen, setIsMoodModalOpen] = useState(false);
   const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [isCloudModalOpen, setIsCloudModalOpen] = useState(false);
-  const [isAchievementsModalOpen, setIsAchievementsModalOpen] = useState(false); // Nuevo Modal
+  const [isAchievementsModalOpen, setIsAchievementsModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
-  const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false); // Estado elevado
-  
-  // Estado para la notificación in-app simulada (fines de diseño y auditoría)
-  const [activeInAppNotification, setActiveInAppNotification] = useState<null | { title: string; body: string; tag: string }>(null);
-  
-  // Achievements State (V2 with Dates)
-  const [unlockedAchievements, setUnlockedAchievements] = useState<UnlockedAchievement[]>([]);
-  
-  // Real-time achievement notifications
-  const [newlyUnlocked, setNewlyUnlocked] = useState<Achievement | null>(null);
-  const [isClosingToast, setIsClosingToast] = useState(false); 
-  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isFirstLoad = useRef(true);
-  
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Estados de Configuración
-  const [ecoMode, setEcoMode] = useState(() => {
-    try {
-      return localStorage.getItem('pepe_eco_mode') === 'true';
-    } catch (e) { return false; }
-  });
-  const [pixelMode, setPixelMode] = useState(() => {
-    try {
-      return localStorage.getItem('pepe_pixel_mode') === 'true';
-    } catch (e) { return false; }
-  });
-  const [particleCount, setParticleCount] = useState(() => {
-    try {
-      const saved = localStorage.getItem('pepe_particle_count');
-      if (saved) return parseInt(saved);
-    } catch (e) { }
-    return window.innerWidth < 768 ? 40 : 150;
-  });
-
-  // Estados del sistema de Notificaciones Locales (PWA)
-  const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
-    try {
-      return localStorage.getItem('pepe_notifications_enabled') === 'true';
-    } catch (e) { return false; }
-  });
-  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(() => {
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-      return Notification.permission;
-    }
-    return 'default';
-  });
-  const [nextScheduledInfo, setNextScheduledInfo] = useState<string>('No agendado');
+  const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false);
+  const [highlightedDates, setHighlightedDates] = useState<string[]>([]);
 
   const [quickLogState, setQuickLogState] = useState<{
     isActive: boolean;
@@ -131,560 +78,105 @@ const App: React.FC = () => {
     dateStr: null,
     startPos: null
   });
-  
   const quickLogStateRef = useRef(quickLogState);
-  
-  // GENERACIÓN DE PÍXELES ACTIVOS PARA EL BANNER
-  // Calculamos posiciones alineadas al grid de 14px
-  const activePixels = useMemo(() => {
-    const colors = [
-        '#4ade80', // Green (Pepe base)
-        '#22c55e', // Green strong
-        '#60a5fa', // Blue
-        '#818cf8', // Indigo
-        '#c084fc', // Purple
-        '#f472b6', // Pink (Requested)
-        '#fb7185', // Rose (Requested)
-        '#fbbf24', // Amber
-        '#38bdf8'  // Sky
-    ];
-
-    // Aumentamos cantidad y rango para asegurar cobertura total (especialmente en desktop 256px)
-    // Reducido a 24 para optimizar rendimiento en móviles, y agregado will-change.
-    return Array.from({ length: 24 }).map((_, i) => ({
-      id: i,
-      left: Math.floor(Math.random() * 19) * 14, 
-      top: Math.floor(Math.random() * 19) * 14,
-      color: colors[Math.floor(Math.random() * colors.length)],
-      delay: Math.random() * 5,
-      duration: 3 + Math.random() * 4
-    }));
-  }, []);
-  
   useEffect(() => {
     quickLogStateRef.current = quickLogState;
   }, [quickLogState]);
 
-  const [highlightedDates, setHighlightedDates] = useState<string[]>([]);
+  const {
+    ecoMode,
+    setEcoMode,
+    pixelMode,
+    setPixelMode,
+    particleCount,
+    setParticleCount,
+    triggerHaptic
+  } = useAppSettings();
 
-  // OPTIMIZACIÓN: Detectar si hay modales abiertos para pausar animaciones de fondo
-  const isAnyModalOpen = isMoodModalOpen || isStatsModalOpen || isSearchModalOpen || isCloudModalOpen || isSettingsOpen || showResetConfirm || quickLogState.isActive || isWelcomeModalOpen || isAchievementsModalOpen;
+  const {
+    yearData,
+    saveDay,
+    deleteDay,
+    quickSetMood,
+    clearAllData,
+    exportData,
+    importData
+  } = useYearData({ currentYear, triggerHaptic });
 
-  // Fix for infinite loop: Stable callback for highlighting results
-  const handleHighlightResults = useCallback((dates: string[]) => {
-      setHighlightedDates(dates);
-  }, []);
+  const {
+    unlockedAchievements,
+    newlyUnlocked,
+    isClosingToast,
+    closeAchievementToast,
+    resetAchievements
+  } = useAchievements({ yearData, particleCount, ecoMode, triggerHaptic });
 
-  // Efecto para Modo Eco (Body Class)
-  useEffect(() => {
-      if (ecoMode) {
-          document.body.classList.add('eco-mode');
-      } else {
-          document.body.classList.remove('eco-mode');
-      }
-  }, [ecoMode]);
+  const {
+    notificationsEnabled,
+    nextScheduledInfo,
+    activeInAppNotification,
+    notificationFeedback,
+    dismissInAppNotification,
+    clearNotificationFeedback,
+    sendPepeNotification,
+    toggleNotifications,
+    testLocalNotification
+  } = useNotifications({ yearData, triggerHaptic });
 
-  // Efecto para rotar el Banner
-  useEffect(() => {
-    // Si hay un modal abierto, detenemos el intervalo para evitar re-renderizados en App
-    if (isAnyModalOpen) return;
-
-    const interval = setInterval(() => {
-        setBannerIndex((prev) => (prev + 1) % BANNER_SLIDES.length);
-    }, 4000); // Cambiar cada 4 segundos
-    return () => clearInterval(interval);
-  }, [isAnyModalOpen]);
-
-  const triggerHaptic = useCallback((type: 'light' | 'medium' | 'heavy' = 'light') => {
-    if ('vibrate' in navigator) {
-      const patterns = {
-        light: 10,
-        medium: 30,
-        heavy: [50, 30, 50]
-      };
-      navigator.vibrate(patterns[type]);
-    }
-  }, []);
-
-  // HELPER UNIFICADO DE NOTIFICACIÓN DE PEPE
-  const sendPepeNotification = useCallback((title: string, body: string, tag: string = 'pepe-mood-reminder') => {
-    // A. Mostrar SIEMPRE la visualización in-app (Ideal para auditoría de diseño, bypass de bloqueos de OS, sin permisos o DND)
-    setActiveInAppNotification({ title, body, tag });
-    SoundManager.play('magic', 0.12);
-
-    if (!('Notification' in window)) {
-      console.warn("Notificaciones no soportadas en este dispositivo/navegador.");
-      return;
-    }
-
-    if (Notification.permission !== 'granted') {
-      console.warn("Permisos de notificaciones no concedidos.");
-      return;
-    }
-
-    const options: NotificationOptions = {
-      body,
-      icon: 'https://sme2zz26xzjq57zw.public.blob.vercel-storage.com/favicon_2.png',
-      badge: 'https://sme2zz26xzjq57zw.public.blob.vercel-storage.com/favicon_2.png',
-      tag,
-      requireInteraction: true,
-      vibrate: [150, 50, 150],
-      data: { url: window.location.origin + window.location.pathname }
-    };
-
-    // 1. Mostrar utilizando el constructor directo del navegador (Muy rápido en Android Chrome / Desktop Chrome / Firefox)
-    try {
-      new Notification(title, options);
-      console.log("Notificación detonada vía Window Notification.");
-    } catch (e) {
-      console.warn("Constructor tradicional incompatible o requiere Service Worker (ej. iOS/PWA). Intentando SW...", e);
-    }
-
-    // 2. Mostrar usando el registro activo de Service Worker (Obligatorio en iOS PWA y soporte de Background completo)
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistration().then(reg => {
-        if (reg) {
-          reg.showNotification(title, options)
-            .then(() => console.log("Notificación mostrada por Service Worker."))
-            .catch(err => console.error("Error al disparar notificación Service Worker:", err));
-        } else {
-          // Fallback ultra-seguro por si no está listo instantáneamente
-          navigator.serviceWorker.ready.then(activeReg => {
-            activeReg.showNotification(title, options).catch(err => console.error("Fallo definitivo SW ready:", err));
-          });
-        }
-      }).catch(err => {
-        console.warn("Fallo al obtener registro de Service Worker para notificación:", err);
-      });
-
-      // 3. Dual-Activation: Enviar también un mensaje directo al SW activo.
-      // En algunos dispositivos móviles, llamar directametne a navigator.serviceWorker.controller.postMessage
-      // fuerza al Service Worker a despertar y lanzar la notificación desde su propio hilo de fondo.
-      if (navigator.serviceWorker.controller) {
-        navigator.serviceWorker.controller.postMessage({
-          action: 'show-notification',
-          title,
-          options: {
-            body,
-            tag,
-            vibrate: [150, 50, 150],
-            requireInteraction: true,
-            data: { url: window.location.origin + window.location.pathname }
-          }
-        });
-        console.log("Notificación enviada vía postMessage al Service Worker activo.");
-      }
-    }
-  }, []);
-
-  // AGENDAMIENTO DE NOTIFICACIÓN DIARIA LOCAL (A LAS 23:30)
-  const scheduleDailyReminder = useCallback((dataToUse?: YearData) => {
-    const activeData = dataToUse || yearData;
-    if (!notificationsEnabled || !('Notification' in window) || Notification.permission !== 'granted') {
-      setNextScheduledInfo('Desactivado');
-      return;
-    }
-
-    const now = new Date();
-    
-    // Creamos la fecha objetivo para las 23:30 de hoy
-    const targetTime = new Date();
-    targetTime.setHours(23, 30, 0, 0);
-
-    // Obtener el día de hoy en formato local YYYY-MM-DD
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const todayStr = `${year}-${month}-${day}`;
-
-    const hasRegisteredToday = !!activeData[todayStr];
-    const finalTargetDate = new Date(targetTime);
-    let scheduleMsg = '';
-
-    if (hasRegisteredToday) {
-      // Si ya completó el registro de hoy, agendamos la notificación para mañana a las 23:30
-      finalTargetDate.setDate(finalTargetDate.getDate() + 1);
-      scheduleMsg = `Mañana a las 23:30 (Hoy registrado)`;
-    } else {
-      // Si aún no ha completado el registro de hoy, miramos si ya pasó la hora límite
-      if (now.getTime() < targetTime.getTime()) {
-        // Agenda para hoy a las 23:30
-        scheduleMsg = `Hoy a las 23:30`;
-      } else {
-        // Ya pasaron las 23:30 de hoy. Agendamos para mañana
-        finalTargetDate.setDate(finalTargetDate.getDate() + 1);
-        scheduleMsg = `Mañana a las 23:30 (Hora de hoy vencida)`;
-      }
-    }
-
-    setNextScheduledInfo(scheduleMsg);
-    localStorage.setItem('pepe_next_reminder_time', finalTargetDate.getTime().toString());
-
-    // Agendar en Service Worker si está soportado (Notification Triggers nativos)
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistration().then(registration => {
-        if (registration) {
-          // Limpiamos cualquier notificación anterior duplicada
-          if (registration.getNotifications) {
-            registration.getNotifications().then(notifications => {
-              notifications.forEach(n => {
-                if (n.tag === 'pepe-mood-reminder') n.close();
-              });
-            });
-          }
-
-          const options: any = {
-            body: "¿Cómo te sientes hoy? No dejes el día en blanco en tu calendario de Pepe. Haz clic para puntuar.",
-            icon: 'https://sme2zz26xzjq57zw.public.blob.vercel-storage.com/favicon_2.png',
-            badge: 'https://sme2zz26xzjq57zw.public.blob.vercel-storage.com/favicon_2.png',
-            tag: 'pepe-mood-reminder',
-            requireInteraction: true,
-            vibrate: [100, 50, 100],
-            data: { url: window.location.origin + window.location.pathname }
-          };
-
-          if ('showTrigger' in Notification.prototype && (window as any).TimestampTrigger) {
-            try {
-              options.showTrigger = new (window as any).TimestampTrigger(finalTargetDate.getTime());
-              registration.showNotification("🐸 Pepe Pixel Tracker", options);
-              console.log("Notificación programada vía showTrigger para:", finalTargetDate);
-            } catch (e) {
-              console.warn("showTrigger no permitido hoy:", e);
-            }
-          }
-        }
-      }).catch(err => {
-        console.warn("Fallo cargando Service Worker para agendar:", err);
-      });
-    }
-  }, [notificationsEnabled, yearData]);
-
-  // Alternar notificaciones (Activar/Desactivar)
-  const toggleNotifications = useCallback(async () => {
-    SoundManager.play('click');
-    triggerHaptic('light');
-
-    if (!('Notification' in window)) {
-      alert("Tu dispositivo o navegador no soporta notificaciones de forma nativa.");
-      return;
-    }
-
-    if (notificationsEnabled) {
-      localStorage.setItem('pepe_notifications_enabled', 'false');
-      setNotificationsEnabled(false);
-      setNextScheduledInfo('Desactivado');
-      
-      // Limpiar notificaciones activas
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistration().then(reg => {
-          if (reg && reg.getNotifications) {
-            reg.getNotifications().then(notifications => {
-              notifications.forEach(n => {
-                if (n.tag === 'pepe-mood-reminder') n.close();
-              });
-            });
-          }
-        });
-      }
-      return;
-    }
-
-    // Solicitar permisos de notificación
-    try {
-      const permission = await Notification.requestPermission();
-      setNotificationPermission(permission);
-
-      if (permission === 'granted') {
-        localStorage.setItem('pepe_notifications_enabled', 'true');
-        setNotificationsEnabled(true);
-        setTimeout(() => scheduleDailyReminder(), 300);
-      } else if (permission === 'denied') {
-        alert("Permisos de notificaciones bloqueados. Habilítalos manualmente en los ajustes del sitio de tu navegador móvil para que Pepe pueda recordarte.");
-      }
-    } catch (e) {
-      console.error("No se pudo solicitar permisos de notificación", e);
-    }
-  }, [notificationsEnabled, triggerHaptic, scheduleDailyReminder]);
-
-  // Lanzar notificación de prueba en 5 segundos
-  const testLocalNotification = useCallback(() => {
-    if (!('Notification' in window)) {
-      alert("Este navegador no tiene soporte de notificaciones.");
-      return;
-    }
-
-    if (Notification.permission !== 'granted') {
-      alert("Por favor, concede primero permisos de notificación habilitando los recordatorios en la Configuración de la app.");
-      return;
-    }
-
-    SoundManager.play('click');
-    triggerHaptic('light');
-    
-    // Alerta descriptiva y programación
-    alert("🐸 Pepe ha agendado la notificación de prueba. Minimiza la app o bloquea el móvil, ¡saldrá en exactamente 5 segundos!");
-
-    setTimeout(() => {
-      sendPepeNotification(
-        "🐸 ¡Éxito en la prueba de Pepe!",
-        "¡Así de bien se verá tu recordatorio de las 23:30! Pulsa para registrar tu día en el pantano.",
-        "pepe-test-reminder"
-      );
-    }, 5000);
-  }, [triggerHaptic, sendPepeNotification]);
-
-  // Auto-descartar visualización de notificación in-app simulada tras 7 segundos
-  useEffect(() => {
-    if (activeInAppNotification) {
-      const timer = setTimeout(() => {
-        setActiveInAppNotification(null);
-      }, 7000);
-      return () => clearTimeout(timer);
-    }
-  }, [activeInAppNotification]);
-
-  // Ejecutar agendamiento cada vez que cambien los datos o la configuración de notificaciones
-  useEffect(() => {
-    scheduleDailyReminder();
-  }, [notificationsEnabled, yearData, scheduleDailyReminder]);
-
-  // Chequeo periódico residual en segundo plano (Fallback Timer)
-  useEffect(() => {
-    if (!notificationsEnabled) return;
-
-    const interval = setInterval(() => {
-      const savedTimeStr = localStorage.getItem('pepe_next_reminder_time');
-      if (savedTimeStr) {
-        const nextTime = parseInt(savedTimeStr);
-        const now = Date.now();
-
-        // Si ya nos pasamos de la hora calculada y aún no se ha registrado el día actual
-        if (now >= nextTime) {
-          const todayStr = new Date().toISOString().split('T')[0];
-          const hasRegistered = !!yearData[todayStr];
-
-          if (!hasRegistered) {
-            if ('Notification' in window && Notification.permission === 'granted') {
-              sendPepeNotification(
-                "🐸 ¡Tu estado de ánimo de hoy!",
-                "¿Cómo te ha ido el día? No olvides registrar tu humor diario en el calendario de Pepe."
-              );
-
-              // Calculamos y agendamos para mañana para no notificar repetidamente
-              const tomorrow = new Date();
-              tomorrow.setDate(tomorrow.getDate() + 1);
-              tomorrow.setHours(23, 30, 0, 0);
-              localStorage.setItem('pepe_next_reminder_time', tomorrow.getTime().toString());
-              setNextScheduledInfo("Mañana a las 23:30");
-            }
-          }
-        }
-      }
-    }, 60000); // Chequea cada 60 segundos
-
-    return () => clearInterval(interval);
-  }, [notificationsEnabled, yearData, sendPepeNotification]);
-
-
-  // --- INITIAL DATA LOAD & ACHIEVEMENT MIGRATION ---
   useEffect(() => {
     SoundManager.preload();
-    
-    // Check Tutorial Logic
     const hasSeenTutorial = localStorage.getItem(TUTORIAL_KEY);
     if (!hasSeenTutorial) {
-        setTimeout(() => setIsWelcomeModalOpen(true), 1000);
-    }
-
-    // Load Data
-    const storedData = localStorage.getItem(STORAGE_KEY);
-    if (storedData) {
-        try { 
-            const parsedData = JSON.parse(storedData);
-            setYearData(parsedData); 
-        } catch (e) { console.error(e); }
-    }
-
-    // Load Config - Simplified as we now use initializers
-    const storedEco = localStorage.getItem('pepe_eco_mode');
-    if (storedEco) setEcoMode(storedEco === 'true');
-    const storedPixel = localStorage.getItem('pepe_pixel_mode');
-    if (storedPixel) setPixelMode(storedPixel === 'true');
-    const storedParticles = localStorage.getItem('pepe_particle_count');
-    if (storedParticles) setParticleCount(parseInt(storedParticles));
-
-    // --- MIGRATION LOGIC (V1 String[] -> V2 UnlockedAchievement[]) ---
-    try {
-        const storedV2 = localStorage.getItem(ACHIEVEMENTS_STORAGE_KEY_V2);
-        
-        if (storedV2) {
-            setUnlockedAchievements(JSON.parse(storedV2));
-        } else {
-            // Check for V1 data
-            const storedV1 = localStorage.getItem(ACHIEVEMENTS_STORAGE_KEY_V1);
-            if (storedV1) {
-                const parsedV1 = JSON.parse(storedV1) as string[];
-                const migrated: UnlockedAchievement[] = parsedV1.map(id => ({
-                    id,
-                    unlockedAt: 0 // Legacy marker
-                }));
-                setUnlockedAchievements(migrated);
-                localStorage.setItem(ACHIEVEMENTS_STORAGE_KEY_V2, JSON.stringify(migrated));
-            }
-        }
-    } catch (e) {
-        console.error("Failed to load achievements", e);
+      const timer = setTimeout(() => setIsWelcomeModalOpen(true), 1000);
+      return () => clearTimeout(timer);
     }
   }, []);
 
-  // Función para cerrar el toast con animación
-  const closeAchievementToast = useCallback(() => {
-      setIsClosingToast(true);
-      // Esperar a que termine la animación de salida (700ms)
-      setTimeout(() => {
-          setNewlyUnlocked(null);
-          setIsClosingToast(false);
-      }, 700);
-  }, []);
+  const isAnyModalOpen =
+    isMoodModalOpen ||
+    isStatsModalOpen ||
+    isSearchModalOpen ||
+    isCloudModalOpen ||
+    isSettingsOpen ||
+    showResetConfirm ||
+    quickLogState.isActive ||
+    isWelcomeModalOpen ||
+    isAchievementsModalOpen;
 
-  // --- MAIN ACHIEVEMENT LOGIC (HISTORICAL REPLAY) ---
   useEffect(() => {
-    if (isFirstLoad.current) {
-        isFirstLoad.current = false;
-        return;
-    }
-
-    // 1. Calculate currently valid IDs based on YearData (current state)
-    const currentValidIDs = getUnlockedAchievements(yearData, { particleCount, ecoMode });
-    
-    // 2. Identify strictly newly unlocked items (present in validIDs but NOT in state)
-    const existingIDs = new Set(unlockedAchievements.map(ua => ua.id));
-    const newUnlockIDs = currentValidIDs.filter(id => !existingIDs.has(id));
-
-    if (newUnlockIDs.length > 0) {
-        
-        // --- KEY FIX: CALCULATE HISTORICAL DATE FOR NEW UNLOCKS ASYNC TO PREVENT UI BLOCKING ---
-        setTimeout(() => {
-            const newUnlocksData: UnlockedAchievement[] = newUnlockIDs.map(id => {
-                const definition = ACHIEVEMENTS.find(a => a.id === id);
-                let unlockTimestamp = Date.now();
-                
-                if (definition) {
-                    unlockTimestamp = calculateHistoricalUnlockDate(definition, yearData, { particleCount, ecoMode });
-                }
-
-                return {
-                    id,
-                    unlockedAt: unlockTimestamp
-                };
-            });
-
-            // 3. Update State & Storage
-            const updatedList = [...unlockedAchievements, ...newUnlocksData];
-            setUnlockedAchievements(updatedList);
-            localStorage.setItem(ACHIEVEMENTS_STORAGE_KEY_V2, JSON.stringify(updatedList));
-
-            // 4. Trigger Toast for the FIRST new achievement found
-            const firstNewId = newUnlockIDs[0];
-            const achievementDef = ACHIEVEMENTS.find(ach => ach.id === firstNewId);
-            
-            if (achievementDef) {
-                if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
-                setNewlyUnlocked(achievementDef);
-                setIsClosingToast(false);
-                SoundManager.play('achievement'); 
-                triggerHaptic('heavy');
-                toastTimeoutRef.current = setTimeout(() => {
-                    closeAchievementToast();
-                }, 6000);
-            }
-        }, 50); // Small delay to let React render and paint first
-    }
-  }, [yearData, unlockedAchievements, ecoMode, particleCount, triggerHaptic, closeAchievementToast]);
-
-
-  // handleGlobalEnd ahora recibe la selección final desde QuickLogMenu
-  const handleQuickLogComplete = useCallback((result: { type: 'MOOD'|'DELETE'|null, data?: any }) => {
-    const state = quickLogStateRef.current;
-    
-    if (state.dateStr && result) {
-        if (result.type === 'DELETE') {
-             SoundManager.play('trash');
-             triggerHaptic('heavy');
-             setYearData(prev => {
-                const { [state.dateStr!]: _, ...rest } = prev;
-                return rest;
-             });
-        } else if (result.type === 'MOOD' && result.data) {
-             SoundManager.play('success');
-             triggerHaptic('medium');
-             
-             setYearData(prev => ({
-                 ...prev,
-                 [state.dateStr!]: {
-                     level: result.data as MoodLevel,
-                     note: prev[state.dateStr!]?.note || '' 
-                 }
-             }));
-        }
-    }
-
-    setQuickLogState({
-        isActive: false,
-        dateStr: null,
-        startPos: null
-    });
-  }, [triggerHaptic]);
-
-  const handleDayLongPress = useCallback((dateStr: string, x: number, y: number) => {
-      SoundManager.play('pop'); 
-      setQuickLogState({
-          isActive: true,
-          dateStr: dateStr,
-          startPos: { x, y }
-      });
-  }, []);
+    document.body.style.overflow = isAnyModalOpen ? 'hidden' : '';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isAnyModalOpen]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') {
-            if (isMoodModalOpen) setIsMoodModalOpen(false);
-            if (isStatsModalOpen) setIsStatsModalOpen(false);
-            if (isSearchModalOpen) setIsSearchModalOpen(false);
-            if (isCloudModalOpen) setIsCloudModalOpen(false);
-            if (isAchievementsModalOpen) setIsAchievementsModalOpen(false);
-            if (isSettingsOpen) setIsSettingsOpen(false);
-            if (showResetConfirm) setShowResetConfirm(false);
-            if (isWelcomeModalOpen) setIsWelcomeModalOpen(false);
-            if (newlyUnlocked) closeAchievementToast();
-        }
+      if (e.key !== 'Escape') return;
+      if (isMoodModalOpen) setIsMoodModalOpen(false);
+      if (isStatsModalOpen) setIsStatsModalOpen(false);
+      if (isSearchModalOpen) setIsSearchModalOpen(false);
+      if (isCloudModalOpen) setIsCloudModalOpen(false);
+      if (isAchievementsModalOpen) setIsAchievementsModalOpen(false);
+      if (isSettingsOpen) setIsSettingsOpen(false);
+      if (showResetConfirm) setShowResetConfirm(false);
+      if (isWelcomeModalOpen) setIsWelcomeModalOpen(false);
+      if (newlyUnlocked) closeAchievementToast();
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isMoodModalOpen, isStatsModalOpen, isSearchModalOpen, isCloudModalOpen, isAchievementsModalOpen, isSettingsOpen, showResetConfirm, newlyUnlocked, closeAchievementToast, isWelcomeModalOpen]);
-
-  useEffect(() => {
-    if (isAnyModalOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-  }, [isAnyModalOpen]);
-
-  // Titulo Fijo para mayor claridad
-  const MAIN_TITLE = "PEPE PIXEL YEAR";
-  const SUBTITLE = `${currentYear} EDITION`;
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(yearData));
-  }, [yearData]);
-  
-  // Guardar config al cambiar
-  useEffect(() => {
-      localStorage.setItem('pepe_eco_mode', String(ecoMode));
-      localStorage.setItem('pepe_pixel_mode', String(pixelMode));
-      localStorage.setItem('pepe_particle_count', String(particleCount));
-  }, [ecoMode, particleCount, pixelMode]);
+  }, [
+    isMoodModalOpen,
+    isStatsModalOpen,
+    isSearchModalOpen,
+    isCloudModalOpen,
+    isAchievementsModalOpen,
+    isSettingsOpen,
+    showResetConfirm,
+    isWelcomeModalOpen,
+    newlyUnlocked,
+    closeAchievementToast
+  ]);
 
   const handleDayClick = useCallback((dateStr: string) => {
     triggerHaptic('light');
@@ -693,326 +185,156 @@ const App: React.FC = () => {
     setIsMoodModalOpen(true);
   }, [triggerHaptic]);
 
-  const handleSaveDay = (data: DayData) => {
-    if (!selectedDate) return;
-    triggerHaptic('medium');
-    setYearData(prev => ({ ...prev, [selectedDate]: data }));
-  };
-
-  const handleDeleteDay = (dateToDelete: string) => {
-    if (!dateToDelete) return;
-    triggerHaptic('heavy');
-    setYearData(prev => {
-      const { [dateToDelete]: _, ...rest } = prev;
-      return rest;
+  const handleDayLongPress = useCallback((dateStr: string, x: number, y: number) => {
+    SoundManager.play('pop');
+    setQuickLogState({
+      isActive: true,
+      dateStr,
+      startPos: { x, y }
     });
+  }, []);
+
+  const handleQuickLogComplete = useCallback((result: { type: 'MOOD' | 'DELETE' | null; data?: any }) => {
+    const state = quickLogStateRef.current;
+    if (state.dateStr && result) {
+      if (result.type === 'DELETE') {
+        SoundManager.play('trash');
+        deleteDay(state.dateStr);
+      } else if (result.type === 'MOOD' && result.data) {
+        quickSetMood(state.dateStr, result.data as MoodLevel);
+      }
+    }
+    setQuickLogState({ isActive: false, dateStr: null, startPos: null });
+  }, [deleteDay, quickSetMood]);
+
+  const handleSaveDay = useCallback((data: DayData) => {
+    if (!selectedDate) return;
+    saveDay(selectedDate, data);
+  }, [selectedDate, saveDay]);
+
+  const handleDeleteDay = useCallback((dateToDelete: string) => {
+    if (!dateToDelete) return;
+    deleteDay(dateToDelete);
     setIsMoodModalOpen(false);
     setSelectedDate(null);
-  };
+  }, [deleteDay]);
 
-  const handleToday = () => {
+  const handleToday = useCallback(() => {
     triggerHaptic('medium');
     SoundManager.play('open');
-    const today = new Date();
-    const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-    handleDayClick(dateStr);
-  };
+    handleDayClick(getLocalDateStr());
+  }, [triggerHaptic, handleDayClick]);
 
-  const handleExport = () => {
-    triggerHaptic('light');
-    SoundManager.play('success');
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(yearData));
-    const dl = document.createElement('a');
-    dl.setAttribute("href", dataStr);
-    dl.setAttribute("download", `pepe_mood_backup_${currentYear}.json`);
-    document.body.appendChild(dl);
-    dl.click();
-    dl.remove();
-  };
-  
-  const handleImportClick = () => {
-     if (fileInputRef.current) fileInputRef.current.value = '';
-     fileInputRef.current?.click();
-  }
+  const handleHighlightResults = useCallback((dates: string[]) => {
+    setHighlightedDates(dates);
+  }, []);
 
-  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleJumpToDate = useCallback((date: string) => {
+    setSelectedDate(date);
+    setIsMoodModalOpen(true);
+  }, []);
+
+  const handleImportClick = useCallback(() => {
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleImport = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const content = event.target?.result as string;
-        const importedData = JSON.parse(content);
-        if (typeof importedData === 'object' && importedData !== null) {
-          triggerHaptic('medium');
-          SoundManager.play('success');
-          // Forzar reseteo de logros al importar para recalcular
-          setUnlockedAchievements([]);
-          localStorage.removeItem(ACHIEVEMENTS_STORAGE_KEY_V2);
-          
-          setYearData(importedData);
-          setIsSettingsOpen(false); // Close modal on success
-        }
-      } catch (err) {
-        console.error("Import error:", err);
-      }
-    };
-    reader.readAsText(file);
+    importData(file, () => {
+      resetAchievements();
+      setIsSettingsOpen(false);
+    });
     e.target.value = '';
-  };
+  }, [importData, resetAchievements]);
+
+  const handleConfirmReset = useCallback(() => {
+    triggerHaptic('heavy');
+    SoundManager.play('trash');
+    clearAllData();
+    resetAchievements();
+    setShowResetConfirm(false);
+  }, [triggerHaptic, clearAllData, resetAchievements]);
+
+  const handleOpenStats = useCallback(() => {
+    triggerHaptic('light');
+    setIsStatsModalOpen(true);
+  }, [triggerHaptic]);
+
+  const handleOpenReset = useCallback(() => {
+    triggerHaptic('medium');
+    setShowResetConfirm(true);
+  }, [triggerHaptic]);
+
+  const handleOpenSearch = useCallback(() => {
+    triggerHaptic('light');
+    setIsSearchModalOpen(true);
+  }, [triggerHaptic]);
+
+  const handleOpenCloud = useCallback(() => {
+    triggerHaptic('light');
+    setIsCloudModalOpen(true);
+  }, [triggerHaptic]);
+
+  const handleOpenAchievements = useCallback(() => {
+    triggerHaptic('light');
+    setIsAchievementsModalOpen(true);
+  }, [triggerHaptic]);
+
+  const handleOpenSettings = useCallback(() => {
+    triggerHaptic('light');
+    clearNotificationFeedback();
+    setIsSettingsOpen(true);
+  }, [triggerHaptic, clearNotificationFeedback]);
+
+  const handleToastClick = useCallback(() => {
+    closeAchievementToast();
+    setTimeout(() => setIsAchievementsModalOpen(true), 700);
+  }, [closeAchievementToast]);
+
+  const handlePreviewNotification = useCallback(() => {
+    SoundManager.play('click');
+    triggerHaptic('medium');
+    sendPepeNotification(
+      '🐸 Recordatorio de Pepe (Preview)',
+      '¿Cómo te ha ido el día? No olvides registrar tu humor diario.'
+    );
+  }, [triggerHaptic, sendPepeNotification]);
 
   return (
     <div className="flex flex-col items-center min-h-screen pb-24 overflow-x-hidden text-slate-100 relative">
       <Particles count={particleCount} enabled={!ecoMode} pixelMode={pixelMode} />
-      
-      {/* Componente de Tutorial Inicial */}
+
       <WelcomeModal isOpen={isWelcomeModalOpen} onClose={() => setIsWelcomeModalOpen(false)} />
 
-      {/* Input oculto para importación - se mantiene en el DOM para funcionar */}
-      <input 
-        type="file" 
-        ref={fileInputRef} 
-        onChange={handleImport} 
-        accept=".json" 
-        className="hidden" 
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleImport}
+        accept=".json"
+        className="hidden"
       />
 
-      <QuickLogMenu 
+      <QuickLogMenu
         isOpen={quickLogState.isActive}
         startPos={quickLogState.startPos}
         onComplete={handleQuickLogComplete}
       />
 
-      {/* ENHANCED ACHIEVEMENT TOAST NOTIFICATION */}
       {newlyUnlocked && (
-          <div className="fixed top-0 left-0 right-0 z-[100] flex justify-center pt-8 pointer-events-none px-4">
-              <style>{`
-                @keyframes bounceIn {
-                    0% { opacity: 0; transform: translateY(-100px) scale(0.5); }
-                    60% { opacity: 1; transform: translateY(20px) scale(1.1); }
-                    80% { transform: translateY(-5px) scale(0.95); }
-                    100% { transform: translateY(0) scale(1); }
-                }
-                @keyframes implodeOut {
-                    0% { opacity: 1; transform: translateY(0) scale(1); filter: brightness(1); }
-                    30% { opacity: 1; transform: translateY(0) scale(1.1); filter: brightness(1.5); }
-                    100% { opacity: 0; transform: translateY(0) scale(0) rotate(720deg); filter: brightness(3) blur(20px); }
-                }
-                @keyframes spin-border {
-                    from { transform: rotate(0deg); }
-                    to { transform: rotate(360deg); }
-                }
-                @keyframes god-rays {
-                    from { transform: rotate(0deg); }
-                    to { transform: rotate(360deg); }
-                }
-                @keyframes pulse-shadow {
-                    0%, 100% { box-shadow: 0 0 20px ${newlyUnlocked.color}40, 0 0 40px ${newlyUnlocked.color}20; }
-                    50% { box-shadow: 0 0 50px ${newlyUnlocked.color}80, 0 0 80px ${newlyUnlocked.color}40; }
-                }
-                @keyframes shimmer-fast {
-                    0% { transform: translateX(-150%) skewX(-15deg); }
-                    100% { transform: translateX(150%) skewX(-15deg); }
-                }
-              `}</style>
-              
-              {/* Main Animation Container */}
-              <div 
-                  className="w-full max-w-sm relative pointer-events-auto"
-                  style={{ 
-                      animation: isClosingToast 
-                        ? 'implodeOut 0.7s cubic-bezier(0.6, -0.28, 0.735, 0.045) forwards' 
-                        : 'bounceIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)' 
-                  }}
-                  onClick={() => {
-                      if (!isClosingToast) {
-                          closeAchievementToast();
-                          setTimeout(() => setIsAchievementsModalOpen(true), 700);
-                      }
-                  }}
-              >
-                 
-                 {/* God Rays Background */}
-                 <div className="absolute inset-0 z-0 flex items-center justify-center opacity-30 pointer-events-none">
-                      <div 
-                          className="w-[500px] h-[500px] bg-[conic-gradient(from_0deg,transparent,rgba(255,255,255,0.2),transparent)] rounded-full"
-                          style={{ 
-                              animation: 'god-rays 10s linear infinite',
-                              maskImage: 'radial-gradient(closest-side, black 40%, transparent 100%)',
-                              WebkitMaskImage: 'radial-gradient(closest-side, black 40%, transparent 100%)'
-                          }}
-                      />
-                 </div>
-
-                 {/* Explosion Particles */}
-                 {!isClosingToast && (
-                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 overflow-visible w-full h-full pointer-events-none">
-                     {[...Array(20)].map((_, i) => (
-                         <div key={i} className="absolute w-2 h-2 rounded-full animate-ping"
-                             style={{
-                                 backgroundColor: i % 2 === 0 ? newlyUnlocked.color : '#fff',
-                                 top: '50%', left: '50%',
-                                 transform: `rotate(${i * 18}deg) translate(${80 + Math.random()*60}px)`,
-                                 animationDuration: `${0.6 + Math.random() * 0.8}s`,
-                                 animationDelay: `0.1s`
-                             }}
-                         />
-                     ))}
-                 </div>
-                 )}
-
-                 {/* Card Wrapper with Rotating Border */}
-                 <div className="relative z-10 p-[3px] rounded-3xl overflow-hidden group">
-                     {/* Spinning Gradient Border */}
-                     <div 
-                        className="absolute inset-[-50%] animate-[spin-border_3s_linear_infinite]"
-                        style={{ 
-                            background: `conic-gradient(from 0deg, transparent 0deg, ${newlyUnlocked.color} 90deg, transparent 180deg, ${newlyUnlocked.color} 270deg, transparent 360deg)`
-                        }}
-                     />
-                     
-                     {/* The Card Itself */}
-                     <div 
-                        className="relative bg-slate-900 rounded-[22px] overflow-hidden backdrop-blur-3xl"
-                        style={{ animation: 'pulse-shadow 2s infinite ease-in-out' }}
-                     >
-                        <div className="absolute inset-0 bg-slate-900/90 z-0" />
-                        
-                        {/* Dynamic Background Noise/Texture */}
-                        <div className="absolute inset-0 opacity-10 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjZmZmIi8+CjxyZWN0IHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiMwMDAiLz4KPC9zdmc+')] z-0" />
-                        
-                        <div className="relative z-10 p-5 flex items-center gap-5">
-                            {/* Icon Container */}
-                            <div className="shrink-0 relative">
-                                <div className="absolute inset-0 blur-2xl opacity-60 animate-pulse" style={{ backgroundColor: newlyUnlocked.color }}></div>
-                                <div 
-                                    className="w-16 h-16 rounded-2xl flex items-center justify-center relative shadow-lg border border-white/20 overflow-hidden"
-                                    style={{ backgroundColor: `${newlyUnlocked.color}20` }}
-                                >
-                                    <div className="absolute inset-0 bg-white/20 animate-pulse" />
-                                    <newlyUnlocked.icon size={36} style={{ color: newlyUnlocked.color }} className="drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)] animate-[spin_3s_ease-in-out_infinite_alternate]" />
-                                </div>
-                            </div>
-
-                            {/* Text Content */}
-                            <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
-                                    <div className="px-2 py-0.5 rounded-md bg-yellow-500/20 border border-yellow-500/40 flex items-center gap-1 shadow-sm">
-                                        <Trophy size={10} className="text-yellow-400 fill-yellow-400" />
-                                        <span className="text-[9px] font-black uppercase tracking-widest text-yellow-400">Logro Desbloqueado</span>
-                                    </div>
-                                </div>
-                                <h4 className="text-xl font-black text-white leading-tight mb-1 drop-shadow-md tracking-tight">
-                                    {newlyUnlocked.title}
-                                </h4>
-                                <p className="text-xs text-slate-300 font-medium leading-relaxed opacity-90 line-clamp-2">
-                                    {newlyUnlocked.description}
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Hyper Shimmer Overlay */}
-                        <div 
-                            className="absolute inset-0 pointer-events-none bg-gradient-to-r from-transparent via-white/30 to-transparent z-20"
-                            style={{ animation: 'shimmer-fast 2s infinite linear' }}
-                        />
-                     </div>
-                 </div>
-              </div>
-          </div>
+        <AchievementToast
+          achievement={newlyUnlocked}
+          isClosing={isClosingToast}
+          onOpenAchievements={handleToastClick}
+        />
       )}
-      
-      <header className="mt-8 mb-6 text-center flex flex-col items-center relative w-full px-4">
-        
-        <div className="relative group mb-8 mt-4">
-            <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[180%] h-[180%] pointer-events-none opacity-80 ${ecoMode ? 'hidden' : ''}`}>
-                 <div className="absolute inset-0 border-2 border-green-500/30 rounded-full border-dashed animate-[spin_20s_linear_infinite]"></div>
-                 <div className="absolute inset-8 border-2 border-emerald-400/40 rounded-full border-dotted animate-[spin_15s_linear_infinite_reverse]"></div>
-                 <div className="absolute inset-4 bg-green-500/20 blur-[50px] rounded-full animate-pulse"></div>
-            </div>
 
-            {/* NEW RETRO/PIXEL STYLE BANNER CONTAINER */}
-            <div 
-                className="relative w-48 h-48 md:w-64 md:h-64 rounded-[3rem] overflow-hidden pepe-float z-10 transition-all duration-500 hover:scale-105 group-hover:shadow-[0_30px_70px_-10px_rgba(34,197,94,0.4)] border-4 border-slate-800/80 shadow-[0_20px_50px_rgba(0,0,0,0.5)] bg-slate-900"
-            >
-                {/* 1. Pixel Grid Background */}
-                <div 
-                    className="absolute inset-0 z-0 pointer-events-none" 
-                    style={{
-                        backgroundImage: `linear-gradient(rgba(34, 197, 94, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(34, 197, 94, 0.2) 1px, transparent 1px)`,
-                        backgroundSize: '14px 14px',
-                        imageRendering: 'pixelated',
-                        maskImage: 'radial-gradient(circle at center, black 40%, transparent 100%)',
-                        WebkitMaskImage: 'radial-gradient(circle at center, black 40%, transparent 100%)'
-                    }}
-                >
-                    {!ecoMode && activePixels.map((p) => (
-                        <div
-                            key={p.id}
-                            className="absolute"
-                            style={{
-                                width: '14px',
-                                height: '14px',
-                                top: `${p.top}px`,
-                                left: `${p.left}px`,
-                                backgroundColor: p.color,
-                                animation: `pixel-breath ${p.duration}s infinite ${p.delay}s`,
-                                boxShadow: `0 0 10px ${p.color}`,
-                                opacity: 0, // Start hidden
-                                willChange: 'transform, opacity'
-                            }}
-                        />
-                    ))}
-                    <style>{`
-                        @keyframes pixel-breath {
-                            0% { opacity: 0; transform: scale(0.5); }
-                            30% { opacity: 0.8; transform: scale(1); box-shadow: 0 0 15px currentColor; }
-                            70% { opacity: 0.8; transform: scale(1); }
-                            100% { opacity: 0; transform: scale(0.5); }
-                        }
-                    `}</style>
-                </div>
-                
-                {/* 2. CRT Scanline Effect */}
-                <div className="absolute inset-0 z-20 pointer-events-none opacity-10 bg-[linear-gradient(transparent_50%,rgba(0,0,0,0.5)_50%)] bg-[size:100%_4px]"></div>
-                <div className="absolute inset-0 z-20 pointer-events-none bg-gradient-to-b from-transparent via-green-500/5 to-transparent animate-[scan_3s_linear_infinite] h-full opacity-30"></div>
-                <style>{`@keyframes scan { 0% { transform: translateY(-100%); } 100% { transform: translateY(100%); } }`}</style>
-                
-                {/* 3. Rotating Images with Cross-Fade */}
-                <div className="absolute inset-0 z-10 p-6 flex items-center justify-center">
-                    {BANNER_SLIDES.map((src, index) => {
-                        const isFavicon1 = src === PEPE_ASSETS.FAVICON_1;
-                        const isActive = index === bannerIndex;
-                        
-                        return (
-                            <img 
-                                key={src}
-                                src={src} 
-                                alt="Pepe Banner" 
-                                className={`
-                                    absolute inset-0 w-full h-full object-contain p-6 transition-all duration-1000 ease-in-out
-                                    ${isActive 
-                                        ? (isFavicon1 ? 'opacity-100 scale-125 blur-0' : 'opacity-100 scale-100 blur-0') 
-                                        : 'opacity-0 scale-90 blur-sm'
-                                    }
-                                `}
-                            />
-                        );
-                    })}
-                </div>
-
-                {/* 4. Glare Effect */}
-                <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none z-30"></div>
-            </div>
-        </div>
-        
-        <h1 className="text-4xl md:text-6xl font-black bg-gradient-to-r from-green-400 via-emerald-300 to-green-600 bg-clip-text text-transparent py-2 px-6 leading-tight animate-shimmer tracking-tighter uppercase text-center drop-shadow-lg">
-          {MAIN_TITLE}
-        </h1>
-        <p className="text-slate-400 font-bold tracking-[0.2em] text-[10px] md:text-sm mt-1 italic opacity-90 uppercase text-center max-w-lg mx-auto">
-          {SUBTITLE}
-        </p>
-      </header>
+      <BannerShowcase
+        currentYear={currentYear}
+        ecoMode={ecoMode}
+        isPaused={isAnyModalOpen}
+      />
 
       <PepeOracle data={yearData} />
 
@@ -1020,16 +342,18 @@ const App: React.FC = () => {
         onClick={handleToday}
         className="group relative mb-12 inline-flex items-center gap-3 px-10 py-5 bg-gradient-to-br from-green-600 to-emerald-700 rounded-2xl text-white font-black text-xl shadow-[0_10px_30px_-5px_rgba(34,197,94,0.5)] hover:shadow-[0_15px_40px_-5px_rgba(34,197,94,0.7)] transition-all active:scale-95"
       >
-        <Plus size={24} className="group-hover:rotate-90 transition-transform" /> 
+        <Plus size={24} className="group-hover:rotate-90 transition-transform" />
         REGISTRAR HOY
       </button>
 
-      <Calendar 
-        yearData={yearData} 
-        onDayClick={handleDayClick} 
+      <Calendar
+        yearData={yearData}
+        onDayClick={handleDayClick}
         onDayLongPress={handleDayLongPress}
-        currentYear={currentYear} 
+        currentYear={currentYear}
         highlightedDates={highlightedDates}
+        ecoMode={ecoMode}
+        deferInitialScroll={isWelcomeModalOpen}
       />
 
       <footer className="mt-auto py-10 flex items-center justify-center gap-3 opacity-60 hover:opacity-100 transition-opacity">
@@ -1040,336 +364,91 @@ const App: React.FC = () => {
         <GeminiStatusBulb />
       </footer>
 
-      <FloatingMenu 
-        onStats={() => { triggerHaptic('light'); setIsStatsModalOpen(true); }}
-        onReset={() => { triggerHaptic('medium'); setShowResetConfirm(true); }}
-        onSearch={() => { triggerHaptic('light'); setIsSearchModalOpen(true); }}
-        onCloud={() => { triggerHaptic('light'); setIsCloudModalOpen(true); }}
-        onAchievements={() => { triggerHaptic('light'); setIsAchievementsModalOpen(true); }}
-        onSettings={() => { triggerHaptic('light'); setIsSettingsOpen(true); }}
+      <FloatingMenu
+        onStats={handleOpenStats}
+        onReset={handleOpenReset}
+        onSearch={handleOpenSearch}
+        onCloud={handleOpenCloud}
+        onAchievements={handleOpenAchievements}
+        onSettings={handleOpenSettings}
       />
 
       <Suspense fallback={<ModalLoader />}>
         {isMoodModalOpen && (
-            <MoodModal
+          <MoodModal
             isOpen={isMoodModalOpen}
             onClose={() => setIsMoodModalOpen(false)}
             onSave={handleSaveDay}
             onDelete={handleDeleteDay}
             dateStr={selectedDate || ''}
             initialData={selectedDate ? yearData[selectedDate] || { level: MoodLevel.None, note: '' } : { level: MoodLevel.None, note: '' }}
-            />
+          />
         )}
-        {isStatsModalOpen && <StatsModal isOpen={isStatsModalOpen} onClose={() => setIsStatsModalOpen(false)} data={yearData} />}
-        {isSearchModalOpen && <SearchModal isOpen={isSearchModalOpen} onClose={() => setIsSearchModalOpen(false)} data={yearData} onJumpToDate={(date) => { setSelectedDate(date); setIsMoodModalOpen(true); }} onHighlightResults={handleHighlightResults} />}
-        {isCloudModalOpen && <CloudModal isOpen={isCloudModalOpen} onClose={() => setIsCloudModalOpen(false)} data={yearData} />}
-        {isAchievementsModalOpen && <AchievementsModal isOpen={isAchievementsModalOpen} onClose={() => setIsAchievementsModalOpen(false)} unlockedItems={unlockedAchievements} />}
+        {isStatsModalOpen && (
+          <StatsModal
+            isOpen={isStatsModalOpen}
+            onClose={() => setIsStatsModalOpen(false)}
+            data={yearData}
+          />
+        )}
+        {isSearchModalOpen && (
+          <SearchModal
+            isOpen={isSearchModalOpen}
+            onClose={() => setIsSearchModalOpen(false)}
+            data={yearData}
+            onJumpToDate={handleJumpToDate}
+            onHighlightResults={handleHighlightResults}
+          />
+        )}
+        {isCloudModalOpen && (
+          <CloudModal
+            isOpen={isCloudModalOpen}
+            onClose={() => setIsCloudModalOpen(false)}
+            data={yearData}
+          />
+        )}
+        {isAchievementsModalOpen && (
+          <AchievementsModal
+            isOpen={isAchievementsModalOpen}
+            onClose={() => setIsAchievementsModalOpen(false)}
+            unlockedItems={unlockedAchievements}
+          />
+        )}
+        {isSettingsOpen && (
+          <SettingsModal
+            isOpen={isSettingsOpen}
+            onClose={() => setIsSettingsOpen(false)}
+            onOpenTutorial={() => setIsWelcomeModalOpen(true)}
+            ecoMode={ecoMode}
+            onToggleEcoMode={() => setEcoMode(prev => !prev)}
+            pixelMode={pixelMode}
+            onTogglePixelMode={() => setPixelMode(prev => !prev)}
+            particleCount={particleCount}
+            onChangeParticleCount={setParticleCount}
+            notificationsEnabled={notificationsEnabled}
+            nextScheduledInfo={nextScheduledInfo}
+            notificationFeedback={notificationFeedback}
+            onToggleNotifications={toggleNotifications}
+            onPreviewNotification={handlePreviewNotification}
+            onTestDelayedNotification={testLocalNotification}
+            onExport={exportData}
+            onImportClick={handleImportClick}
+          />
+        )}
+        {showResetConfirm && (
+          <ResetConfirmModal
+            isOpen={showResetConfirm}
+            onConfirmReset={handleConfirmReset}
+            onCancel={() => setShowResetConfirm(false)}
+          />
+        )}
       </Suspense>
 
-      {isSettingsOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300" onClick={() => setIsSettingsOpen(false)}>
-           <div 
-             className="bg-slate-900 border border-slate-700 w-full max-w-sm rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[85vh] relative" 
-             onClick={(e) => e.stopPropagation()}
-           >
-              {/* HEADER DE AJUSTES */}
-              <div className="p-6 pb-4 border-b border-slate-800/60 shrink-0 flex items-center justify-between bg-slate-900 rounded-t-[2rem]">
-                  <div className="flex items-center gap-3">
-                     <div className="p-2.5 bg-slate-800 rounded-xl text-slate-300">
-                        <Sliders size={18} />
-                     </div>
-                     <div>
-                        <h3 className="text-sm font-black text-white uppercase tracking-tight leading-none">Configuración</h3>
-                        <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest leading-none mt-1">Ajustes & Datos</p>
-                     </div>
-                  </div>
-                  <button 
-                    onClick={() => { SoundManager.play('click'); setIsSettingsOpen(false); }}
-                    className="p-1.5 bg-slate-800 hover:bg-slate-700 hover:scale-105 active:scale-95 transition-all text-slate-400 hover:text-white rounded-xl"
-                  >
-                     <X size={16} />
-                  </button>
-              </div>
-
-              {/* CUERPO CON SCROLL PERFECTO */}
-              <div className="overflow-y-auto p-6 space-y-6 flex-1 scrollbar-thin">
-                   {/* TUTORIAL RELOAD BUTTON */}
-                   <button 
-                     onClick={() => {
-                         SoundManager.play('click');
-                         setIsSettingsOpen(false);
-                         setIsWelcomeModalOpen(true);
-                     }}
-                     className="w-full flex items-center justify-between p-3 bg-indigo-500/10 hover:bg-indigo-500/20 rounded-xl border border-indigo-500/30 group transition-all"
-                   >
-                      <div className="flex items-center gap-3">
-                          <div className="p-2 rounded-lg bg-indigo-500/20 text-indigo-400 group-hover:scale-110 transition-transform">
-                              <BookOpen size={18} />
-                          </div>
-                          <div className="text-left">
-                              <div className="text-xs font-bold text-indigo-200 uppercase tracking-wider">Ver Tutorial / Guía</div>
-                              <div className="text-[9px] text-indigo-400/70 font-medium">Instrucciones y trucos</div>
-                          </div>
-                      </div>
-                      <HelpCircle size={18} className="text-indigo-400 opacity-50 group-hover:opacity-100" />
-                   </button>
-
-                  {/* ECO MODE TOGGLE */}
-                  <div className="flex items-center justify-between p-3 bg-slate-800/50 rounded-xl border border-slate-700">
-                      <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-lg ${ecoMode ? 'bg-green-500 text-white' : 'bg-slate-700 text-slate-400'}`}>
-                              <BatteryCharging size={18} />
-                          </div>
-                          <div>
-                              <div className="text-xs font-bold text-slate-200 uppercase tracking-wider">Modo Ahorro</div>
-                              <div className="text-[9px] text-slate-500 font-medium">Desactiva partículas y blur</div>
-                          </div>
-                      </div>
-                      <button 
-                        onClick={() => setEcoMode(!ecoMode)}
-                        className={`w-10 h-6 rounded-full p-1 transition-colors duration-300 ${ecoMode ? 'bg-green-500' : 'bg-slate-700'}`}
-                      >
-                          <div className={`w-4 h-4 bg-white rounded-full transition-transform duration-300 ${ecoMode ? 'translate-x-4' : ''}`}></div>
-                      </button>
-                  </div>
-
-                  {/* NOTIFICACIONES RECORDATORIO LOCAL (23:30) */}
-                  <div className="flex flex-col p-4 bg-slate-800/40 rounded-2xl border border-slate-700/50 space-y-3 shadow-inner">
-                      <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                              <div className={`p-2 rounded-xl transition-all duration-300 ${notificationsEnabled ? 'bg-amber-500 text-slate-900 animate-pulse' : 'bg-slate-800 text-slate-500'}`}>
-                                  {notificationsEnabled ? <Bell size={18} /> : <BellOff size={18} />}
-                              </div>
-                              <div>
-                                  <div className="text-xs font-black text-slate-200 uppercase tracking-wider select-none">Recordatorio Diario</div>
-                                  <div className="text-[9px] text-slate-400 font-black uppercase tracking-widest leading-none mt-0.5 opacity-80">Aviso local (23:30)</div>
-                              </div>
-                          </div>
-                          
-                          <button 
-                            onClick={toggleNotifications}
-                            className={`w-11 h-6 rounded-full p-1 transition-colors duration-300 relative shrink-0 ${notificationsEnabled ? 'bg-amber-500' : 'bg-slate-700'}`}
-                          >
-                              <div className={`w-4 h-4 bg-slate-900 rounded-full transition-transform duration-300 ${notificationsEnabled ? 'translate-x-5' : ''}`}></div>
-                          </button>
-                      </div>
-
-                      {/* Botones de Test - Visibles siempre en desarrollo para auditoría */}
-                      <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
-                          {notificationsEnabled && (
-                              <div className="flex items-center gap-2.5 p-2.5 bg-slate-950/60 rounded-xl border border-slate-800 text-[10px] text-slate-300">
-                                  <Clock size={12} className="text-amber-400 shrink-0" />
-                                  <div className="min-w-0 flex-1">
-                                      <span className="text-slate-500 font-bold uppercase text-[8px] tracking-wider block">Siguiente Alarma</span>
-                                      <span className="font-mono text-amber-300 font-black">{nextScheduledInfo}</span>
-                                  </div>
-                              </div>
-                          )}
-
-                          {/* Info extra */}
-                          <div className="flex items-start gap-2 text-[9px] text-slate-400 leading-normal pl-1">
-                              <Info size={11} className="text-slate-500 shrink-0 mt-0.5" />
-                              <p className="font-bold uppercase tracking-wide text-slate-400/90">
-                                  {notificationsEnabled 
-                                    ? "Agenda automática offline. Te recordará si a las 23:30 no has puntuado."
-                                    : "Nota: Las notificaciones requieren permiso del navegador (usa 'Abrir en pestaña nueva' para activar)."}
-                              </p>
-                          </div>
-
-                          {/* Botones de Test */}
-                          <div className="grid grid-cols-2 gap-2">
-                              <button 
-                                onClick={() => {
-                                    SoundManager.play('click');
-                                    triggerHaptic('medium');
-                                    sendPepeNotification(
-                                        "🐸 Recordatorio de Pepe (Preview)",
-                                        "¿Cómo te ha ido el día? No olvides registrar tu humor diario."
-                                    );
-                                }}
-                                className="py-2.5 bg-slate-100/10 hover:bg-slate-100/20 active:scale-95 transition-all text-slate-200 font-black uppercase text-[9px] tracking-widest rounded-xl border border-white/10 flex flex-col items-center justify-center gap-1"
-                              >
-                                  <span>Ver Diseño</span>
-                                  <span className="text-[7px] opacity-60">(Ahora)</span>
-                              </button>
-
-                              <button 
-                                onClick={testLocalNotification}
-                                className="py-2.5 bg-amber-500/10 hover:bg-amber-500/20 active:scale-95 transition-all text-amber-500 font-black uppercase text-[9px] tracking-widest rounded-xl border border-amber-500/30 flex flex-col items-center justify-center gap-1"
-                              >
-                                  <span>Test Delay</span>
-                                  <span className="text-[7px] opacity-60">(En 5 seg)</span>
-                              </button>
-                          </div>
-                      </div>
-                  </div>
-                  
-                  {/* PIXEL MODE TOGGLE */}
-                  {!ecoMode && (
-                      <div className="flex items-center justify-between p-3 bg-slate-800/50 rounded-xl border border-slate-700">
-                          <div className="flex items-center gap-3">
-                              <div className={`p-2 rounded-lg ${pixelMode ? 'bg-purple-500 text-white' : 'bg-slate-700 text-slate-400'}`}>
-                                  <BoxSelect size={18} />
-                              </div>
-                              <div>
-                                  <div className="text-xs font-bold text-slate-200 uppercase tracking-wider">Partículas Pixel Art</div>
-                                  <div className="text-[9px] text-slate-500 font-medium">Vibra 8-bits retro</div>
-                              </div>
-                          </div>
-                          <button 
-                            onClick={() => setPixelMode(!pixelMode)}
-                            className={`w-10 h-6 rounded-full p-1 transition-colors duration-300 ${pixelMode ? 'bg-purple-500' : 'bg-slate-700'}`}
-                          >
-                              <div className={`w-4 h-4 bg-white rounded-full transition-transform duration-300 ${pixelMode ? 'translate-x-4' : ''}`}></div>
-                          </button>
-                      </div>
-                  )}
-
-                  {!ecoMode && (
-                  <div className="space-y-3 opacity-100 transition-opacity">
-                      <div className="flex justify-between items-center">
-                          <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Intensidad del Pantano</label>
-                          <span className="text-xs font-mono text-green-400 bg-green-400/10 px-2 py-0.5 rounded">{particleCount}</span>
-                      </div>
-                      
-                      <div className="relative h-6 flex items-center">
-                          <input 
-                            type="range" 
-                            min="0" 
-                            max="800" 
-                            step="10" 
-                            value={particleCount} 
-                            onChange={(e) => setParticleCount(Number(e.target.value))}
-                            className="w-full h-2 bg-slate-800 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-green-500 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:hover:scale-125 [&::-webkit-slider-thumb]:transition-all"
-                          />
-                      </div>
-                  </div>
-                  )}
-
-                  <div className="pt-4 border-t border-slate-700 mt-4">
-                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">Gestión de Datos</h4>
-                    <div className="grid grid-cols-2 gap-3">
-                         {/* EXPORT BUTTON */}
-                         <button 
-                            onClick={handleExport}
-                            className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500 to-green-600 p-4 shadow-lg shadow-emerald-500/20 transition-all duration-300 hover:scale-[1.02] hover:shadow-emerald-500/40 active:scale-95"
-                        >
-                            <div className="relative z-10 flex flex-col items-center gap-1">
-                                <Save size={24} className="text-emerald-100 group-hover:scale-110 transition-transform duration-300" />
-                                <span className="text-[10px] font-black uppercase tracking-widest text-white">Exportar</span>
-                            </div>
-                            <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:animate-[shimmer_1.5s_infinite]"></div>
-                        </button>
-                        
-                        {/* IMPORT BUTTON */}
-                        <button 
-                            onClick={handleImportClick}
-                            className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 p-4 shadow-lg shadow-blue-500/20 transition-all duration-300 hover:scale-[1.02] hover:shadow-blue-500/40 active:scale-95"
-                        >
-                            <div className="relative z-10 flex flex-col items-center gap-1">
-                                <FileJson size={24} className="text-blue-100 group-hover:scale-110 transition-transform duration-300" />
-                                <span className="text-[10px] font-black uppercase tracking-widest text-white">Importar</span>
-                            </div>
-                            <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:animate-[shimmer_1.5s_infinite]"></div>
-                        </button>
-                    </div>
-                  </div>
-              </div>
-
-              {/* FOOTER DE AJUSTES */}
-              <div className="p-4 bg-slate-900/95 border-t border-slate-800/60 shrink-0 rounded-b-[2rem] z-10">
-                  <button 
-                    onClick={() => { SoundManager.play('click'); setIsSettingsOpen(false); }}
-                    className="w-full py-3 bg-slate-800 hover:bg-slate-700 active:scale-98 text-white font-black uppercase tracking-wider text-[11px] rounded-xl transition-all border border-slate-700"
-                  >
-                    Listo (Cerrar)
-                  </button>
-              </div>
-           </div>
-        </div>
-       )}
-
-      {showResetConfirm && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-xl animate-in fade-in duration-300">
-          <div className="bg-slate-900 border-2 border-red-500/50 w-full max-w-md rounded-[2.5rem] shadow-[0_0_50px_rgba(239,68,68,0.2)] overflow-hidden p-6 md:p-8 flex flex-col items-center text-center space-y-6">
-            <div className="w-16 h-16 md:w-20 md:h-20 bg-red-500/10 rounded-full flex items-center justify-center text-red-500 animate-pulse">
-              <AlertTriangle size={40} />
-            </div>
-            <div className="space-y-2">
-              <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-tighter">¿Borrar todo el lore?</h2>
-              <p className="text-slate-400 text-xs md:text-sm font-medium leading-relaxed">
-                Pepe pregunta: ¿Seguro que quieres borrar todos tus recuerdos? Esta acción no se puede deshacer.
-              </p>
-            </div>
-            <div className="flex flex-col w-full gap-3 pt-2">
-              <button
-                onClick={() => { 
-                    triggerHaptic('heavy'); 
-                    SoundManager.play('trash'); 
-                    // 1. Clear Data
-                    setYearData({}); 
-                    // 2. Clear Achievement Memory
-                    localStorage.removeItem(ACHIEVEMENTS_STORAGE_KEY_V2);
-                    setUnlockedAchievements([]); // Clear state
-                    // 3. Optional: Clear specific achievements if needed
-                    localStorage.removeItem('pepe_ach_dark_knight_unlocked');
-                    
-                    setShowResetConfirm(false); 
-                }}
-                className="w-full py-4 bg-red-600 hover:bg-red-500 text-white font-black uppercase tracking-[0.2em] text-xs rounded-2xl transition-all shadow-lg shadow-red-900/40 flex items-center justify-center gap-2"
-              >
-                <Trash2 size={16} /> SÍ, BORRAR TODO
-              </button>
-              <button
-                onClick={() => { triggerHaptic('light'); SoundManager.play('click'); setShowResetConfirm(false); }}
-                className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-slate-300 font-black uppercase tracking-[0.2em] text-xs rounded-2xl transition-all border border-slate-700"
-              >
-                CANCELAR
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* NOTIFICACIÓN IN-APP SIMULADA DE PEPE (Floating Banner) */}
       {activeInAppNotification && (
-        <div 
-          className="fixed top-6 left-1/2 -translate-x-1/2 z-[150] w-[92%] max-w-sm bg-slate-900/95 border border-emerald-500/40 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.85),0_0_40px_rgba(34,197,94,0.2)] rounded-3xl backdrop-blur-xl p-4 flex gap-3.5 items-center animate-in fade-in slide-in-from-top-4 duration-500"
-          style={{ contentVisibility: 'auto' }}
-        >
-          <div className="w-[42px] h-[42px] rounded-2xl bg-slate-950 border border-emerald-500/20 shadow-inner flex items-center justify-center shrink-0 overflow-hidden p-1.5">
-            <img 
-               src="https://sme2zz26xzjq57zw.public.blob.vercel-storage.com/favicon_2.png" 
-               alt="Pepe" 
-               className="w-full h-full object-contain"
-               referrerPolicy="no-referrer"
-            />
-          </div>
-          
-          <div className="flex-1 min-w-0 pr-6">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[9px] bg-emerald-500/15 text-emerald-400 font-extrabold tracking-wider uppercase px-2 py-0.5 rounded-md">Pepe Tracker</span>
-              <span className="text-[7px] text-slate-500 font-black font-mono">AVISO RECURRENTE</span>
-            </div>
-            <h4 className="text-xs font-black text-slate-100 uppercase tracking-tight leading-none mt-2 truncate">
-               {activeInAppNotification.title}
-            </h4>
-            <p className="text-[9px] text-slate-300 font-bold leading-relaxed mt-1 uppercase tracking-wide opacity-90">
-               {activeInAppNotification.body}
-            </p>
-          </div>
-          
-          <button 
-            onClick={() => { 
-              SoundManager.play('click'); 
-              setActiveInAppNotification(null); 
-            }}
-            className="absolute top-3.5 right-3.5 p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-xl active:scale-90 transition-all border border-white/5"
-            title="Cerrar notificación"
-          >
-            <X size={12} />
-          </button>
-        </div>
+        <InAppNotificationBanner
+          notification={activeInAppNotification}
+          onDismiss={dismissInAppNotification}
+        />
       )}
     </div>
   );

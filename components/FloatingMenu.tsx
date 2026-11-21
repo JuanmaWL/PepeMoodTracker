@@ -1,5 +1,5 @@
 
-import React, { useRef } from 'react';
+import React, { memo } from 'react';
 import { BarChart2, RotateCcw, Search, Cloud, Settings, Trophy } from 'lucide-react';
 import SoundManager from '../utils/sounds';
 
@@ -12,7 +12,7 @@ interface FloatingMenuProps {
   onAchievements: () => void;
 }
 
-const FloatingMenu: React.FC<FloatingMenuProps> = ({ onStats, onReset, onSearch, onCloud, onSettings, onAchievements }) => {
+const FloatingMenu: React.FC<FloatingMenuProps> = memo(({ onStats, onReset, onSearch, onCloud, onSettings, onAchievements }) => {
   
   const handleClick = (action: () => void) => {
     SoundManager.play('click');
@@ -122,6 +122,6 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({ onStats, onReset, onSearch,
       </div>
     </div>
   );
-};
+});
 
 export default FloatingMenu;

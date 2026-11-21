@@ -1,29 +1,41 @@
 import React, { useState, useEffect } from 'react';
 import { Lightbulb, CheckCircle2, XCircle, Loader2, RefreshCw, Key, Cpu, Zap } from 'lucide-react';
-import { pingGemini, GeminiPingResult, getGeminiApiKey, GEMINI_MODEL_TEXT } from '../utils/gemini';
+import { pingGemini, fetchGeminiStatus, GeminiPingResult, GEMINI_MODEL_TEXT } from '../utils/gemini';
 
 export const GeminiStatusBulb: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [status, setStatus] = useState<'idle' | 'checking' | 'success' | 'error'>('idle');
   const [result, setResult] = useState<GeminiPingResult | null>(null);
+  const [serverHasKey, setServerHasKey] = useState<boolean | null>(null);
 
-  // Check on first mount silently
+  // Check server configuration on first mount silently
   useEffect(() => {
-    const key = getGeminiApiKey();
-    if (!key) {
-      setStatus('error');
-      setResult({
-        ok: false,
-        hasKey: false,
-        model: GEMINI_MODEL_TEXT,
-        latencyMs: 0,
-        message: 'No se ha detectado variable de entorno GEMINI_API_KEY / VITE_GEMINI_API_KEY.',
-        keyMasked: 'No detectada'
+    let active = true;
+    fetchGeminiStatus()
+      .then((info) => {
+        if (!active) return;
+        setServerHasKey(info.hasKey);
+        if (!info.hasKey) {
+          setStatus('error');
+          setResult({
+            ok: false,
+            hasKey: false,
+            model: info.model || GEMINI_MODEL_TEXT,
+            latencyMs: 0,
+            message: 'No se ha detectado clave de Gemini en el servidor (GEMINI_API_KEY / PEPE_VAULT_TOKEN).',
+            keyStatus: info.keyStatus || 'No configurada',
+          });
+        } else {
+          setStatus('idle');
+        }
+      })
+      .catch(() => {
+        if (!active) return;
+        setStatus('idle');
       });
-    } else {
-      // Key is present, start with idle-configured
-      setStatus('idle');
-    }
+    return () => {
+      active = false;
+    };
   }, []);
 
   const runTest = async (e?: React.MouseEvent) => {
@@ -31,17 +43,18 @@ export const GeminiStatusBulb: React.FC = () => {
     setStatus('checking');
     try {
       const res = await pingGemini();
+      setServerHasKey(res.hasKey);
       setResult(res);
       setStatus(res.ok ? 'success' : 'error');
     } catch (err: any) {
       setStatus('error');
       setResult({
         ok: false,
-        hasKey: !!getGeminiApiKey(),
+        hasKey: Boolean(serverHasKey),
         model: GEMINI_MODEL_TEXT,
         latencyMs: 0,
         message: err?.message || 'Error inesperado al probar conexión.',
-        keyMasked: 'Error'
+        keyStatus: serverHasKey ? 'Configurada en servidor' : 'Error',
       });
     }
   };
@@ -144,7 +157,7 @@ export const GeminiStatusBulb: React.FC = () => {
                   <Key size={12} /> API Key
                 </span>
                 <span className="font-mono font-semibold text-slate-200">
-                  {result?.keyMasked || (getGeminiApiKey() ? `${getGeminiApiKey().slice(0, 4)}...${getGeminiApiKey().slice(-4)}` : 'No encontrada')}
+                  {result?.keyStatus || (serverHasKey ? 'Configurada en servidor' : serverHasKey === false ? 'No encontrada' : 'Comprobando...')}
                 </span>
               </div>
 

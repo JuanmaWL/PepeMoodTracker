@@ -1,9 +1,10 @@
 
 import React, { useMemo, useState } from 'react';
 import { X, BrainCircuit, CalendarRange, Filter, Sparkles, Zap, Network } from 'lucide-react';
-import { YearData, DayData } from '../types';
+import { YearData } from '../types';
 import { MONTHS } from '../constants';
 import SoundManager from '../utils/sounds';
+import { filterEntriesByRange } from '../utils/date';
 
 interface CloudModalProps {
   isOpen: boolean;
@@ -81,25 +82,7 @@ const CloudModal: React.FC<CloudModalProps> = ({ isOpen, onClose, data }) => {
   const words = useMemo(() => {
     if (!data) return [];
     
-    // 1. Filtrar datos por fecha
-    const entries = Object.entries(data) as [string, DayData][];
-    const allValidEntries = entries.filter(([_, d]) => d.note && d.note.trim().length > 0).sort((a, b) => a[0].localeCompare(b[0]));
-    
-    let filteredEntries: [string, DayData][] = [];
-
-    if (timeRange === 'all') {
-        filteredEntries = allValidEntries;
-    } else if (timeRange === 'last_7') {
-        filteredEntries = allValidEntries.slice(-7);
-    } else if (timeRange === 'last_30') {
-        filteredEntries = allValidEntries.slice(-30);
-    } else {
-        const monthIndex = parseInt(timeRange);
-        filteredEntries = allValidEntries.filter(([date]) => {
-             const [_, m] = date.split('-');
-             return parseInt(m) - 1 === monthIndex;
-        });
-    }
+    const filteredEntries = filterEntriesByRange(data, timeRange, 'all', true);
 
     if (filteredEntries.length === 0) return [];
 
@@ -362,14 +345,6 @@ const CloudModal: React.FC<CloudModalProps> = ({ isOpen, onClose, data }) => {
                       animationDelay: `${w.animDelay}s`
                     }}
                   > 
-                    {/* Estilos para animación flotante */}
-                    <style>{`
-                        @keyframes float {
-                            0%, 100% { transform: translateY(0); }
-                            50% { transform: translateY(-5px); }
-                        }
-                    `}</style>
-
                     {/* Nodo Dot */}
                     <div className={`
                         w-1.5 h-1.5 rounded-full transition-all duration-500

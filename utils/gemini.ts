@@ -1,21 +1,10 @@
-import { GoogleGenAI } from '@google/genai';
+export const GEMINI_MODEL_TEXT = 'gemini-4-hydrogen';
+export const GEMINI_FALLBACK_TEXT = 'gemini-3.1-flash-lite';
 
-export const GEMINI_MODEL_TEXT = 'gemini-3.6-flash';
-export const GEMINI_FALLBACK_TEXT = 'gemini-3-flash-preview';
-
-export function getGeminiApiKey(): string {
-  const env = (import.meta as any).env || {};
-  const proc = (typeof process !== 'undefined' ? process.env : {}) as any;
-
-  return (
-    env.VITE_GEMINI_API_KEY ||
-    env.VITE_PEPE_MOOD_KEY ||
-    proc.VITE_GEMINI_API_KEY ||
-    proc.GEMINI_API_KEY ||
-    proc.API_KEY ||
-    proc.NEXT_PUBLIC_PEPE_MOOD_KEY ||
-    ''
-  );
+export interface GeminiStatusResult {
+  hasKey: boolean;
+  model: string;
+  keyStatus: string;
 }
 
 export interface GeminiPingResult {
@@ -24,69 +13,118 @@ export interface GeminiPingResult {
   model: string;
   latencyMs: number;
   message: string;
-  keyMasked: string;
+  keyStatus: string;
+}
+
+export interface OracleLoreItem {
+  date: string;
+  mood: string;
+  note: string;
+}
+
+export interface JudgeVerdictRequest {
+  judgeMood: 'roast' | 'wholesome';
+  contextData: {
+    range: string;
+    totalDaysAnalyzed: number;
+    averageMood: string;
+    topMoods: string;
+    days: Array<{
+      date: string;
+      mood: string;
+      note: string;
+    }>;
+  };
+}
+
+export interface MemeEditRequest {
+  level: number;
+  note: string;
+}
+
+async function parseJsonSafe(res: Response): Promise<Record<string, any>> {
+  try {
+    return await res.json();
+  } catch {
+    return {};
+  }
+}
+
+export async function fetchGeminiStatus(): Promise<GeminiStatusResult> {
+  const res = await fetch('/api/gemini/status');
+  const data = await parseJsonSafe(res);
+  if (!res.ok) {
+    throw new Error(data.error || 'No se pudo comprobar el estado de Gemini en el servidor.');
+  }
+  return {
+    hasKey: Boolean(data.hasKey),
+    model: typeof data.model === 'string' ? data.model : GEMINI_MODEL_TEXT,
+    keyStatus: typeof data.keyStatus === 'string' ? data.keyStatus : 'Desconocido',
+  };
 }
 
 export async function pingGemini(): Promise<GeminiPingResult> {
-  const key = getGeminiApiKey();
-  const startTime = Date.now();
+  const res = await fetch('/api/gemini/ping', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  const data = await parseJsonSafe(res);
 
-  if (!key) {
-    return {
-      ok: false,
-      hasKey: false,
-      model: GEMINI_MODEL_TEXT,
-      latencyMs: 0,
-      message: 'No se ha detectado ninguna API Key en las variables de entorno (VITE_GEMINI_API_KEY / GEMINI_API_KEY).',
-      keyMasked: 'No configurada'
-    };
+  if (!res.ok && typeof data.ok !== 'boolean') {
+    throw new Error(data.error || data.message || `Error HTTP ${res.status}`);
   }
 
-  const masked = key.length > 8 ? `${key.slice(0, 4)}...${key.slice(-4)}` : '***';
+  return {
+    ok: Boolean(data.ok),
+    hasKey: Boolean(data.hasKey),
+    model: typeof data.model === 'string' ? data.model : GEMINI_MODEL_TEXT,
+    latencyMs: typeof data.latencyMs === 'number' ? data.latencyMs : 0,
+    message: typeof data.message === 'string' ? data.message : (data.error || 'Error al conectar con Gemini.'),
+    keyStatus: typeof data.keyStatus === 'string' ? data.keyStatus : (data.hasKey ? 'Configurada en servidor' : 'No configurada'),
+  };
+}
 
-  try {
-    const ai = new GoogleGenAI({ apiKey: key });
-    const response = await ai.models.generateContent({
-      model: GEMINI_MODEL_TEXT,
-      contents: 'Ping test Pepe. Responde solo OK'
-    });
-
-    const latency = Date.now() - startTime;
-    return {
-      ok: true,
-      hasKey: true,
-      model: GEMINI_MODEL_TEXT,
-      latencyMs: latency,
-      message: response.text?.trim() || 'OK',
-      keyMasked: masked
-    };
-  } catch (err: any) {
-    // Si falla el modelo principal, probar fallback
-    try {
-      const ai = new GoogleGenAI({ apiKey: key });
-      const fallbackRes = await ai.models.generateContent({
-        model: GEMINI_FALLBACK_TEXT,
-        contents: 'Ping test Pepe. Responde solo OK'
-      });
-      const latency = Date.now() - startTime;
-      return {
-        ok: true,
-        hasKey: true,
-        model: GEMINI_FALLBACK_TEXT,
-        latencyMs: latency,
-        message: fallbackRes.text?.trim() || 'OK (Fallback)',
-        keyMasked: masked
-      };
-    } catch (fallbackErr: any) {
-      const latency = Date.now() - startTime;
-      return {
-        ok: false,
-        hasKey: true,
-        model: GEMINI_MODEL_TEXT,
-        latencyMs: latency,
-        message: err?.message || 'Error al conectar con la API de Gemini.',
-        keyMasked: masked
-      };
-    }
+export async function requestOracleVerdict(recent: OracleLoreItem[]): Promise<string> {
+  const res = await fetch('/api/gemini/oracle', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ recent }),
+  });
+  const data = await parseJsonSafe(res);
+  if (!res.ok) {
+    throw new Error(data.error || `Error HTTP ${res.status}`);
   }
+  return typeof data.text === 'string' ? data.text : 'Pepe se ha quedado sin palabras.';
+}
+
+export async function requestJudgeVerdict(payload: JudgeVerdictRequest): Promise<string> {
+  const res = await fetch('/api/gemini/judge', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await parseJsonSafe(res);
+  if (!res.ok) {
+    throw new Error(data.error || `Error HTTP ${res.status}`);
+  }
+  if (typeof data.analysis !== 'string' || !data.analysis) {
+    throw new Error('Pepe se quedó mudo.');
+  }
+  return data.analysis;
+}
+
+export async function requestMemeEdit(payload: MemeEditRequest): Promise<string> {
+  const res = await fetch('/api/gemini/meme', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await parseJsonSafe(res);
+  if (!res.ok) {
+    throw new Error(data.error || `Error HTTP ${res.status}`);
+  }
+  if (typeof data.imageDataUrl !== 'string' || !data.imageDataUrl) {
+    throw new Error('No se generó imagen');
+  }
+  return data.imageDataUrl;
 }
