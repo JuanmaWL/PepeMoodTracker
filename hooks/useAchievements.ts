@@ -115,11 +115,21 @@ export function useAchievements({ yearData, particleCount, ecoMode, triggerHapti
     setUnlockedAchievements([]);
   }, []);
 
+  const restoreAchievements = useCallback((items: UnlockedAchievement[]) => {
+    try {
+      localStorage.setItem(ACHIEVEMENTS_STORAGE_KEY_V2, JSON.stringify(items));
+    } catch {
+      // Ignore storage errors
+    }
+    setUnlockedAchievements(items);
+  }, []);
+
   return {
     unlockedAchievements,
     newlyUnlocked,
     isClosingToast,
     closeAchievementToast,
-    resetAchievements
+    resetAchievements,
+    restoreAchievements
   };
 }

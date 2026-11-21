@@ -59,6 +59,13 @@ export function useAppSettings() {
     }
   }, []);
 
+  const resetAppSettings = useCallback(() => {
+    const defaultParticles = typeof window !== 'undefined' && window.innerWidth < 768 ? 40 : 150;
+    setEcoMode(false);
+    setPixelMode(false);
+    setParticleCount(defaultParticles);
+  }, []);
+
   return {
     ecoMode,
     setEcoMode,
@@ -66,6 +73,7 @@ export function useAppSettings() {
     setPixelMode,
     particleCount,
     setParticleCount,
-    triggerHaptic
+    triggerHaptic,
+    resetAppSettings
   };
 }

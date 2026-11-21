@@ -54,17 +54,17 @@ const FloatingMenu: React.FC<FloatingMenuProps> = memo(({
       type="button"
       onClick={onClick}
       className={`
-        group relative flex flex-col items-center justify-center gap-1 shrink-0
-        min-w-[44px] min-h-[44px] w-11 h-11 md:w-14 md:h-auto
+        group relative flex flex-col items-center justify-center gap-1
+        w-full min-h-[44px] md:w-14 md:h-auto
         text-slate-400 ${colorClass} transition-all duration-300
         active:scale-90 outline-none
       `}
       title={label}
       aria-label={label}
     >
-      <div className="p-2 rounded-xl group-hover:bg-white/5 transition-colors">
+      <div className="p-1.5 md:p-2 rounded-xl group-hover:bg-white/5 transition-colors">
         <Icon
-          size={19}
+          size={18}
           className={`transition-transform duration-300 ${rotateIcon ? 'group-hover:rotate-180' : 'group-hover:-translate-y-0.5'}`}
         />
       </div>
@@ -79,13 +79,16 @@ const FloatingMenu: React.FC<FloatingMenuProps> = memo(({
   );
 
   return (
-    <div className="fixed bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 z-40 w-max max-w-[95vw]">
+    <nav
+      aria-label="Menú principal"
+      className="fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] md:bottom-6 left-1/2 -translate-x-1/2 z-40 w-[calc(100vw-0.75rem)] max-w-[430px] md:w-max md:max-w-[95vw]"
+    >
       <div className="
-        flex items-center gap-0.5 md:gap-2 px-2 py-1.5 md:px-6 md:py-3.5
+        grid grid-cols-8 items-center px-1 py-1
+        md:flex md:items-center md:gap-2 md:px-6 md:py-3.5
         bg-slate-900/90 backdrop-blur-xl
         border border-slate-700/60 ring-1 ring-white/5
-        rounded-[2rem] shadow-[0_10px_40px_-10px_rgba(0,0,0,0.6)]
-        overflow-x-auto no-scrollbar
+        rounded-2xl md:rounded-[2rem] shadow-[0_10px_40px_-10px_rgba(0,0,0,0.6)]
         animate-in slide-in-from-bottom-10 fade-in duration-500
       ">
         <MenuButton
@@ -147,7 +150,7 @@ const FloatingMenu: React.FC<FloatingMenuProps> = memo(({
           rotateIcon={true}
         />
       </div>
-    </div>
+    </nav>
   );
 });
 

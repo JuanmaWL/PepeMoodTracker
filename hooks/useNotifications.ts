@@ -269,6 +269,13 @@ export function useNotifications({ yearData, triggerHaptic }: UseNotificationsOp
     return () => clearInterval(interval);
   }, [notificationsEnabled, yearData, sendPepeNotification]);
 
+  const resetNotifications = useCallback(() => {
+    setNotificationsEnabled(false);
+    setNextScheduledInfo('Desactivado');
+    setNotificationFeedback(null);
+    setActiveInAppNotification(null);
+  }, []);
+
   return {
     notificationsEnabled,
     notificationPermission,
@@ -279,6 +286,7 @@ export function useNotifications({ yearData, triggerHaptic }: UseNotificationsOp
     clearNotificationFeedback: useCallback(() => setNotificationFeedback(null), []),
     sendPepeNotification,
     toggleNotifications,
-    testLocalNotification
+    testLocalNotification,
+    resetNotifications
   };
 }

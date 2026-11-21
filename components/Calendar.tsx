@@ -9,6 +9,8 @@ interface CalendarProps {
   onDayClick: (dateStr: string) => void;
   onDayLongPress: (dateStr: string, x: number, y: number) => void;
   currentYear: number;
+  realCurrentYear?: number;
+  onReturnToCurrentYear?: () => void;
   highlightedDates: string[];
   ecoMode?: boolean;
   deferInitialScroll?: boolean;
@@ -322,6 +324,8 @@ const Calendar: React.FC<CalendarProps> = memo(({
   onDayClick,
   onDayLongPress,
   currentYear,
+  realCurrentYear = new Date().getFullYear(),
+  onReturnToCurrentYear,
   highlightedDates,
   ecoMode = false,
   deferInitialScroll = false
@@ -331,6 +335,7 @@ const Calendar: React.FC<CalendarProps> = memo(({
   const hasAutoScrolledRef = useRef(false);
 
   const highlightedSet = useMemo(() => new Set(highlightedDates), [highlightedDates]);
+  const isViewingCurrentYear = currentYear === realCurrentYear;
 
   const { todayStr, todayMonthIndex } = useMemo(() => {
     const today = new Date();
@@ -359,9 +364,9 @@ const Calendar: React.FC<CalendarProps> = memo(({
     scrollToMonth(todayMonthIndex, true);
   }, [scrollToMonth, todayMonthIndex]);
 
-  // Auto-scroll suave al mes actual al abrir la aplicación
+  // Auto-scroll suave al mes actual al abrir la aplicación en el año en curso
   useEffect(() => {
-    if (hasAutoScrolledRef.current || deferInitialScroll) return;
+    if (hasAutoScrolledRef.current || deferInitialScroll || !isViewingCurrentYear) return;
 
     const timer = setTimeout(() => {
       requestAnimationFrame(() => {
@@ -371,10 +376,14 @@ const Calendar: React.FC<CalendarProps> = memo(({
     }, 120);
 
     return () => clearTimeout(timer);
-  }, [deferInitialScroll, scrollToMonth, todayMonthIndex]);
+  }, [deferInitialScroll, isViewingCurrentYear, scrollToMonth, todayMonthIndex]);
 
   // Observador para mostrar botón rápido "Ir a Hoy" cuando el mes actual sale de pantalla
   useEffect(() => {
+    if (!isViewingCurrentYear) {
+      setIsTodayMonthOutOfView(false);
+      return;
+    }
     const todayEl = document.getElementById(`month-${todayMonthIndex}`);
     if (!todayEl || typeof IntersectionObserver === 'undefined') return;
 
@@ -387,7 +396,7 @@ const Calendar: React.FC<CalendarProps> = memo(({
 
     observer.observe(todayEl);
     return () => observer.disconnect();
-  }, [todayMonthIndex]);
+  }, [isViewingCurrentYear, todayMonthIndex]);
 
   return (
     <div className="w-full relative">
@@ -415,13 +424,22 @@ const Calendar: React.FC<CalendarProps> = memo(({
             <div className="w-px bg-slate-800 my-2" />
 
             <button
-              onClick={handleJumpToToday}
+              onClick={() => {
+                if (isViewingCurrentYear) {
+                  handleJumpToToday();
+                } else {
+                  SoundManager.play('click');
+                  onReturnToCurrentYear?.();
+                }
+              }}
               className="min-h-[48px] px-4 py-2.5 flex items-center gap-1.5 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 active:scale-95 transition-all whitespace-nowrap shrink-0"
-              title="Ir al mes actual"
-              aria-label="Ir al mes de hoy"
+              title={isViewingCurrentYear ? 'Ir al mes actual' : `Volver a ${realCurrentYear}`}
+              aria-label={isViewingCurrentYear ? 'Ir al mes de hoy' : `Volver a ${realCurrentYear}`}
             >
               <LocateFixed size={16} />
-              <span className="text-xs font-black uppercase tracking-widest">Hoy</span>
+              <span className="text-xs font-black uppercase tracking-widest">
+                {isViewingCurrentYear ? 'Hoy' : realCurrentYear}
+              </span>
             </button>
           </div>
 
@@ -433,7 +451,7 @@ const Calendar: React.FC<CalendarProps> = memo(({
           >
             <div className="grid grid-cols-3 gap-2 p-3 bg-slate-950/50">
               {MONTHS.map((m, i) => {
-                const isCurrent = i === todayMonthIndex;
+                const isCurrent = isViewingCurrentYear && i === todayMonthIndex;
                 return (
                   <button
                     key={m}
@@ -463,10 +481,10 @@ const Calendar: React.FC<CalendarProps> = memo(({
       </div>
 
       {/* BOTÓN FLOTANTE CONTEXTUAL PARA VOLVER A HOY (Desktop y Móvil al hacer scroll) */}
-      {isTodayMonthOutOfView && (
+      {isTodayMonthOutOfView && isViewingCurrentYear && (
         <button
           onClick={handleJumpToToday}
-          className="fixed bottom-24 md:bottom-28 right-4 md:right-8 z-30 min-h-[44px] px-4 py-2.5 rounded-full bg-slate-900/90 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/40 shadow-[0_10px_30px_rgba(0,0,0,0.6)] backdrop-blur-xl flex items-center gap-2 transition-all duration-200 active:scale-95 animate-in fade-in slide-in-from-bottom-4 whitespace-nowrap shrink-0"
+          className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] md:bottom-28 right-4 md:right-8 z-30 min-h-[44px] px-4 py-2.5 rounded-full bg-slate-900/90 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/40 shadow-[0_10px_30px_rgba(0,0,0,0.6)] backdrop-blur-xl flex items-center gap-2 transition-all duration-200 active:scale-95 animate-in fade-in slide-in-from-bottom-4 whitespace-nowrap shrink-0"
           title="Volver al mes actual"
           aria-label="Volver al mes de hoy"
         >
@@ -483,7 +501,7 @@ const Calendar: React.FC<CalendarProps> = memo(({
             monthName={monthName}
             monthIndex={mIndex}
             currentYear={currentYear}
-            isCurrentMonth={mIndex === todayMonthIndex}
+            isCurrentMonth={isViewingCurrentYear && mIndex === todayMonthIndex}
             yearData={yearData}
             highlightedSet={highlightedSet}
             todayStr={todayStr}

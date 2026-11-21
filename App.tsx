@@ -10,12 +10,19 @@ import WelcomeModal, { WelcomeTab } from './components/WelcomeModal';
 import BannerShowcase from './components/BannerShowcase';
 import AchievementToast from './components/AchievementToast';
 import InAppNotificationBanner from './components/InAppNotificationBanner';
-import { DayData, MoodLevel } from './types';
+import { DayData, MoodLevel, UnlockedAchievement } from './types';
 import { PEPE_ASSETS } from './constants';
 import SoundManager from './utils/sounds';
 import { getLocalDateStr } from './utils/date';
 import { APP_VERSION, SEEN_VERSION_KEY, TUTORIAL_KEY } from './utils/changelog';
 import { computeStreakStats } from './utils/streak';
+import { WrappedScope } from './utils/wrapped';
+import {
+  countArchiveSummary,
+  getYearCompletionStats,
+  listStoredYears,
+  readYearDataFromStorage
+} from './utils/years';
 import { useAppSettings } from './hooks/useAppSettings';
 import { useYearData } from './hooks/useYearData';
 import { useAchievements } from './hooks/useAchievements';
@@ -57,7 +64,8 @@ const ModalLoader = () => {
 };
 
 const App: React.FC = () => {
-  const currentYear = useMemo(() => new Date().getFullYear(), []);
+  const realCurrentYear = useMemo(() => new Date().getFullYear(), []);
+  const [activeYear, setActiveYear] = useState<number>(realCurrentYear);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -67,7 +75,15 @@ const App: React.FC = () => {
   const [isCloudModalOpen, setIsCloudModalOpen] = useState(false);
   const [isAchievementsModalOpen, setIsAchievementsModalOpen] = useState(false);
   const [isTimeCapsuleOpen, setIsTimeCapsuleOpen] = useState(false);
-  const [isWrappedOpen, setIsWrappedOpen] = useState(false);
+  const [wrappedState, setWrappedState] = useState<{
+    isOpen: boolean;
+    initialYear: number;
+    initialScope: WrappedScope;
+  }>({
+    isOpen: false,
+    initialYear: realCurrentYear,
+    initialScope: 'month'
+  });
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [highlightedDates, setHighlightedDates] = useState<string[]>([]);
@@ -120,22 +136,47 @@ const App: React.FC = () => {
     setPixelMode,
     particleCount,
     setParticleCount,
-    triggerHaptic
+    triggerHaptic,
+    resetAppSettings
   } = useAppSettings();
 
   const {
     yearData,
+    storageRevision,
     saveDay,
     deleteDay,
     quickSetMood,
     clearAllData,
     exportData,
     importData
-  } = useYearData({ currentYear, triggerHaptic });
+  } = useYearData({ activeYear, realCurrentYear, triggerHaptic });
+
+  const availableYears = useMemo(
+    () => listStoredYears(realCurrentYear),
+    [realCurrentYear, storageRevision]
+  );
+
+  const activeYearCompletion = useMemo(
+    () => getYearCompletionStats(yearData, activeYear),
+    [yearData, activeYear]
+  );
+
+  const prevYearCompletion = useMemo(() => {
+    const prevYear = realCurrentYear - 1;
+    const prevData = activeYear === prevYear ? yearData : readYearDataFromStorage(prevYear);
+    const hasEntries = (Object.values(prevData) as DayData[]).some((d) => d && d.level > MoodLevel.None);
+    if (!hasEntries) return null;
+    return getYearCompletionStats(prevData, prevYear);
+  }, [realCurrentYear, activeYear, yearData, storageRevision]);
+
+  const archiveSummary = useMemo(
+    () => countArchiveSummary(activeYear, yearData),
+    [activeYear, yearData, storageRevision]
+  );
 
   const streakStats = useMemo(
-    () => computeStreakStats(yearData, currentYear),
-    [yearData, currentYear]
+    () => computeStreakStats(yearData, activeYear, realCurrentYear),
+    [yearData, activeYear, realCurrentYear]
   );
 
   const {
@@ -143,7 +184,8 @@ const App: React.FC = () => {
     newlyUnlocked,
     isClosingToast,
     closeAchievementToast,
-    resetAchievements
+    resetAchievements,
+    restoreAchievements
   } = useAchievements({ yearData, particleCount, ecoMode, triggerHaptic });
 
   const {
@@ -155,7 +197,8 @@ const App: React.FC = () => {
     clearNotificationFeedback,
     sendPepeNotification,
     toggleNotifications,
-    testLocalNotification
+    testLocalNotification,
+    resetNotifications
   } = useNotifications({ yearData, triggerHaptic });
 
   useEffect(() => {
@@ -180,13 +223,20 @@ const App: React.FC = () => {
     [triggerHaptic]
   );
 
+  const handleSelectYear = useCallback((yr: number) => {
+    triggerHaptic('light');
+    setHighlightedDates([]);
+    setActiveYear(yr);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [triggerHaptic]);
+
   const isAnyModalOpen =
     isMoodModalOpen ||
     isStatsModalOpen ||
     isSearchModalOpen ||
     isCloudModalOpen ||
     isTimeCapsuleOpen ||
-    isWrappedOpen ||
+    wrappedState.isOpen ||
     isSettingsOpen ||
     showResetConfirm ||
     quickLogState.isActive ||
@@ -209,7 +259,7 @@ const App: React.FC = () => {
       if (isCloudModalOpen) setIsCloudModalOpen(false);
       if (isAchievementsModalOpen) setIsAchievementsModalOpen(false);
       if (isTimeCapsuleOpen) setIsTimeCapsuleOpen(false);
-      if (isWrappedOpen) setIsWrappedOpen(false);
+      if (wrappedState.isOpen) setWrappedState((prev) => ({ ...prev, isOpen: false }));
       if (isSettingsOpen) setIsSettingsOpen(false);
       if (showResetConfirm) setShowResetConfirm(false);
       if (welcomeState.isOpen) handleCloseWelcome();
@@ -224,7 +274,7 @@ const App: React.FC = () => {
     isCloudModalOpen,
     isAchievementsModalOpen,
     isTimeCapsuleOpen,
-    isWrappedOpen,
+    wrappedState.isOpen,
     isSettingsOpen,
     showResetConfirm,
     welcomeState.isOpen,
@@ -277,8 +327,11 @@ const App: React.FC = () => {
   const handleToday = useCallback(() => {
     triggerHaptic('medium');
     SoundManager.play('open');
+    if (activeYear !== realCurrentYear) {
+      setActiveYear(realCurrentYear);
+    }
     handleDayClick(getLocalDateStr());
-  }, [triggerHaptic, handleDayClick]);
+  }, [activeYear, realCurrentYear, triggerHaptic, handleDayClick]);
 
   const handleHighlightResults = useCallback((dates: string[]) => {
     setHighlightedDates(dates);
@@ -297,20 +350,39 @@ const App: React.FC = () => {
   const handleImport = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    importData(file, () => {
-      resetAchievements();
+    importData(file, (restoredAchievements?: UnlockedAchievement[]) => {
+      if (restoredAchievements) {
+        restoreAchievements(restoredAchievements);
+      } else {
+        resetAchievements();
+      }
       setIsSettingsOpen(false);
     });
     e.target.value = '';
-  }, [importData, resetAchievements]);
+  }, [importData, resetAchievements, restoreAchievements]);
+
+  const handleExportFullBackup = useCallback(() => {
+    exportData(unlockedAchievements);
+  }, [exportData, unlockedAchievements]);
 
   const handleConfirmReset = useCallback(() => {
     triggerHaptic('heavy');
     SoundManager.play('trash');
     clearAllData();
     resetAchievements();
+    resetNotifications();
+    resetAppSettings();
+    setActiveYear(realCurrentYear);
+    setHighlightedDates([]);
     setShowResetConfirm(false);
-  }, [triggerHaptic, clearAllData, resetAchievements]);
+  }, [
+    triggerHaptic,
+    clearAllData,
+    resetAchievements,
+    resetNotifications,
+    resetAppSettings,
+    realCurrentYear
+  ]);
 
   const handleOpenStats = useCallback(() => {
     triggerHaptic('light');
@@ -344,7 +416,20 @@ const App: React.FC = () => {
 
   const handleOpenWrapped = useCallback(() => {
     triggerHaptic('light');
-    setIsWrappedOpen(true);
+    setWrappedState({
+      isOpen: true,
+      initialYear: activeYear,
+      initialScope: activeYear < realCurrentYear ? 'year' : 'month'
+    });
+  }, [activeYear, realCurrentYear, triggerHaptic]);
+
+  const handleOpenAnnualChronicle = useCallback((yr: number) => {
+    triggerHaptic('light');
+    setWrappedState({
+      isOpen: true,
+      initialYear: yr,
+      initialScope: 'year'
+    });
   }, [triggerHaptic]);
 
   const handleOpenSettings = useCallback(() => {
@@ -401,7 +486,13 @@ const App: React.FC = () => {
       )}
 
       <BannerShowcase
-        currentYear={currentYear}
+        currentYear={activeYear}
+        realCurrentYear={realCurrentYear}
+        availableYears={availableYears}
+        onSelectYear={handleSelectYear}
+        activeYearCompletion={activeYearCompletion}
+        prevYearCompletion={prevYearCompletion}
+        onOpenAnnualChronicle={handleOpenAnnualChronicle}
         ecoMode={ecoMode}
         isPaused={isAnyModalOpen}
         streakStats={streakStats}
@@ -414,7 +505,7 @@ const App: React.FC = () => {
 
       <button
         onClick={handleToday}
-        className="group relative mb-12 inline-flex items-center gap-3 px-10 py-5 bg-gradient-to-br from-green-600 to-emerald-700 rounded-2xl text-white font-black text-xl shadow-[0_10px_30px_-5px_rgba(34,197,94,0.5)] hover:shadow-[0_15px_40px_-5px_rgba(34,197,94,0.7)] transition-all active:scale-95"
+        className="group relative mb-12 inline-flex items-center gap-3 px-8 md:px-10 py-4 md:py-5 bg-gradient-to-br from-green-600 to-emerald-700 rounded-2xl text-white font-black text-lg md:text-xl shadow-[0_10px_30px_-5px_rgba(34,197,94,0.5)] hover:shadow-[0_15px_40px_-5px_rgba(34,197,94,0.7)] transition-all active:scale-95"
       >
         <Plus size={24} className="group-hover:rotate-90 transition-transform" />
         REGISTRAR HOY
@@ -424,7 +515,9 @@ const App: React.FC = () => {
         yearData={yearData}
         onDayClick={handleDayClick}
         onDayLongPress={handleDayLongPress}
-        currentYear={currentYear}
+        currentYear={activeYear}
+        realCurrentYear={realCurrentYear}
+        onReturnToCurrentYear={() => handleSelectYear(realCurrentYear)}
         highlightedDates={highlightedDates}
         ecoMode={ecoMode}
         deferInitialScroll={welcomeState.isOpen}
@@ -495,18 +588,23 @@ const App: React.FC = () => {
             isOpen={isTimeCapsuleOpen}
             onClose={() => setIsTimeCapsuleOpen(false)}
             data={yearData}
-            currentYear={currentYear}
+            currentYear={activeYear}
             onSelectDate={handleJumpToDate}
             onLogToday={handleToday}
           />
         )}
-        {isWrappedOpen && (
+        {wrappedState.isOpen && (
           <PepeWrappedModal
-            isOpen={isWrappedOpen}
-            onClose={() => setIsWrappedOpen(false)}
+            isOpen={wrappedState.isOpen}
+            onClose={() => setWrappedState((prev) => ({ ...prev, isOpen: false }))}
             data={yearData}
             unlockedAchievements={unlockedAchievements}
-            currentYear={currentYear}
+            currentYear={activeYear}
+            realCurrentYear={realCurrentYear}
+            availableYears={availableYears}
+            initialYear={wrappedState.initialYear}
+            initialScope={wrappedState.initialScope}
+            onTravelToYear={handleSelectYear}
           />
         )}
         {isSettingsOpen && (
@@ -526,8 +624,9 @@ const App: React.FC = () => {
             onToggleNotifications={toggleNotifications}
             onPreviewNotification={handlePreviewNotification}
             onTestDelayedNotification={testLocalNotification}
-            onExport={exportData}
+            onExport={handleExportFullBackup}
             onImportClick={handleImportClick}
+            onOpenReset={handleOpenReset}
           />
         )}
         {showResetConfirm && (
@@ -535,6 +634,9 @@ const App: React.FC = () => {
             isOpen={showResetConfirm}
             onConfirmReset={handleConfirmReset}
             onCancel={() => setShowResetConfirm(false)}
+            onExportBackup={handleExportFullBackup}
+            yearsCount={archiveSummary.yearsCount}
+            entriesCount={archiveSummary.entriesCount}
           />
         )}
       </Suspense>

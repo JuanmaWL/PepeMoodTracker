@@ -123,36 +123,60 @@ function sanitizeShortString(value: unknown, maxLen: number, fallback = ''): str
   return value.trim().slice(0, maxLen);
 }
 
+let primaryCooldownUntil = 0;
+const PRIMARY_QUOTA_COOLDOWN_MS = 30 * 60 * 1000;
+
+function isQuotaOrRateLimitError(err: unknown): boolean {
+  const anyErr = err as { status?: number; message?: string } | undefined;
+  const msg = typeof anyErr?.message === 'string' ? anyErr.message : '';
+  return (
+    anyErr?.status === 429 ||
+    msg.includes('RESOURCE_EXHAUSTED') ||
+    msg.includes('429') ||
+    msg.toLowerCase().includes('quota')
+  );
+}
+
 async function generateTextWithFallback(
   ai: GoogleGenAI,
   contents: string,
   config?: Record<string, unknown>
 ): Promise<{ text: string; model: string }> {
-  try {
-    const response = await ai.models.generateContent({
-      model: GEMINI_MODEL_TEXT,
-      contents,
-      config: {
-        ...(config ?? {}),
-        abortSignal: AbortSignal.timeout(8000),
-      },
-    });
-    return { text: response.text ?? '', model: GEMINI_MODEL_TEXT };
-  } catch (primaryErr) {
-    console.warn(
-      `Gemini primary model (${GEMINI_MODEL_TEXT}) failed, trying ${GEMINI_FALLBACK_TEXT}:`,
-      primaryErr
-    );
-    const fallbackResponse = await ai.models.generateContent({
-      model: GEMINI_FALLBACK_TEXT,
-      contents,
-      config: {
-        ...(config ?? {}),
-        abortSignal: AbortSignal.timeout(15000),
-      },
-    });
-    return { text: fallbackResponse.text ?? '', model: GEMINI_FALLBACK_TEXT };
+  if (Date.now() >= primaryCooldownUntil) {
+    try {
+      const response = await ai.models.generateContent({
+        model: GEMINI_MODEL_TEXT,
+        contents,
+        config: {
+          ...(config ?? {}),
+          abortSignal: AbortSignal.timeout(8000),
+        },
+      });
+      return { text: response.text ?? '', model: GEMINI_MODEL_TEXT };
+    } catch (primaryErr) {
+      if (isQuotaOrRateLimitError(primaryErr)) {
+        primaryCooldownUntil = Date.now() + PRIMARY_QUOTA_COOLDOWN_MS;
+        console.info(`Gemini primary model (${GEMINI_MODEL_TEXT}) quota reached; switching to ${GEMINI_FALLBACK_TEXT}.`);
+      } else {
+        const anyErr = primaryErr as { status?: number; message?: string } | undefined;
+        const msg = primaryErr instanceof Error ? primaryErr.message : 'Error desconocido';
+        if (anyErr?.status === 503 || msg.includes('UNAVAILABLE')) {
+          primaryCooldownUntil = Date.now() + 2 * 60 * 1000;
+        }
+        console.info(`Gemini primary model (${GEMINI_MODEL_TEXT}) fallback triggered.`);
+      }
+    }
   }
+
+  const fallbackResponse = await ai.models.generateContent({
+    model: GEMINI_FALLBACK_TEXT,
+    contents,
+    config: {
+      ...(config ?? {}),
+      abortSignal: AbortSignal.timeout(15000),
+    },
+  });
+  return { text: fallbackResponse.text ?? '', model: GEMINI_FALLBACK_TEXT };
 }
 
 async function fetchPepeBaseImage(): Promise<{ data: string; mimeType: string }> {
@@ -184,9 +208,10 @@ app.use(express.json({ limit: '1mb' }));
 
 app.get('/api/gemini/status', (_req: Request, res: Response) => {
   const hasKey = Boolean(getGeminiApiKey());
+  const activeModel = Date.now() < primaryCooldownUntil ? GEMINI_FALLBACK_TEXT : GEMINI_MODEL_TEXT;
   res.json({
     hasKey,
-    model: GEMINI_MODEL_TEXT,
+    model: activeModel,
     keyStatus: hasKey ? 'Configurada en servidor' : 'No configurada',
   });
 });
@@ -268,8 +293,8 @@ app.post('/api/gemini/oracle', async (req: Request, res: Response) => {
     const { text } = await generateTextWithFallback(ai, prompt);
     res.json({ text: text || 'Pepe se ha quedado sin palabras.' });
   } catch (err) {
-    console.error('Oracle API error:', err);
     const { status, message } = formatGeminiError(err);
+    if (status >= 500) console.warn('Oracle API error:', message);
     res.status(status).json({ error: message });
   }
 });
@@ -374,8 +399,8 @@ app.post('/api/gemini/judge', async (req: Request, res: Response) => {
 
     res.json({ analysis: text });
   } catch (err) {
-    console.error('Tribunal API error:', err);
     const { status, message } = formatGeminiError(err);
+    if (status >= 500) console.warn('Tribunal API error:', message);
     res.status(status).json({ error: message });
   }
 });
@@ -424,8 +449,8 @@ app.post('/api/gemini/meme', async (req: Request, res: Response) => {
 
     throw new ApiError(502, 'No se generó ninguna imagen.');
   } catch (err) {
-    console.error('Meme API error:', err);
     const { status, message } = formatGeminiError(err);
+    if (status >= 500) console.warn('Meme API error:', message);
     res.status(status).json({ error: message });
   }
 });
@@ -476,8 +501,8 @@ app.post('/api/gemini/wrapped', async (req: Request, res: Response) => {
     const cleaned = text.trim().replace(/\*\*/g, '').replace(/^["'«]|["'»]$/g, '');
     res.json({ tagline: cleaned || 'Pepe observó tu lore y asintió en silencio.' });
   } catch (err) {
-    console.error('Wrapped API error:', err);
     const { status, message } = formatGeminiError(err);
+    if (status >= 500) console.warn('Wrapped API error:', message);
     res.status(status).json({ error: message });
   }
 });

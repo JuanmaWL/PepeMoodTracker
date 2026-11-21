@@ -11,7 +11,8 @@ import {
   Info,
   BoxSelect,
   Save,
-  FileJson
+  FileJson,
+  Trash2
 } from 'lucide-react';
 import SoundManager from '../utils/sounds';
 
@@ -33,6 +34,7 @@ interface SettingsModalProps {
   onTestDelayedNotification: () => void;
   onExport: () => void;
   onImportClick: () => void;
+  onOpenReset: () => void;
 }
 
 const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -52,7 +54,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   onPreviewNotification,
   onTestDelayedNotification,
   onExport,
-  onImportClick
+  onImportClick,
+  onOpenReset
 }) => {
   if (!isOpen) return null;
 
@@ -236,29 +239,59 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           )}
 
-          <div className="pt-4 border-t border-slate-700 mt-4">
-            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">Gestión de Datos</h4>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={onExport}
-                className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500 to-green-600 p-4 shadow-lg shadow-emerald-500/20 transition-all duration-300 hover:scale-[1.02] hover:shadow-emerald-500/40 active:scale-95"
-              >
-                <div className="relative z-10 flex flex-col items-center gap-1">
-                  <Save size={24} className="text-emerald-100 group-hover:scale-110 transition-transform duration-300" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-white">Exportar</span>
-                </div>
-                <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:animate-[shimmer_1.5s_infinite]"></div>
-              </button>
+          <div className="pt-4 border-t border-slate-700 mt-4 space-y-4">
+            <div>
+              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-2">
+                Gestión de Datos
+              </h4>
+              <p className="text-[10px] text-slate-500 font-semibold mb-3">
+                La copia incluye todos tus años guardados y logros.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={onExport}
+                  className="group relative min-h-[44px] overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500 to-green-600 p-4 shadow-lg shadow-emerald-500/20 transition-all duration-300 hover:scale-[1.02] hover:shadow-emerald-500/40 active:scale-95"
+                >
+                  <div className="relative z-10 flex flex-col items-center gap-1">
+                    <Save size={24} className="text-emerald-100 group-hover:scale-110 transition-transform duration-300" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-white">Exportar</span>
+                  </div>
+                  <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:animate-[shimmer_1.5s_infinite]"></div>
+                </button>
 
+                <button
+                  onClick={onImportClick}
+                  className="group relative min-h-[44px] overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 p-4 shadow-lg shadow-blue-500/20 transition-all duration-300 hover:scale-[1.02] hover:shadow-blue-500/40 active:scale-95"
+                >
+                  <div className="relative z-10 flex flex-col items-center gap-1">
+                    <FileJson size={24} className="text-blue-100 group-hover:scale-110 transition-transform duration-300" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-white">Importar</span>
+                  </div>
+                  <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:animate-[shimmer_1.5s_infinite]"></div>
+                </button>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-red-950/20 border border-red-500/25 space-y-2.5">
+              <div>
+                <h5 className="text-[11px] font-black uppercase tracking-wider text-red-300">
+                  Zona de Peligro
+                </h5>
+                <p className="text-[10px] text-slate-400 leading-relaxed mt-0.5">
+                  Borra todos los años, logros y ajustes. Podrás descargar un respaldo antes de confirmar.
+                </p>
+              </div>
               <button
-                onClick={onImportClick}
-                className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 p-4 shadow-lg shadow-blue-500/20 transition-all duration-300 hover:scale-[1.02] hover:shadow-blue-500/40 active:scale-95"
+                type="button"
+                onClick={() => {
+                  SoundManager.play('click');
+                  onClose();
+                  onOpenReset();
+                }}
+                className="w-full min-h-[44px] px-4 py-2.5 rounded-xl bg-red-600/20 hover:bg-red-600/35 border border-red-500/40 text-red-200 hover:text-white text-xs font-black uppercase tracking-wider inline-flex items-center justify-center gap-2 transition-colors"
               >
-                <div className="relative z-10 flex flex-col items-center gap-1">
-                  <FileJson size={24} className="text-blue-100 group-hover:scale-110 transition-transform duration-300" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-white">Importar</span>
-                </div>
-                <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:animate-[shimmer_1.5s_infinite]"></div>
+                <Trash2 size={15} />
+                <span>Borrar todo el historial</span>
               </button>
             </div>
           </div>
